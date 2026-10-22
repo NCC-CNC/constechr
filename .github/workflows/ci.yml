@@ -34,9 +34,13 @@ concurrency:
 # - checks: the one required status check. It passes when every job it needs
 #   passed or was skipped. Branch protection names only this job, so adding or
 #   renaming a job never means touching the protection rules.
+#
+# Every job times out after 10 minutes (normal runs take 2 to 3), so a stuck
+# runner fails fast; use "Re-run failed jobs" to get a fresh one.
 jobs:
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       pull-requests: read
     outputs:
@@ -63,6 +67,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       LINTR_ERROR_ON_LINT: true
@@ -90,6 +95,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ${{ matrix.config.os }}
+    timeout-minutes: 10
     name: r-cmd-check (${{ matrix.config.os }}, ${{ matrix.config.deps }})
     strategy:
       fail-fast: false
@@ -131,6 +137,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -155,6 +162,7 @@ jobs:
     needs: [changes, repo-hygiene, style-lint, r-cmd-check]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: All jobs passed or were skipped
         env:
@@ -167,6 +175,7 @@ jobs:
 
   repo-hygiene:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
