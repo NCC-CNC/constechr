@@ -7,7 +7,11 @@ The workflow is:
 1. Branch from `main` (one short-lived branch per change).
 2. Keep changes small and focused.
 3. Run the package checks locally before pushing (see Setup below).
-4. Open a pull request into `main`. CI must pass before merge.
+4. Open a pull request into `main`. CI must pass before merge. A PR from a
+   branch in this repo merges itself (squash) once CI passes, and is kept up
+   to date with `main` while it waits; this is done by the NCC ConsTech
+   Automation app (`.github/workflows/auto-merge.yml` and
+   `update-branches.yml`). Open it as a draft to hold it back.
 
 ## Setup
 

@@ -104,7 +104,9 @@ job. `CONTRIBUTING.md` Setup should match.
 ## Working rules
 
 - Branch from `main`; one short-lived branch per change. Open a pull request
-  into `main`; CI must pass before merge.
+  into `main`; CI must pass before merge. Non-draft PRs from branches in this
+  repo auto-merge (squash) when CI passes, so open a draft if a PR must not
+  merge yet.
 - Conventional Commits (for example `feat: ...`, `fix: ...`, `chore: ...`,
   `docs: ...`).
 - No em dashes in code, comments, docs, commit messages, or user-facing text.
