@@ -6,9 +6,17 @@ name: CI
 # fresh repo gets a first run:
 #   push:
 #     branches: [main]
+#
+# Weekly: R dependencies are only pinned to minimum versions, so a new sf or
+# terra release can break the package with no commit here. The scheduled run
+# checks main against current CRAN, and also saves the R package cache on
+# main, which PRs can read. workflow_dispatch allows a manual run.
 on:
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
 
 # Cancel superseded runs for the same ref.
 concurrency:
@@ -16,16 +24,23 @@ concurrency:
   cancel-in-progress: true
 
 # Layout:
-# - changes: says whether the PR touches anything besides docs and Markdown.
+# - changes: says whether the PR touches anything besides docs and Markdown
+#   (always "yes" outside a PR).
 # - repo-hygiene: stack-neutral checks, always runs.
-# - your own jobs: add them with the `needs`/`if` lines of the example below,
-#   so a docs-only PR skips them and clears in seconds.
+# - style-lint: styler and lintr. Skipped on docs-only PRs.
+# - r-cmd-check: R CMD check (build, tests, examples, docs) on Ubuntu and
+#   Windows, plus a run without Suggests. Skipped on docs-only PRs.
+# - coverage: test coverage, reported in the log. Not a gate.
 # - checks: the one required status check. It passes when every job it needs
 #   passed or was skipped. Branch protection names only this job, so adding or
-#   renaming a stack job never means touching the protection rules.
+#   renaming a job never means touching the protection rules.
+#
+# Every job times out after 10 minutes (normal runs take 2 to 3), so a stuck
+# runner fails fast; use "Re-run failed jobs" to get a fresh one.
 jobs:
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       pull-requests: read
     outputs:
@@ -34,8 +49,13 @@ jobs:
       - id: diff
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
           PR: ${{ github.event.pull_request.number }}
         run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           files=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}/files" --paginate --jq '.[].filename')
           if printf '%s\n' "$files" | grep -qvE '^docs/|\.md$'; then
             echo "code=true" >> "$GITHUB_OUTPUT"
@@ -43,31 +63,106 @@ jobs:
             echo "code=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # Example stack job, to copy once the stack is chosen. Add its name to the
-  # `needs` list of `checks` below.
-  #
-  # build:
-  #   needs: changes
-  #   if: needs.changes.outputs.code == 'true'
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v7
-  #     # Setup, install, then format/lint/typecheck/test/build for your stack.
-  #     #
-  #     # Caching a slow-to-fetch dependency or tool: restore it with
-  #     # actions/cache and a key from your lockfile. A PR can read caches
-  #     # saved on main but not caches saved by another PR, so also add
-  #     # workflows-optional/warm-cache.yml with the same key.
-  #     - uses: actions/cache@v6
-  #       with:
-  #         path: PATH_TO_CACHE
-  #         key: cache-${{ runner.os }}-${{ hashFiles('LOCKFILE') }}
-  #     - run: YOUR_BUILD_AND_TEST_COMMAND
+  style-lint:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      LINTR_ERROR_ON_LINT: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::lintr, any::styler, local::.
+          needs: lint
+
+      - name: Check formatting (styler)
+        run: styler::style_pkg(dry = "fail")
+        shell: Rscript {0}
+
+      - name: Lint (lintr)
+        run: lintr::lint_package()
+        shell: Rscript {0}
+
+  r-cmd-check:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ${{ matrix.config.os }}
+    timeout-minutes: 10
+    name: r-cmd-check (${{ matrix.config.os }}, ${{ matrix.config.deps }})
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: ubuntu-latest, deps: 'all'}
+          - {os: windows-latest, deps: 'all'}
+          # Without Suggests: optional packages must be checked for, not
+          # assumed. testthat is still installed to run the tests.
+          - {os: ubuntu-latest, deps: 'hard'}
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+      _R_CHECK_FORCE_SUGGESTS_: false
+      # The --as-cran time check needs an outside time server; skip it.
+      _R_CHECK_SYSTEM_CLOCK_: false
+    steps:
+      # Keep LF line endings on Windows, so the check sees the same files.
+      - run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@v7
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          dependencies: ${{ matrix.config.deps == 'hard' && '"hard"' || '"all"' }}
+          extra-packages: any::rcmdcheck, any::testthat
+          needs: check
+
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          error-on: '"warning"'
+          upload-snapshots: true
+
+  coverage:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::covr
+          needs: coverage
+
+      # Report only: a failure here does not fail the job or the checks.
+      - name: Test coverage
+        continue-on-error: true
+        run: print(covr::package_coverage())
+        shell: Rscript {0}
 
   checks:
-    needs: [changes, repo-hygiene]
+    needs: [changes, repo-hygiene, style-lint, r-cmd-check]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: All jobs passed or were skipped
         env:
@@ -80,6 +175,7 @@ jobs:
 
   repo-hygiene:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -96,11 +192,11 @@ jobs:
           rm -f actionlint actionlint.tar.gz
 
       - name: Lint markdown
-        run: npx --yes markdownlint-cli '**/*.md' --ignore node_modules --ignore LICENSE
+        run: npx --yes markdownlint-cli '**/*.md' --ignore node_modules --ignore LICENSE.md
 
       - name: No em dashes in tracked text
         run: |
-          if git grep -In $'\xe2\x80\x94' -- . ':!LICENSE'; then
+          if git grep -In $'\xe2\x80\x94' -- . ':!LICENSE.md'; then
             echo "Em dash found. See CLAUDE.md: no em dashes in code, comments, docs, or commit messages." >&2
             exit 1
           fi

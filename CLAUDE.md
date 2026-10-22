@@ -5,47 +5,101 @@ context automatically, so keep it to direction and rules, not a task list.
 
 ## Project name
 
-{{PROJECT_NAME}}
+constechr
 
 ## Project purpose
 
-{{One or two paragraphs: what this project is, who it is for, and the core
-idea in plain terms. See `docs/design/00_project_brief.md` for the full
-brief.}}
+constechr (Conservation Technology R) is a shared R package of the functions
+ConsTech apps and pipelines use to prepare and extract conservation data, such
+as aligning an area of interest to the national 1 km grid or extracting
+national data for it. It exists so every ConsTech R tool calls the same
+function for the same task, and results are consistent and repeatable across
+tools. Tools install a tagged version and call these functions instead of
+keeping their own copies.
+
+Users are developers and analysts working in R with spatial data, and Claude
+Code working in their repos. See `docs/design/00_project_brief.md` for the
+full brief.
 
 ## Project status
 
-{{Where things stand right now: design, pre-build, MVP in progress, etc., and
-what the next milestone is. Open GitHub issues are the live task tracker;
-`docs/design/03_milestones.md` (if present) is the shape of the plan.}}
+Pre-build: the brief is written; the package skeleton and CI come next. The
+next milestone is v0.1.0: grid alignment, sparse-matrix (rij) helpers and
+national data extraction, with tests, used by wtw-data-prep2 in place of its
+own copies. Open GitHub issues are the live task tracker.
 
 ## Scope
 
-{{What this project is, and just as importantly, what it deliberately is NOT.
+In scope: functions more than one ConsTech tool needs for preparing,
+extracting and summarising conservation data, with their methods documented
+and tested.
+
+Not in scope:
+
+- Front ends or Shiny code; apps keep their own UI.
+- Configuration and data locations: reading setup files and knowing where
+  data lives stays with each tool. Functions take objects or paths as
+  arguments.
+- Bundled conservation data, beyond small test fixtures.
+- One-off project scripts.
+- Code copied from other packages, such as wheretowork. Tools that need those
+  functions import those packages themselves.
+
 Do not expand scope without a design note in `docs/design/` or an ADR in
-`docs/decisions/`.}}
+`docs/decisions/`.
 
 ## Stack
 
-{{Languages, frameworks, test runner, deployment target, and any hard
-architectural constraints (for example: "business logic stays framework-free
-under `src/core/` so it is unit-testable"). Link to the relevant ADR(s) in
-`docs/decisions/` for the reasoning.}}
+- R package, licensed GPL-3. Installed from GitHub at a tagged version
+  (`pak::pak("NCC-CNC/constechr@vX.Y.Z")`); not on CRAN.
+- Spatial: sf, terra; sparse matrices: Matrix.
+- Docs: roxygen2 with markdown; `man/` and `NAMESPACE` are generated.
+- Tests: testthat (3rd edition); coverage with covr.
+- Style: styler (tidyverse style) for formatting, lintr for linting
+  (settings in `.lintr`). Tooling is R packages only, run with `Rscript`.
+- CI: GitHub Actions, R CMD check via r-lib/actions on Ubuntu and Windows.
+- Conventions follow prioritizr: files named by topic (not `fct_`/`utils_`
+  prefixes), argument checks with assertthat and cli, deprecation before
+  removal.
+- Hard constraints:
+  - Package dependencies go in `Imports`; `Depends` holds only the minimum
+    R version. Keep `Imports` small;
+    heavy or task-specific packages go in `Suggests` and are checked with
+    `requireNamespace()` in the function that needs them.
+  - Every exported function states its method (CRS, planar or spherical
+    area, raster or vector intersection, units) in its documentation.
+
+ADRs in `docs/decisions/` record the reasoning as each choice is made.
 
 ## Commands
 
-{{The everyday commands: run, test, lint/typecheck, build. One line each, and
-mark which ones are gates (non-zero exit blocks a merge). Say how long the
-slow ones take and which ones CI skips, so nobody runs a 20 minute suite by
-accident. Fill in once the stack is chosen; `CONTRIBUTING.md` Setup should
-match.}}
+Run from the repo root.
+
+- `Rscript -e "styler::style_pkg()"`: format all R code (tidyverse style).
+  Gate: CI runs `styler::style_pkg(dry = "fail")` and fails on unformatted
+  files.
+- `Rscript -e "lintr::lint_package()"`: lint (lintr, settings in `.lintr`).
+  Gate: CI fails on any lint.
+- `Rscript -e "devtools::document()"`: regenerate `man/` and `NAMESPACE`
+  after any roxygen change. Commit the results.
+- `Rscript -e "devtools::test()"`: run the tests. Gate: CI runs them as part
+  of R CMD check.
+- `Rscript -e "devtools::check()"`: full R CMD check (build, tests,
+  examples, docs). Gate: CI fails on any error or warning.
+- `Rscript -e "covr::package_coverage()"`: test coverage. Reported in CI,
+  not a gate.
+- `Rscript -e "devtools::install()"`: install the working copy locally, for
+  trying it from another repo.
+
+All gates run in the one `ci.yml` workflow, reported through its `checks`
+job. `CONTRIBUTING.md` Setup should match.
 
 ## Repo structure
 
-{{Optional: a short map of top-level directories, only if it adds real
-orientation beyond exploring the tree. State layering rules here too, such as "`core/` never imports from `ui/`".
-Keep it brief and expect it to drift; when in doubt, explore the tree rather
-than trusting this section.}}
+- `R/`: package code, one file per topic.
+- `tests/testthat/`: tests; small fixtures in `inst/extdata/`.
+- `man/`: generated by roxygen2; never edit by hand.
+- `docs/`: design notes, ADRs and handoffs (not a pkgdown site).
 
 ## Working rules
 
@@ -57,3 +111,11 @@ than trusting this section.}}
 - Significant technical or design decisions get an ADR in `docs/decisions/`.
 - Design notes live in `docs/design/`; session handoffs in `docs/handoffs/`.
 - Keep changes small and focused; update docs when behaviour or design changes.
+- Before writing a new function, check whether constechr or one of its
+  dependencies already does the job; extend an existing function rather than
+  add a near-duplicate.
+- Every exported function has roxygen docs (including its method), an
+  example, and tests, including a known-answer test where it computes a
+  result.
+- A change that alters a function's results or arguments gets a `NEWS.md`
+  entry and a version bump. Deprecate before removing or renaming.

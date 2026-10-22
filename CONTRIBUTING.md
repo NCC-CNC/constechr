@@ -6,23 +6,44 @@ The workflow is:
 
 1. Branch from `main` (one short-lived branch per change).
 2. Keep changes small and focused.
-3. Run the project checks locally before pushing (format, lint, tests, build).
-   See the Setup section below for the exact commands once they are defined.
+3. Run the package checks locally before pushing (see Setup below).
 4. Open a pull request into `main`. CI must pass before merge.
 
 ## Setup
 
-TODO: setup and local-run instructions once the stack is chosen. A good shape:
+Prerequisites:
 
-- Prerequisites (tool and version).
-- A short block that installs, runs, and checks. Make its last line the
-  command CI runs, and say so.
-- Pointers to `CLAUDE.md` for anything stack-specific or slow.
+- R 4.4 or later.
+- The devtools, styler, lintr and covr packages:
+  `install.packages(c("devtools", "styler", "lintr", "covr"))`. Rtools is
+  not needed while the package has no compiled code.
+
+From the repo root:
+
+```sh
+Rscript -e "devtools::install_deps(dependencies = TRUE)"  # package dependencies
+Rscript -e "styler::style_pkg()"     # format R code
+Rscript -e "lintr::lint_package()"   # lint
+Rscript -e "devtools::document()"    # regenerate man/ and NAMESPACE; commit them
+Rscript -e "devtools::test()"        # run the tests
+Rscript -e "devtools::check()"       # full R CMD check (build, tests, examples)
+```
+
+CI runs the same checks on every pull request and weekly:
+`styler::style_pkg(dry = "fail")`, the lint, and R CMD check (which runs the
+tests) on Ubuntu and Windows. Any formatting change, lint, or
+check error or warning fails it, so if these pass locally CI should too. CI
+also reports test coverage (`covr::package_coverage()`). To try the working
+copy from another repo, install it with `Rscript -e "devtools::install()"`.
+
+See `CLAUDE.md` for the package's stack, scope and working rules.
 
 ## Conventions
 
 - Conventional Commits (for example `feat: ...`, `fix: ...`, `chore: ...`,
   `docs: ...`).
 - No em dashes in code, comments, docs, commit messages, or user-facing text.
+- A change that alters a function's results or arguments gets a `NEWS.md`
+  entry and a version bump.
 - See `CLAUDE.md` for the full working rules and `docs/` for design notes and
   decision records.

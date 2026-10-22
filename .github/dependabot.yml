@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Keep GitHub Actions themselves up to date. Stack-agnostic; leave this in.
+  # Keep GitHub Actions themselves up to date.
   - package-ecosystem: github-actions
     directory: '/'
     schedule:
@@ -8,18 +8,6 @@ updates:
     commit-message:
       prefix: ci
 
-  # Add one entry per package manager your stack uses, for example:
-  #
-  # - package-ecosystem: npm
-  #   directory: '/'
-  #   schedule:
-  #     interval: weekly
-  #   open-pull-requests-limit: 5
-  #   commit-message:
-  #     prefix: chore
-  #   groups:
-  #     dev-dependencies:
-  #       dependency-type: development
-  #
-  # See https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
-  # for the full list of supported ecosystems (pip, bundler, cargo, gomod, ...).
+  # Dependabot has no R ecosystem. R dependencies are declared with minimum
+  # versions in DESCRIPTION, and the weekly scheduled CI run checks the
+  # package against current CRAN.

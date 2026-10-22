@@ -5,14 +5,20 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Build output (adjust for your stack: dist/, build/, out/, target/, __pycache__/, etc.)
-node_modules/
-dist/
-coverage/
-*.tsbuildinfo
-__pycache__/
-playwright-report/
-test-results/
+# R session and RStudio
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+
+# R package build and check output
+*.Rcheck/
+*.tar.gz
+/doc/
+/Meta/
+
+# renv (if used locally)
+renv/library/
 
 # Logs and temp
 *.log

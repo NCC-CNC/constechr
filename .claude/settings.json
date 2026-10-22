@@ -24,7 +24,15 @@
       "Bash(gh issue *)",
       "Bash(gh label *)",
       "Bash(gh api *)",
-      "Bash(cat MEMORY.md)"
+      "Bash(cat MEMORY.md)",
+      "Bash(Rscript -e \"devtools::*)",
+      "Bash(Rscript -e \"lintr::*)",
+      "Bash(Rscript -e \"covr::*)",
+      "Bash(Rscript -e \"styler::*)",
+      "PowerShell(Rscript -e \"devtools::*)",
+      "PowerShell(Rscript -e \"lintr::*)",
+      "PowerShell(Rscript -e \"covr::*)",
+      "PowerShell(Rscript -e \"styler::*)"
     ],
     "deny": [
       "Bash(git push --force *)",
