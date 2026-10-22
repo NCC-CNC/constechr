@@ -1,0 +1,40 @@
+# Versioning and releases
+
+## Status
+
+Accepted
+
+## Context
+
+The reason constechr exists is that the same inputs give the same results in
+every tool. That only holds if each tool knows exactly which version of
+constechr it ran, and if a change to a function's results reaches a tool only
+when that tool chooses to take it. The package is expected to change often
+while its API settles, and it is used only by ConsTech tools.
+
+## Decision
+
+- Versions follow semantic versioning (`MAJOR.MINOR.PATCH`), with a
+  `.9000` suffix for development versions between releases:
+  - PATCH: fixes that do not change documented results or arguments.
+  - MINOR: new functions or arguments that are backward compatible.
+  - MAJOR: changes to existing results or arguments, or removals (after
+    deprecation, see ADR 0002).
+  - While the version is 0.x, the API is not yet stable, and MINOR releases
+    may include changes to results; each is called out in `NEWS.md`.
+- Every change to a function's results or arguments gets a `NEWS.md` entry
+  and a version bump.
+- A release is a Git tag (`vX.Y.Z`) on `main`, matching the `DESCRIPTION`
+  version.
+- Distribution is from GitHub only, not CRAN or an r-universe. Tools install
+  a tag, for example `pak::pak("NCC-CNC/constechr@v0.1.0")`, and record it in
+  their `renv.lock`.
+
+## Consequences
+
+- Each tool controls when it takes a new version, and its lockfile records
+  which version produced its results.
+- Frequent releases are cheap: a version bump, a `NEWS.md` entry and a tag,
+  with no CRAN review.
+- Installing needs pak (or remotes) rather than plain `install.packages()`.
+- There is no automatic update path; tools must bump their pin to get fixes.
