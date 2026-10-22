@@ -1,0 +1,24 @@
+Package: constechr
+Title: Shared Functions for Conservation Technology Tools
+Version: 0.0.0.9000
+Authors@R: c(
+    person("Shaun", "Astbury", , "shaun.astbury@natureconservancy.ca", role = c("aut", "cre")),
+    person("Nature Conservancy of Canada", role = "cph")
+  )
+Description: Functions shared by Conservation Technology (ConsTech) apps
+    and pipelines to prepare and extract conservation data, such as
+    aligning an area of interest to the national 1 km grid and extracting
+    national data for it. Each function documents the method it uses, so
+    results are consistent and repeatable across tools.
+License: GPL (>= 3)
+URL: https://github.com/NCC-CNC/constechr
+BugReports: https://github.com/NCC-CNC/constechr/issues
+Depends: 
+    R (>= 4.4.0)
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Encoding: UTF-8
+Language: en-CA
+Roxygen: list(markdown = TRUE)
+Config/roxygen2/version: 8.1.0

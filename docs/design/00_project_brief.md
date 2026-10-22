@@ -2,53 +2,88 @@
 
 ## What this is
 
-{{One or two sentences: what {{PROJECT_NAME}} is and the problem it addresses.}}
+constechr (Conservation Technology R) is a shared R package of the functions
+ConsTech apps and pipelines use to prepare and extract conservation data. The
+same functions are currently copied between repos and have started to drift
+apart, so the same inputs can give different results in different tools.
 
-It is {{a teaching tool / an internal tool / a production service / ...}}, not
-{{whatever it is explicitly not}}. The goal is to {{the outcome for the person
-using it}}.
+It is an internal library, not an app or a pipeline: it has no front end and
+runs nothing on its own. The goal is that every ConsTech R tool calls the same
+function for the same task, so results are consistent and repeatable.
 
 ## Who it is for
 
-- {{Primary audience or user.}}
-- {{Secondary audience, if any.}}
+- Developers and analysts building ConsTech apps and pipelines in R.
+- Claude Code working in those repos, which should call an existing function
+  rather than write a new one.
 
-{{Any assumptions about the audience: technical level, prior knowledge, access
-requirements.}}
+Users are comfortable in R and with spatial data (sf, terra). Some functions
+expect access to national conservation datasets on disk; the package itself
+ships only small test fixtures.
 
-## The core idea (one screen)
+## The core idea
 
-{{Describe the central loop or workflow in a few sentences, as if explaining it
-to someone seeing the project for the first time. What does the user do, what
-does the system do in response, what do they see change?}}
-
-## Scope layers (if applicable)
-
-{{If the project has a staged or layered scope (an MVP plus deeper layers over
-the same core), describe each layer briefly and how they share the same
-underlying engine or model. Delete this section if the project is a single
-flat scope.}}
+A tool that needs to, for example, align an area of interest to the national
+1 km grid or extract national data for it, installs a pinned version of
+constechr and calls the function for that task instead of keeping its own
+copy. Each function documents the method it uses (CRS, area calculation,
+intersection rules), and tests with known answers hold that method in place.
+When a method changes, it changes once, in a new version, and each tool takes
+it when it is ready. A tool's output can record the constechr version that
+produced it.
 
 ## MVP scope
 
-{{The smallest version that proves the core idea. Enumerate the concrete
-pieces.}}
+The first release (v0.1.0). The exact function list comes from an inventory
+of the functions currently copied across ConsTech repos.
 
-1.
-2.
-3.
+1. Align an area of interest to the national 1 km grid.
+2. Sparse-matrix (rij) helpers: clip to an area of interest, convert to
+   raster.
+3. Extract national data for an area of interest.
+4. Tests for each, using small simulated fixtures, including known-answer
+   tests.
+5. wtw-data-prep2 is refactored to install a tagged release (v0.1.0) and use
+   these functions in place of its own copies, and to import wheretowork in
+   place of its copied wheretowork code, with unchanged outputs.
 
 See `docs/design/03_milestones.md` (if present) for the phased plan.
 
 ## Explicit non-goals (for now)
 
-- {{What this project is deliberately not trying to be or do, and why.}}
+- No front end or Shiny code; apps keep their own UI.
+- No configuration or file paths: reading setup files and knowing where data
+  lives stays with each tool. Functions take objects or paths as arguments.
+- No bundled conservation data beyond small test fixtures.
+- Not on CRAN or an r-universe; installed from GitHub at a tagged version,
+  which suits frequent iterations and lets each tool pin one.
+- Not a home for one-off project scripts; only functions more than one tool
+  needs, or will need.
+- No code copied from other packages, such as wheretowork. Tools that need
+  wheretowork functions (for example, wtw-data-prep2 writing project files)
+  import wheretowork themselves, so constechr does not depend on it.
 
 ## Design principles
 
-1. {{A principle that should guide tradeoffs, and why it matters here.}}
-2. {{...}}
+1. **Same inputs, same numbers.** Consistency across tools is the reason the
+   package exists; a change to a result is a versioned, documented change.
+2. **Methods are explicit.** Each exported function states its method (CRS,
+   planar or spherical area, raster or vector intersection, units), so a
+   result can be explained and reproduced.
+3. **Known-answer tests.** A hand-checked result per method guards against
+   silent drift.
+4. **Stable API.** Deprecate before removing or renaming, and record it in
+   `NEWS.md`, because several tools depend on it.
+5. **Light dependencies.** Few `Imports`; heavy or area-specific packages go
+   in `Suggests` and are checked at run time, so tools install only what they
+   use.
+6. **Easy to find.** Clear names, reference docs, and a Claude Code skill
+   that maps tasks to functions, so the existing function is found before a
+   new one is written.
 
 ## Open questions
 
-- {{Anything still undecided that a reader should know is open, not settled.}}
+- One package, or a family of smaller packages as the scope grows?
+- Grid alignment: terra only, or also a GDAL (`gdalwarp`) option?
+- The area and intersection methods to standardize on (CRS, planar or
+  spherical, partial cells, rounding).

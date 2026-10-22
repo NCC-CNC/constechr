@@ -1,0 +1,14 @@
+^LICENSE\.md$
+^CLAUDE\.md$
+^CONTRIBUTING\.md$
+^SECURITY\.md$
+^docs$
+^scripts$
+^\.claude$
+^\.github$
+^\.markdownlint\.json$
+^\.lintr$
+^renv$
+^renv\.lock$
+^.*\.Rproj$
+^\.Rproj\.user$
