@@ -255,6 +255,14 @@ the conventions.
 - Wider use: the toolkit reads uploads in several formats and builds AOIs from
   lines and points; conservation-profiles reads geodatabase layers. The aim
   is one entry point that the raster functions share, not every format.
+- As built (#13): any file or folder with several layers takes
+  `<path>/<layer>` (not only geodatabases), and one with a single layer
+  needs no layer name. Bounds are a numeric `c(xmin, ymin, xmax, ymax)`, a
+  terra `SpatExtent` (both need `crs`, the CRS they are in) or an sf `bbox`
+  (which carries its CRS, so `crs` reprojects it). `crs` also takes a
+  spatial object, such as the template raster. Z and M are dropped;
+  geometries are not repaired; the union runs after reprojection, in the
+  target CRS. Lines and points are rejected.
 
 ### AOI rasters
 
