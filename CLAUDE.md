@@ -132,3 +132,33 @@ job. `CONTRIBUTING.md` Setup should match.
   result.
 - A change that alters a function's results or arguments gets a `NEWS.md`
   entry and a version bump. Deprecate before removing or renaming.
+
+## How work happens
+
+GitHub issues are the task list; the milestone for the next release holds the
+planned work. Claude works through issues with full GitHub access in this repo
+(issues, labels, branches, commits, pushes, pull requests), as allowed by
+`.claude/settings.json`.
+
+1. Start of a session: read the latest file in `docs/handoffs/`, then the open
+   issues in the current milestone. Pick the next issue whose dependencies
+   are done.
+2. One issue, one branch, one pull request:
+   - branch `<issue number>-<short-slug>` from an up-to-date `main`;
+   - run the local checks in "Commands" before pushing;
+   - PR title in Conventional Commits form, body with "Closes #N" and the
+     PR template checklist filled in.
+3. Never merge by hand. The automation app arms auto-merge on every non-draft
+   PR and merges it when `checks` passes. If CI fails, fix it on the same
+   branch.
+4. Anything found that is out of scope for the current issue becomes a new
+   issue (what, why, done criteria), not an addition to the open PR.
+5. A design decision that the issue needs (a default, a method) gets an ADR in
+   the same PR, or its own issue labelled `decision` if it blocks others.
+6. End of a session: write `docs/handoffs/YYYY-MM-DD.md` from
+   `docs/handoffs/HANDOFF_TEMPLATE.md` (what landed, current state, next
+   issues, risks or decisions needed) and open it as its own PR in the same
+   session.
+
+Never force-push, rewrite pushed history, or change repo settings without
+being asked.
