@@ -324,10 +324,12 @@ check_resolution <- function(resolution, call) {
 #' @param x A `SpatRaster` or a path to a raster file.
 #' @param arg The argument's name, for errors.
 #' @param call The environment that errors name.
-#' @return A `SpatRaster`; an error if it cannot be read or has more than one
-#'   layer.
+#' @param one_layer A single logical: `TRUE` (the default) requires one
+#'   layer; `FALSE` accepts any number of layers.
+#' @return A `SpatRaster`; an error if it cannot be read or, with
+#'   `one_layer = TRUE`, has more than one layer.
 #' @noRd
-as_raster_layer <- function(x, arg, call) {
+as_raster_layer <- function(x, arg, call, one_layer = TRUE) {
   if (assertthat::is.string(x) && !is.na(x)) {
     if (!file.exists(x)) {
       cli::cli_abort(
@@ -354,7 +356,7 @@ as_raster_layer <- function(x, arg, call) {
       call = call
     )
   }
-  if (terra::nlyr(x) != 1) {
+  if (one_layer && terra::nlyr(x) != 1) {
     cli::cli_abort(
       "{.arg {arg}} must have one layer, not {terra::nlyr(x)}.",
       call = call

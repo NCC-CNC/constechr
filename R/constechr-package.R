@@ -1,4 +1,5 @@
 #' @keywords internal
+#' @importClassesFrom Matrix dgCMatrix
 "_PACKAGE"
 
 ## usethis namespace: start

@@ -381,6 +381,14 @@ change from wtw-data-prep2's (`ncc_1km` to `template`, `ncc_1km_idx` to
 - A layer as an rij matrix: a GeoTIFF on the template is converted
   (`prioritizr::rij_matrix()`), a prebuilt `.rds` is read.
 - `type`: `"auto"` (by file extension, as today), `"raster"` or `"rij"`.
+- As built (#17, ADR 0011): prioritizr is in `Suggests` (needed only to
+  convert rasters) and Matrix in `Imports`. A one-layer file's row is named
+  after the file, as today (national layer names are often `Band_1`); a
+  `SpatRaster`'s or multi-layer file's rows after its layers. A raster off
+  the template's grid, an `.rds` without one column per template cell with
+  data, missing or repeated row names, and an unknown extension under
+  `"auto"` are errors. On the fixtures and NAT_DATA_20261009 layers it gives
+  the same matrices as `natdata()`.
 
 `clip_rij_matrix(rij, aoi_raster, template, drop_empty = TRUE)`
 
