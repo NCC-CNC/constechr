@@ -1,6 +1,6 @@
 Package: constechr
 Title: Shared Functions for Conservation Technology Tools
-Version: 0.0.0.9004
+Version: 0.0.0.9005
 Authors@R: c(
     person("Shaun", "Astbury", , "shaun.astbury@natureconservancy.ca", role = c("aut", "cre")),
     person("Nature Conservancy of Canada", role = "cph")
@@ -18,10 +18,11 @@ Depends:
 Imports:
     assertthat,
     cli (>= 3.6.0),
+    Matrix,
     sf,
     terra
 Suggests:
-    Matrix,
+    prioritizr,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Encoding: UTF-8

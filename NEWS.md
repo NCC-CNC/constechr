@@ -1,5 +1,18 @@
-# constechr 0.0.0.9004
+# constechr 0.0.0.9005
 
+- New `read_rij_matrix()` reads one data layer as an rij matrix on a
+  template: one row per feature, one column per template cell with data
+  (#17). A raster on the template's grid (a GeoTIFF path or a `SpatRaster`)
+  is converted with `prioritizr::rij_matrix()`; a prebuilt `.rds` rij matrix
+  is read as it is. `type = "auto"` chooses by file extension. Decisions in
+  ADR 0011. It replaces the layer reading in wtw-data-prep2's `natdata()`,
+  which gives the same matrices on the test fixtures and on NAT_DATA layers.
+  Intended changes from that code: a raster off the template's grid, an
+  `.rds` file with the wrong number of columns, and missing or repeated row
+  names are errors, and a file whose extension is neither `.tif`, `.tiff`
+  nor `.rds` needs `type`, instead of being read as an `.rds` file.
+- Matrix moves from `Suggests` to `Imports`; prioritizr is added to
+  `Suggests`, needed only to convert rasters to rij matrices.
 - New `align_raster()` puts any one-layer raster onto a template raster's
   grid (CRS, extent, resolution) with `terra::project()` (#16). `filename =
   NULL` writes `<input>_align.tif` beside a file input and keeps an
