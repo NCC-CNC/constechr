@@ -112,7 +112,7 @@ job. `CONTRIBUTING.md` Setup should match.
   `docs: ...`).
 - No em dashes in code, comments, docs, commit messages, or user-facing text.
 - Significant technical or design decisions get an ADR in `docs/decisions/`.
-- Design notes live in `docs/design/`; session handoffs in `docs/handoffs/`.
+- Design notes live in `docs/design/`; session handoffs in `docs/handoffs/` (see "Where durable context lives").
 - Keep changes small and focused; update docs when behaviour or design changes.
 - Before writing a new function, check whether constechr or one of its
   dependencies already does the job; extend an existing function rather than
@@ -137,13 +137,14 @@ job. `CONTRIBUTING.md` Setup should match.
 ## How work happens
 
 GitHub issues are the task list; the milestone for the next release holds the
-planned work. Claude works through issues with full GitHub access in this repo
-(issues, labels, branches, commits, pushes, pull requests), as allowed by
-`.claude/settings.json`.
+planned work. Open means to do, closed means shipped. Do not open and close
+issues after the fact for work already shipped. Claude works through issues
+with full GitHub access in this repo (issues, labels, branches, commits,
+pushes, pull requests), as allowed by `.claude/settings.json`.
 
-1. Start of a session: read the latest file in `docs/handoffs/`, then the open
-   issues in the current milestone. Pick the next issue whose dependencies
-   are done.
+1. Start of a session: read the latest handoff in `docs/handoffs/` (the last
+   file by name), then the open issues in the current milestone. Pick the next
+   issue whose dependencies are done.
 2. One issue, one branch, one pull request:
    - branch `<issue number>-<short-slug>` from an up-to-date `main`;
    - run the local checks in "Commands" before pushing;
@@ -156,10 +157,36 @@ planned work. Claude works through issues with full GitHub access in this repo
    issue (what, why, done criteria), not an addition to the open PR.
 5. A design decision that the issue needs (a default, a method) gets an ADR in
    the same PR, or its own issue labelled `decision` if it blocks others.
-6. End of a session: write `docs/handoffs/YYYY-MM-DD.md` from
-   `docs/handoffs/HANDOFF_TEMPLATE.md` (what landed, current state, next
-   issues, risks or decisions needed) and open it as its own PR in the same
-   session.
+6. End of a session: write a handoff (see "Session handoffs") and open it as
+   its own PR in the same session.
 
 Never force-push, rewrite pushed history, or change repo settings without
 being asked.
+
+## Where durable context lives
+
+Sessions run on different machines and on claude.ai/code, so Claude's local
+memory is not shared and must not be the home for project context. The
+repository is the single source of truth:
+
+1. Work to do (opened, then closed): GitHub issues.
+2. Owner direction and working preferences: this file.
+3. Design and decisions: `docs/design/` and `docs/decisions/` (ADRs).
+4. Session narrative: `docs/handoffs/`.
+
+If a fact is worth remembering, write it to one of these four places.
+
+## Session handoffs
+
+At the end of a session, write `docs/handoffs/<YYYY-MM-DD>_Handoff_vNN.md`
+(`v01`, `v02`, ... for more than one session in a day) from
+`docs/handoffs/HANDOFF_TEMPLATE.md`, and open it as its own PR
+(`docs: session handoff YYYY-MM-DD vNN`):
+
+- **Summary**: what the session was about and where things stand, with links
+  to the repo and anything published.
+- **Completed**: what landed, each item with its PR and issue numbers.
+- **Current state**: what works, what is incomplete, known issues.
+- **Next actions**: numbered, as issue numbers in the order to pick them up,
+  with why.
+- **Risks or decisions needed**: open questions that need the owner.

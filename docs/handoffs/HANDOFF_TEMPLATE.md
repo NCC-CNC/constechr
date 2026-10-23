@@ -1,6 +1,6 @@
 # Session Handoff: YYYY-MM-DD
 
-<!-- Open the handoff PR in the same session. The next session starts by reading the latest file in this folder. -->
+<!-- Save as docs/handoffs/<YYYY-MM-DD>_Handoff_vNN.md (v01, v02, ... for more than one session in a day). Open the handoff PR in the same session. The next session starts by reading the latest file in this folder. See "Session handoffs" in CLAUDE.md. -->
 
 ## Summary
 
