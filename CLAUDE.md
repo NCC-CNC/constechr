@@ -170,6 +170,43 @@ To start a session, the owner can say: "Work the next issue in constechr,
 following CLAUDE.md." That means: steps 1 to 6 above for one issue, then stop
 and report the PR.
 
+## Orchestrated runs
+
+To run all open issues in turn, the owner can say: "Run the open issues in
+constechr in turn, following CLAUDE.md 'Orchestrated runs'." The session then
+acts as the orchestrator. It does not write package code itself, and it never
+merges.
+
+1. Read the latest handoff and the milestone's work order.
+2. For the next open issue, start a fresh agent (Agent tool,
+   `general-purpose`, run in this repo) with this brief:
+   "Work issue #N in NCC-CNC/constechr as a one-issue session, following
+   CLAUDE.md 'How work happens' steps 2 to 6 (branch, code, tests and docs to
+   ADR 0006, local checks, PR with 'Closes #N', short handoff in the PR). Do
+   not merge. If the issue needs a design choice that the issue, the
+   inventory or an ADR does not settle, stop before writing code and report
+   it. Return: the PR number, what changed, follow-up issues opened, and
+   either 'no decision needed' or the decision needed (question, options,
+   your recommendation)."
+3. If the agent reports a decision needed, ask the owner (question, options,
+   recommendation). Record the answer as a comment on the issue, and in an
+   ADR if it is a method or default, then start a fresh agent for the issue
+   with the answer added to its brief.
+4. Otherwise wait for the PR to merge and the issue to close. If CI fails,
+   start one fresh agent to fix it on the same branch; if it still fails, ask
+   the owner.
+5. Report one line to the owner (issue, PR, result) and go to the next issue.
+6. Stop when the work order is done, when the owner says stop, or when an
+   issue needs something this machine does not have (for example NAT_DATA or
+   a package that cannot be installed): say what is needed and stop.
+7. When stopping, write a session handoff for the run (its own PR) covering
+   all issues done.
+
+Decisions already recorded are not asked again (for example #10: terra if it
+gives the same output as `gdalwarp`; the owner is asked only if they differ).
+One issue at a time; the next agent starts only after the previous PR has
+merged, so each starts from an up-to-date `main`.
+
 ## Where durable context lives
 
 Sessions run on different machines and on claude.ai/code, so Claude's local
