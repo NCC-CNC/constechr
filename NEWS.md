@@ -1,5 +1,16 @@
-# constechr 0.0.0.9002
+# constechr 0.0.0.9003
 
+- New `polygonize_raster()` turns each cell of a one-layer raster that has
+  a value into its own square polygon, as an `sf` layer (#15). `value`
+  names the value column (default: the layer name) and `id` optionally adds
+  a 1 to n column. It replaces the polygonizing in wtw-data-prep2's
+  `create_1km_grid()` (`terra::as.polygons()`, `NCCID`, `PUID`), which
+  gives the same polygons, values and `PUID`s on the test fixtures with
+  `value = "NCCID", id = "PUID"`. Intended changes from that code: equal
+  neighbouring values are never merged (`dissolve = FALSE`), and polygons
+  are in terra's cell order (row by row from the top-left), not sorted by
+  value, so on a template numbered from the bottom-left (such as
+  `idx.tif`) the `PUID`s run from the top row down.
 - New `rasterize_aoi()` rasterizes an AOI onto a template raster, onto
   coarser cells that nest in the template's, or onto a new grid at a given
   resolution (#14). `cells` (`"touches"` or `"centre"`) is required.

@@ -314,8 +314,14 @@ cells, value = "index", drop_na = TRUE, crop = TRUE)`
 `polygonize_raster(x, value = names(x), id = NULL)`
 
 - Split out of `create_1km_grid()`.
-- Polygonizes any raster with one polygon per cell (`dissolve = FALSE`,
-  so equal neighbouring values are not merged).
+- Polygonizes any one-layer raster (`SpatRaster` or path) with one polygon
+  per cell that has a value (`dissolve = FALSE`, so equal neighbouring
+  values are not merged; `NA` cells get none).
+- Polygons are in terra's cell order (row by row from the top-left), not
+  sorted by value as `terra::as.polygons()`'s default `dissolve = TRUE`
+  gave in `create_1km_grid()`. The two orders agree for `value = "index"`
+  from `rasterize_aoi()`; with `idx.tif`'s bottom-left numbering they give
+  different `PUID`s (recorded in `NEWS.md` as an intended change).
 - `value`: name of the column holding the cell's raster value; defaults to
   the layer name. For an AOI raster from `rasterize_aoi()` the value is the
   template's cell index; wtw-data-prep2 passes `value = "NCCID"`.
