@@ -89,4 +89,8 @@ read_aoi(
   crs = template
 )
 }
+\seealso{
+Other aoi:
+\code{\link[=rasterize_aoi]{rasterize_aoi()}}
+}
 \concept{aoi}

@@ -121,6 +121,21 @@ fixture_template <- function() {
   x
 }
 
+# The template's grid and NA cells with values numbered row by row from the
+# bottom-left cell, like NAT_DATA's `_1km/idx.tif`: value = (10 - row) * 10 +
+# col, so terra cell 34 (row 4, col 4) holds 64 and cell 3 (row 1, col 3)
+# holds 93. A one-layer SpatRaster named "idx", to tell a template's values
+# apart from terra cell numbers. Needs terra.
+fixture_template_bottom_left <- function() {
+  x <- fixture_template()
+  cells <- seq_len(terra::ncell(x))
+  v <- (10 - terra::rowFromCell(x, cells)) * 10 + terra::colFromCell(x, cells)
+  v[fixture_na_cells()] <- NA
+  terra::values(x) <- v
+  names(x) <- "idx"
+  x
+}
+
 # AOI rectangles as offsets in metres from the template's left (x) and top
 # (y) edges: c(x_from, x_to, y_from, y_to). See the table above.
 fixture_aoi_offsets <- function() {
