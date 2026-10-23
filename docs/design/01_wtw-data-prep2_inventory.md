@@ -460,4 +460,3 @@ intersection methods ADR:
   threshold).
 - NAT_DATA unit conversions (for example hectares per cell to km²).
 - R versions of the Python toolbox's regional data conversion.
-
