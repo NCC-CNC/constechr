@@ -34,21 +34,47 @@ produced it.
 
 ## MVP scope
 
-The first release (v0.1.0). The exact function list comes from an inventory
-of the functions currently copied across ConsTech repos.
+The first release (v0.1.0), planned in the
+[v0.1.0 milestone](https://github.com/NCC-CNC/constechr/milestone/1). The
+function list comes from the inventory of wtw-data-prep2,
+[`01_wtw-data-prep2_inventory.md`](01_wtw-data-prep2_inventory.md), which
+gives each function's signature sketch, where it comes from, and its design
+points. Only wtw-data-prep2 was inventoried; other ConsTech repos were a
+design check on the planned functions, not a source of code.
 
-1. Rasterize an area of interest onto the national 1 km template raster,
-   and align rasters to it.
-2. Sparse-matrix (rij) helpers: clip to an area of interest, convert to
-   raster.
-3. Extract national data for an area of interest.
-4. Tests for each, using small simulated fixtures, including known-answer
-   tests.
-5. wtw-data-prep2 is refactored to install a tagged release (v0.1.0) and use
-   these functions in place of its own copies, and to import wheretowork in
-   place of its copied wheretowork code, with unchanged outputs.
+Building blocks (generic, with no use-case conventions):
 
-See `docs/design/03_milestones.md` (if present) for the phased plan.
+1. Areas of interest: `read_aoi()` (#13).
+2. AOI rasters: `rasterize_aoi()` (#14) and `polygonize_raster()` (#15).
+3. Aligning rasters: `align_raster()` (#16), with terra if it gives the same
+   output as `gdalwarp` (#10).
+4. Extracting layers on a national template through rij matrices:
+   `read_rij_matrix()` (#17), `clip_rij_matrix()` (#18),
+   `rij_matrix_to_raster()` (#19), `write_rasters()` (#20) and
+   `extract_layers()` (#21).
+
+Use-case functions (one use case's conventions as overridable defaults over
+the building blocks):
+
+5. NAT_DATA: `natdata_template()` and `read_natdata_metadata()` (#22), and
+   `create_1km_grid()` (#23).
+6. WTW projects: `create_wtw_planning_units()` (#24), `extract_wtw_natdata()`
+   (#25), `create_wtw_project_folder()` and `wtw_project_folders()` (#26),
+   and `create_dataprep_template()` and `dataprep_columns()` (#27).
+
+For all of them:
+
+7. Documentation and tests to ADR 0006, using small synthetic fixtures (#11),
+   including known-answer tests.
+8. The v0.1.0 release (#28).
+9. wtw-data-prep2 then installs v0.1.0 and uses these functions in place of
+   its own copies, and imports wheretowork in place of its copied wheretowork
+   code, with unchanged outputs (#29, work in wtw-data-prep2 after the
+   release).
+
+Not in v0.1.0: `summarize_aoi_raster()` (#31, a candidate), and the later
+candidates in the inventory, such as zonal sums and overlap areas (#35),
+which wait on the area and intersection methods ADR (#30).
 
 ## Explicit non-goals (for now)
 
