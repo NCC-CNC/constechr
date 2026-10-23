@@ -205,8 +205,8 @@ Design sketch (provisional):
 - Without a template, the raster origin snaps to multiples of `resolution`, so
   rasters made separately from different AOIs at the same resolution and CRS
   line up.
-- The cell inclusion rule (touched or cell centre) applies to polygon AOIs;
-  with bounds, every cell inside the bounds is kept.
+- The cell inclusion rule (touched or cell centre) applies to polygon AOIs
+  and to bounds alike (ADR 0008).
 - Outputs: a raster, carrying the reference raster's cell
   index when there is one.
 
@@ -267,7 +267,7 @@ the conventions.
 ### AOI rasters
 
 `rasterize_aoi(aoi, template = NULL, resolution = NULL, crs = NULL,
-cells = "touches", value = "index", crop = TRUE)`
+cells, value = "index", drop_na = TRUE, crop = TRUE)`
 
 - From `create_1km_grid()`, minus AOI reading (now `read_aoi()`) and vector
   output (now `polygonize_raster()`).
@@ -277,22 +277,39 @@ cells = "touches", value = "index", crop = TRUE)`
   `_1km/idx.tif`, `NCC_1KM_PU.tif` and `NCC_PU.tif` in different repos).
 - `resolution`: defaults to the template's; required without one; with a
   template, must equal or be a whole multiple of its resolution.
-- `crs`: required without a template (or taken from bounds); the template's
-  otherwise.
+- `crs`: without a template, the AOI's CRS by default, required with bounds
+  that carry none. With a template, the template's; a `crs` given with a
+  template must be the same CRS, or the function errors.
 - `cells`: `"touches"` (every cell the AOI touches; wtw-data-prep2 today,
   through a 1 km buffer) or `"centre"` (cell centre inside; toolkit and
   erap-deer-code). No default in this building block: it changes which
-  cells an AOI gets, so callers choose. Replaces the hidden buffer.
-- `value`: what AOI cells hold. `"index"` (default): the cell number, in the
-  template when given (so cells link back to the national template), else in
-  the new raster. A number, such as `1`: that constant in every AOI cell
+  cells an AOI gets, so callers choose. Replaces the hidden buffer. Bounds
+  follow the same rule as polygons.
+- `value`: what AOI cells hold (ADR 0008). `"index"` (default): the terra
+  cell number (row by row from the top-left) in the template, so cells link
+  back to the template and to rij matrix columns; at a coarser resolution,
+  the cell number in the coarse grid; without a template, in the new
+  raster. `"template"`: the template's own values (for NAT_DATA,
+  `idx.tif`'s bottom-left numbering); needs a template at its own
+  resolution. A number, such as `1`: that constant in every AOI cell
   (wtw-data-prep2's `pu_1km.tif` holds 1s).
-- `crop`: return the AOI raster cropped to the AOI (default) or at the template's
-  full extent. The full-extent form is what the rij extraction needs, so
-  `align_raster()` is not needed for AOIs that start as polygons.
+- `drop_na`: with a template, `TRUE` (default) drops AOI cells where the
+  template is `NA`, as wtw-data-prep2 does; `FALSE` keeps them. At a coarser
+  resolution, a coarse cell has data if any of its template cells do.
+- Coarser cells: the coarse grid is the template aggregated by the factor,
+  from the template's top-left corner, and the `cells` rule applies at the
+  coarse resolution.
+- `crop`: return the AOI raster cropped to the AOI (default) or the
+  template's full grid (the full coarse grid at a coarser resolution). The
+  full-grid form is what the rij extraction needs, so `align_raster()` is
+  not needed for AOIs that start as polygons.
 - Crops the template to the AOI before rasterizing (`snap = "out"`), instead
   of rasterizing all 26.79 million national cells.
 - Returns a `SpatRaster` (`value` inside the AOI, `NA` outside).
+- As built (#14): an AOI whose bounding box misses the template is an error;
+  one that overlaps but gets no cells warns and returns an all-`NA` raster.
+  wtw-data-prep2's `create_1km_grid()` gives the same cells as
+  `cells = "touches"` on the fixtures (an equivalence test records them).
 
 `polygonize_raster(x, value = names(x), id = NULL)`
 
