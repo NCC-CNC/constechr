@@ -23,8 +23,8 @@ ships only small test fixtures.
 
 ## The core idea
 
-A tool that needs to, for example, align an area of interest to the national
-1 km grid or extract national data for it, installs a pinned version of
+A tool that needs to, for example, rasterize an area of interest onto the
+national 1 km template raster or extract national data for it, installs a pinned version of
 constechr and calls the function for that task instead of keeping its own
 copy. Each function documents the method it uses (CRS, area calculation,
 intersection rules), and tests with known answers hold that method in place.
@@ -37,7 +37,8 @@ produced it.
 The first release (v0.1.0). The exact function list comes from an inventory
 of the functions currently copied across ConsTech repos.
 
-1. Align an area of interest to the national 1 km grid.
+1. Rasterize an area of interest onto the national 1 km template raster,
+   and align rasters to it.
 2. Sparse-matrix (rij) helpers: clip to an area of interest, convert to
    raster.
 3. Extract national data for an area of interest.
@@ -77,13 +78,17 @@ See `docs/design/03_milestones.md` (if present) for the phased plan.
 5. **Light dependencies.** Few `Imports`; heavy or area-specific packages go
    in `Suggests` and are checked at run time, so tools install only what they
    use.
-6. **Easy to find.** Clear names, reference docs, and a Claude Code skill
+6. **Parameters, not hard-coded values.** Values such as buffers, column
+   names, file names and paths are arguments with documented defaults, so
+   each tool can use a function as it needs. Code moved in from other repos is
+   refactored to meet this, and split or rewritten where that helps.
+7. **Easy to find.** Clear names, reference docs, and a Claude Code skill
    that maps tasks to functions, so the existing function is found before a
    new one is written.
 
 ## Open questions
 
 - One package, or a family of smaller packages as the scope grows?
-- Grid alignment: terra only, or also a GDAL (`gdalwarp`) option?
+- Raster alignment: terra only, or also a GDAL (`gdalwarp`) option?
 - The area and intersection methods to standardize on (CRS, planar or
   spherical, partial cells, rounding).
