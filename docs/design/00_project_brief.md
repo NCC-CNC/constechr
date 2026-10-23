@@ -56,18 +56,18 @@ Building blocks (generic, with no use-case conventions):
 Use-case functions (one use case's conventions as overridable defaults over
 the building blocks):
 
-5. NAT_DATA: `natdata_template()` and `read_natdata_metadata()` (#22), and
+1. NAT_DATA: `natdata_template()` and `read_natdata_metadata()` (#22), and
    `create_1km_grid()` (#23).
-6. WTW projects: `create_wtw_planning_units()` (#24), `extract_wtw_natdata()`
+2. WTW projects: `create_wtw_planning_units()` (#24), `extract_wtw_natdata()`
    (#25), `create_wtw_project_folder()` and `wtw_project_folders()` (#26),
    and `create_dataprep_template()` and `dataprep_columns()` (#27).
 
 For all of them:
 
-7. Documentation and tests to ADR 0006, using small synthetic fixtures (#11),
+1. Documentation and tests to ADR 0006, using small synthetic fixtures (#11),
    including known-answer tests.
-8. The v0.1.0 release (#28).
-9. wtw-data-prep2 then installs v0.1.0 and uses these functions in place of
+2. The v0.1.0 release (#28).
+3. wtw-data-prep2 then installs v0.1.0 and uses these functions in place of
    its own copies, and imports wheretowork in place of its copied wheretowork
    code, with unchanged outputs (#29, work in wtw-data-prep2 after the
    release).
