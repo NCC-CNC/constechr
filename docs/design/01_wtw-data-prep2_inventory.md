@@ -52,7 +52,7 @@ Destination key:
 | `init_project_folder()` | `01_init_project_folder.R` | Wrapper: calls `create_project_folder()`. | prep2 (or dropped, calling the constechr function directly) |
 | `create_project_folder()` | `fct_create_project_folder.R` | Creates the WTW project folder tree (`aoi/`, `tifs/themes/...`, `tifs/weights/...`, `wtw/`, `dataprep/`) and a `dataprep.csv` template. | **constechr**, split in two: `create_wtw_project_folder()` (folders only; WTW-specific, but other tools that build WTW projects may need it) and `create_dataprep_template()` (the CSV) |
 | `aoi_to_grid()` | `02_aoi_to_1km_grid.R` | Wrapper: reads the AOI shapefile from `<project>/aoi/`, calls `create_1km_grid()`, writes `aoi.shp`, `pu_1km.shp`, `pu_1km.tif` (`INT1U`). | **constechr** use-case function `create_wtw_planning_units()`, built on the building blocks |
-| `create_1km_grid()` | `fct_create_1km_grid.R` | AOI (`sf`) to 1 km planning units on the national template raster: returns the reprojected AOI, cell polygons (`NCCID`, `PUID`) and a raster of 1s. | **constechr**, split into `read_aoi()`, `rasterize_aoi()` and `polygonize_raster()` |
+| `create_1km_grid()` | `fct_create_1km_grid.R` | AOI (`sf`) to 1 km planning units on the national template raster: returns the reprojected AOI, cell polygons (`NCCID`, `PUID`) and a raster of 1s. | **constechr**: split into the building blocks `read_aoi()`, `rasterize_aoi()` and `polygonize_raster()`, and kept as the NAT_DATA use-case function `create_1km_grid()` that combines them |
 | `natdata()` | `03_natdata.R` | Reads `WTW_NAT_PREP_METADATA.csv` (active rows), aligns the AOI raster to the national template, builds the AOI and index rij rows, then for each layer: TIF to rij (or reads a prebuilt `.rds` rij), clips to the AOI, writes a GeoTIFF to `tifs/<path>/<prefix><name>.tif`. | Split into **constechr** functions (`read_rij_matrix()`, `clip_rij_matrix()`, `rij_matrix_to_raster()`, `write_rasters()`, `extract_layers()`, `read_natdata_metadata()`); the WTW conventions (catalogue, `tifs/<subdir>` layout) go in the use-case function `extract_wtw_natdata()`; wtw-data-prep2 only chooses layers (see "Planned functions") |
 | `align_pu()` | `fct_align_pu.R` | Aligns the AOI planning-unit raster to the national template's full extent and size with `gdalUtilities::gdalwarp`; writes `<name>_align.tif` beside the input and returns it. | **constechr**, as `align_raster()` (exported; method per phase 6 ADR) |
 | `rij_clip()` | `utils_rij.R` | Binds data rij rows to the AOI and index rows, keeps columns inside the AOI and rows with any non-zero value. | **constechr**, as `clip_rij_matrix()` |
@@ -80,7 +80,7 @@ None of the functions moving to constechr has tests yet.
 
 ## Notes on the functions moving to constechr
 
-### `create_1km_grid()` (becomes `rasterize_aoi()`)
+### `create_1km_grid()` (building blocks plus a use-case function)
 
 Method, as written:
 
@@ -172,8 +172,10 @@ its own values):
 | `rij_to_raster()` | Output file name `<prefix><name>.tif` | Optional output folder and prefix; default returns rasters. |
 | `aoi_to_grid()` | Output data type `INT1U`; file names `aoi.shp`, `pu_1km.shp`, `pu_1km.tif` | Defaults of the use-case function `create_wtw_planning_units()` (arguments, overridable); the building blocks return objects. |
 
-Function names follow the same rule: no fixed values baked into names
-(`create_1km_grid()` becomes `rasterize_aoi()`).
+Building-block names follow the same rule: no fixed values baked into names
+(the generic part of `create_1km_grid()` becomes `rasterize_aoi()`). The
+use-case function keeps the name `create_1km_grid()`, because the 1 km
+national template is the convention it sets up.
 
 ### `rasterize_aoi()` use cases
 
@@ -410,17 +412,31 @@ NAT_DATA (shared national data, used by several tools):
 
 `read_natdata_metadata()` (above) also belongs to this layer.
 
+`create_1km_grid(aoi, natdata_dir, cells = "ADR", value = "NCCID",
+id = "PUID")`
+
+- The NAT_DATA 1 km planning units for an AOI, as a raster and polygons:
+  `read_aoi()` in the template's CRS, `rasterize_aoi()` on
+  `natdata_template()` (cell values are national cell numbers), then
+  `polygonize_raster(value = value, id = id)`.
+- `value` and `id` default to NAT_DATA's column names `NCCID` and `PUID`.
+- Returns the AOI, the raster and the polygons; writes nothing.
+- The same job as wtw-data-prep2's `create_1km_grid()`, erap-deer-code's
+  copy of it, and the toolkit's AOI step. The name keeps "grid" here
+  because the result includes the polygon grid, and "1km" because the 1 km
+  national template is the NAT_DATA convention it sets up.
+
 WTW projects (wtw-data-prep2, and other tools that build WTW projects):
 
 `create_wtw_planning_units(aoi, natdata_dir, project_dir = NULL,
 cells = "ADR")`
 
-- wtw-data-prep2's step 02 in one call: `read_aoi()`, then
-  `rasterize_aoi()` on `natdata_template()` with `value = 1`, then
-  `polygonize_raster(value = "NCCID", id = "PUID")`.
+- wtw-data-prep2's step 02 in one call: `create_1km_grid()`, then the WTW
+  files.
 - With `project_dir`, writes `aoi/aoi.shp`, `aoi/pu_1km.shp` and
-  `aoi/pu_1km.tif` (`INT1U`), as today; file names and data type are
-  arguments with these defaults. Returns the AOI raster and polygons.
+  `aoi/pu_1km.tif` (`INT1U`, value 1 in every AOI cell), as today; file
+  names and data type are arguments with these defaults. Returns what
+  `create_1km_grid()` returns.
 
 `extract_wtw_natdata(natdata_dir, project_dir, aoi_raster,
 layers = read_natdata_metadata(natdata_dir))`
