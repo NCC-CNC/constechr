@@ -23,20 +23,24 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Layout:
+# Layout (see ADR 0009):
 # - changes: says whether the PR touches anything besides docs and Markdown
 #   (always "yes" outside a PR).
 # - repo-hygiene: stack-neutral checks, always runs.
-# - style-lint: styler and lintr. Skipped on docs-only PRs.
 # - r-cmd-check: R CMD check (build, tests, examples, docs) on Ubuntu and
-#   Windows, plus a run without Suggests. Skipped on docs-only PRs.
-# - coverage: test coverage, reported in the log. Not a gate.
+#   Windows, plus a run without Suggests. Skipped on docs-only PRs. The
+#   Ubuntu "all" job also runs styler, lintr and test coverage, so each run
+#   sets up R on Ubuntu twice rather than four times. Coverage is reported
+#   in that job's log and is not a gate.
 # - checks: the one required status check. It passes when every job it needs
 #   passed or was skipped. Branch protection names only this job, so adding or
 #   renaming a job never means touching the protection rules.
 #
-# Every job times out after 10 minutes (normal runs take 2 to 3), so a stuck
-# runner fails fast; use "Re-run failed jobs" to get a fresh one.
+# Jobs that install R time out after 30 minutes, the others after 10. Normal
+# runs take 2 to 3 minutes, but r-lib/actions/setup-r installs system
+# packages with apt, and on a slow Ubuntu mirror that step alone can pass 10
+# minutes. A stuck runner still fails; use "Re-run failed jobs" to get a
+# fresh one.
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -63,49 +67,24 @@ jobs:
             echo "code=false" >> "$GITHUB_OUTPUT"
           fi
 
-  style-lint:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      LINTR_ERROR_ON_LINT: true
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: r-lib/actions/setup-r@v2
-        with:
-          use-public-rspm: true
-
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: any::lintr, any::styler, local::.
-          needs: lint
-
-      - name: Check formatting (styler)
-        run: styler::style_pkg(dry = "fail")
-        shell: Rscript {0}
-
-      - name: Lint (lintr)
-        run: lintr::lint_package()
-        shell: Rscript {0}
-
   r-cmd-check:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ${{ matrix.config.os }}
-    timeout-minutes: 10
+    timeout-minutes: 30
     name: r-cmd-check (${{ matrix.config.os }}, ${{ matrix.config.deps }})
     strategy:
       fail-fast: false
       matrix:
         config:
-          - {os: ubuntu-latest, deps: 'all'}
-          - {os: windows-latest, deps: 'all'}
+          # extras: this job also runs styler, lintr and coverage, so they
+          # need no R setup of their own. Only this job sets it.
+          - {os: ubuntu-latest, deps: 'all', extras: true}
+          - {os: windows-latest, deps: 'all', extras: false}
           # Without Suggests: optional packages must be checked for, not
-          # assumed. testthat is still installed to run the tests.
-          - {os: ubuntu-latest, deps: 'hard'}
+          # assumed. testthat is still installed to run the tests; lintr,
+          # styler and covr are not.
+          - {os: ubuntu-latest, deps: 'hard', extras: false}
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
@@ -123,43 +102,44 @@ jobs:
           use-public-rspm: true
 
       - uses: r-lib/actions/setup-r-dependencies@v2
+        id: deps
         with:
           dependencies: ${{ matrix.config.deps == 'hard' && '"hard"' || '"all"' }}
-          extra-packages: any::rcmdcheck, any::testthat
+          extra-packages: any::rcmdcheck, any::testthat${{ matrix.config.extras && ', any::lintr, any::styler, any::covr, local::.' || '' }}
           needs: check
 
+      # Style, lint and coverage run only in the extras job. Style and lint
+      # run before the check, so they see only the source tree, not its
+      # output in check/. Each later step still runs when an earlier one
+      # failed, so one run reports every problem. A style, lint or check
+      # failure fails this job, and so `checks`.
+      - name: Check formatting (styler)
+        if: matrix.config.extras && !cancelled() && steps.deps.outcome == 'success'
+        run: styler::style_pkg(dry = "fail")
+        shell: Rscript {0}
+
+      - name: Lint (lintr)
+        if: matrix.config.extras && !cancelled() && steps.deps.outcome == 'success'
+        env:
+          LINTR_ERROR_ON_LINT: true
+        run: lintr::lint_package()
+        shell: Rscript {0}
+
       - uses: r-lib/actions/check-r-package@v2
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
         with:
           error-on: '"warning"'
           upload-snapshots: true
 
-  coverage:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: r-lib/actions/setup-r@v2
-        with:
-          use-public-rspm: true
-
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: any::covr
-          needs: coverage
-
       # Report only: a failure here does not fail the job or the checks.
       - name: Test coverage
+        if: matrix.config.extras && !cancelled() && steps.deps.outcome == 'success'
         continue-on-error: true
         run: print(covr::package_coverage())
         shell: Rscript {0}
 
   checks:
-    needs: [changes, repo-hygiene, style-lint, r-cmd-check]
+    needs: [changes, repo-hygiene, r-cmd-check]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
