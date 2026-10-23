@@ -319,7 +319,51 @@ check_resolution <- function(resolution, call) {
   rep_len(as.numeric(resolution), 2)
 }
 
-#' The `template` argument as a one-layer SpatRaster
+#' A raster argument as a one-layer SpatRaster
+#'
+#' @param x A `SpatRaster` or a path to a raster file.
+#' @param arg The argument's name, for errors.
+#' @param call The environment that errors name.
+#' @return A `SpatRaster`; an error if it cannot be read or has more than one
+#'   layer.
+#' @noRd
+as_raster_layer <- function(x, arg, call) {
+  if (assertthat::is.string(x) && !is.na(x)) {
+    if (!file.exists(x)) {
+      cli::cli_abort(
+        "{.arg {arg}} must be an existing file; {.file {x}} does not
+        exist.",
+        call = call
+      )
+    }
+    x <- tryCatch(
+      suppressWarnings(terra::rast(x)),
+      error = function(e) NULL
+    )
+    if (is.null(x)) {
+      cli::cli_abort(
+        "{.arg {arg}} could not be opened as a raster.",
+        call = call
+      )
+    }
+  }
+  if (!inherits(x, "SpatRaster")) {
+    cli::cli_abort(
+      "{.arg {arg}} must be a {.cls SpatRaster} or a file path, not
+      {.obj_type_friendly {x}}.",
+      call = call
+    )
+  }
+  if (terra::nlyr(x) != 1) {
+    cli::cli_abort(
+      "{.arg {arg}} must have one layer, not {terra::nlyr(x)}.",
+      call = call
+    )
+  }
+  x
+}
+
+#' The `template` argument as a one-layer SpatRaster with a CRS
 #'
 #' @param template A `SpatRaster` or a path to a raster file.
 #' @param call The environment that errors name.
@@ -327,38 +371,7 @@ check_resolution <- function(resolution, call) {
 #'   more than one layer.
 #' @noRd
 as_template <- function(template, call) {
-  if (assertthat::is.string(template) && !is.na(template)) {
-    if (!file.exists(template)) {
-      cli::cli_abort(
-        "{.arg template} must be an existing file; {.file {template}} does
-        not exist.",
-        call = call
-      )
-    }
-    template <- tryCatch(
-      suppressWarnings(terra::rast(template)),
-      error = function(e) NULL
-    )
-    if (is.null(template)) {
-      cli::cli_abort(
-        "{.arg template} could not be opened as a raster.",
-        call = call
-      )
-    }
-  }
-  if (!inherits(template, "SpatRaster")) {
-    cli::cli_abort(
-      "{.arg template} must be a {.cls SpatRaster} or a file path, not
-      {.obj_type_friendly {template}}.",
-      call = call
-    )
-  }
-  if (terra::nlyr(template) != 1) {
-    cli::cli_abort(
-      "{.arg template} must have one layer, not {terra::nlyr(template)}.",
-      call = call
-    )
-  }
+  template <- as_raster_layer(template, "template", call)
   if (is.na(sf::st_crs(template))) {
     cli::cli_abort(
       "{.arg template} has no coordinate reference system.",
