@@ -54,7 +54,7 @@ Destination key:
 | `aoi_to_grid()` | `02_aoi_to_1km_grid.R` | Wrapper: reads the AOI shapefile from `<project>/aoi/`, calls `create_1km_grid()`, writes `aoi.shp`, `pu_1km.shp`, `pu_1km.tif` (`INT1U`). | **constechr** use-case function `create_wtw_planning_units()`, built on the building blocks |
 | `create_1km_grid()` | `fct_create_1km_grid.R` | AOI (`sf`) to 1 km planning units on the national template raster: returns the reprojected AOI, cell polygons (`NCCID`, `PUID`) and a raster of 1s. | **constechr**: split into the building blocks `read_aoi()`, `rasterize_aoi()` and `polygonize_raster()`, and kept as the NAT_DATA use-case function `create_1km_grid()` that combines them |
 | `natdata()` | `03_natdata.R` | Reads `WTW_NAT_PREP_METADATA.csv` (active rows), aligns the AOI raster to the national template, builds the AOI and index rij rows, then for each layer: TIF to rij (or reads a prebuilt `.rds` rij), clips to the AOI, writes a GeoTIFF to `tifs/<path>/<prefix><name>.tif`. | Split into **constechr** functions (`read_rij_matrix()`, `clip_rij_matrix()`, `rij_matrix_to_raster()`, `write_rasters()`, `extract_layers()`, `read_natdata_metadata()`); the WTW conventions (catalogue, `tifs/<subdir>` layout) go in the use-case function `extract_wtw_natdata()`; wtw-data-prep2 only chooses layers (see "Planned functions") |
-| `align_pu()` | `fct_align_pu.R` | Aligns the AOI planning-unit raster to the national template's full extent and size with `gdalUtilities::gdalwarp`; writes `<name>_align.tif` beside the input and returns it. | **constechr**, as `align_raster()` (exported; terra preferred, see issue #10) |
+| `align_pu()` | `fct_align_pu.R` | Aligns the AOI planning-unit raster to the national template's full extent and size with `gdalUtilities::gdalwarp`; writes `<name>_align.tif` beside the input and returns it. | **constechr**, as `align_raster()` (exported; terra only, ADR 0007) |
 | `rij_clip()` | `utils_rij.R` | Binds data rij rows to the AOI and index rows, keeps columns inside the AOI and rows with any non-zero value. | **constechr**, as `clip_rij_matrix()` |
 | `rij_to_raster()` | `utils_rij.R` | For each data row, fills a raster on the national template from the index row, rounds unless the output type is float, crops to the AOI extent and writes a GeoTIFF. | **constechr**, split into `rij_matrix_to_raster()` (build) and `write_rasters()` (write) |
 | `create_wtw_metadata()` | `04_metadata.R` | Builds `wtw-metadata.csv`: per GeoTIFF, looks up national prep and species metadata, derives legend type, values, colours, labels, units, goal. | prep2 |
@@ -140,8 +140,8 @@ Design points for constechr:
   because GDAL truncates floats cast to integers. This is a method choice that
   changes results, so it belongs in the documentation and tests.
 - Alignment uses `gdalwarp`; another tool does the same with
-  `terra::rasterize()` only. terra is preferred, provided it gives the same
-  output as `gdalwarp`; checked in issue #10.
+  `terra::rasterize()` only. constechr uses terra only: checked against
+  `gdalwarp` in issue #10 and recorded in ADR 0007.
 
 ### The Python toolbox
 
@@ -306,8 +306,8 @@ cells = "touches", value = "index", crop = TRUE)`
 
 ### Aligning rasters
 
-`align_raster(x, template, filename = NULL, method = "terra",
-resample = "near", datatype = NULL, overwrite = TRUE)`
+`align_raster(x, template, filename = NULL, resample = "near",
+datatype = NULL, overwrite = TRUE)`
 
 - From `align_pu()`.
 - `x`: any raster (`SpatRaster` or path), not only planning units: an AOI
@@ -315,9 +315,13 @@ resample = "near", datatype = NULL, overwrite = TRUE)`
   (erap-deer-code).
 - `filename`: `NULL` gives `<input>_align.tif` beside a file input, as today;
   an in-memory input needs a path or returns in memory.
-- `method`: `"gdalwarp"` (today; gdalUtilities in `Suggests`) or `"terra"`
-  (`terra::project()` onto the template). Default `"terra"`, provided it
-  gives the same output as `gdalwarp` (issue #10); otherwise decided there.
+- Method: terra only (`terra::project()` onto the template), with no
+  `gdalwarp` option and no gdalUtilities dependency (issue #10, ADR 0007).
+  It projects in memory, then writes, so cells outside the input's extent
+  are `NA` even for an input with no NoData value. The differences from
+  `align_pu()` (CRS label, sub-nanometre grid offsets, edge cells on
+  reprojection, 0 outside a no-NoData input) are intended changes for
+  `NEWS.md`.
 - `resample`: resampling method, today implicitly nearest neighbour.
 - Returns the aligned `SpatRaster`.
 

@@ -46,8 +46,7 @@ Building blocks (generic, with no use-case conventions):
 
 1. Areas of interest: `read_aoi()` (#13).
 2. AOI rasters: `rasterize_aoi()` (#14) and `polygonize_raster()` (#15).
-3. Aligning rasters: `align_raster()` (#16), with terra if it gives the same
-   output as `gdalwarp` (#10).
+3. Aligning rasters: `align_raster()` (#16), with terra only (ADR 0007).
 4. Extracting layers on a national template through rij matrices:
    `read_rij_matrix()` (#17), `clip_rij_matrix()` (#18),
    `rij_matrix_to_raster()` (#19), `write_rasters()` (#20) and
@@ -115,6 +114,5 @@ which wait on the area and intersection methods ADR (#30).
 ## Open questions
 
 - One package, or a family of smaller packages as the scope grows?
-- Raster alignment: terra only, or also a GDAL (`gdalwarp`) option?
 - The area and intersection methods to standardize on (CRS, planar or
   spherical, partial cells, rounding).
