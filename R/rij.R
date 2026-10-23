@@ -254,24 +254,272 @@ rij_from_rds <- function(x, template, call) {
 #'
 #' @param rij A `dgCMatrix`.
 #' @param call The environment that errors name.
+#' @param arg The argument errors name: `"x"` (the default) for a matrix
+#'   read from `x` by `read_rij_matrix()`, or the name of an argument that is
+#'   the matrix itself, such as `"rij"`.
 #' @return `rij`, invisibly; an error if its row names are missing, empty or
 #'   not unique.
 #' @noRd
-check_rij_rownames <- function(rij, call) {
+check_rij_rownames <- function(rij, call, arg = "x") {
+  what <- if (arg == "x") "the rij matrix from {.arg x}" else "{.arg {arg}}"
   names <- rownames(rij)
   if (is.null(names) || anyNA(names) || !all(nzchar(names))) {
     cli::cli_abort(
-      "Every row of the rij matrix from {.arg x} must have a name.",
+      paste("Every row of", what, "must have a name."),
       call = call
     )
   }
   duplicated <- unique(names[duplicated(names)])
   if (length(duplicated) > 0) {
     cli::cli_abort(
-      "The rij matrix from {.arg x} must have unique row names; repeated:
-      {.str {duplicated}}.",
+      paste(
+        "The row names of", what, "must be unique; repeated:",
+        "{.str {duplicated}}."
+      ),
       call = call
     )
   }
   invisible(rij)
+}
+
+#' Clip an rij matrix to an area of interest
+#'
+#' Keeps the columns of an rij matrix that fall in an area of interest
+#' (AOI), so national data read with [read_rij_matrix()] can be turned into
+#' rasters for the AOI only. An rij matrix is a sparse matrix of feature
+#' values: one row per feature (`i`), one column per template cell with data
+#' (`j`, a planning unit in prioritizr's terms), as made by
+#' [prioritizr::rij_matrix()]. By default, rows (features) with no values in
+#' the AOI are dropped, and a message names them.
+#'
+#' @param rij The rij matrix: a `Matrix::dgCMatrix` with unique row names and
+#'   one column per `template` cell with data, in terra's cell order, as
+#'   [read_rij_matrix()] returns.
+#' @param aoi_raster The AOI as a raster: a `SpatRaster` with one layer, or a
+#'   path to a raster file, on the template's grid (same CRS, resolution and
+#'   cell origin). Its extent may be the template's full extent or any part
+#'   of it, such as the cropped raster [rasterize_aoi()] returns. Every cell
+#'   that is not `NA` is in the AOI, whatever its value.
+#' @param template The template raster the rij matrix was built on: a
+#'   `SpatRaster` with one layer and a CRS, or a path to a raster file. Only
+#'   which of its cells have data (are not `NA`) is used, not its values.
+#' @param drop_empty A single logical. `TRUE` (the default) drops rows with
+#'   no values in the AOI (every value 0 or `NA`) and names them in a
+#'   message; wtw-data-prep2 dropped them silently. `FALSE` keeps every row.
+#'
+#' @section Method:
+#' - **AOI cells**: the cells of `aoi_raster` that are not `NA`, matched to
+#'   the template's cells by position on the shared grid (whole row and
+#'   column offsets from the template's top-left cell), with no resampling
+#'   or reprojection. AOI cells outside the template's extent, or where the
+#'   template is `NA`, have no column in `rij` and are left out.
+#' - **Columns**: the template's cells with data are counted in terra's cell
+#'   order (row by row from the top-left cell) to find each AOI cell's column
+#'   in `rij`; the template is read in blocks of rows, so a national template
+#'   is not held in memory whole. `rij` is subset to those columns, keeping
+#'   their order; nothing is bound to `rij` first, so a large matrix is not
+#'   copied whole.
+#' - **Rows** (`drop_empty = TRUE`): a row is kept if at least one of its
+#'   values in the AOI is neither 0 nor `NA`; negative values count. Kept
+#'   rows keep their order.
+#' - **Values** are not changed: no rounding, no areas.
+#'
+#' Method choices are recorded in ADR 0012.
+#'
+#' @return A sparse matrix (`Matrix::dgCMatrix`) with the kept rows of
+#'   `rij`, named, and one column per AOI cell with template data, in
+#'   terra's cell order, without column names. With no such cells it has no
+#'   columns (and, with `drop_empty = TRUE`, no rows).
+#'
+#' @family rij
+#' @seealso [rasterize_aoi()] to make `aoi_raster`.
+#' @export
+#'
+#' @examples
+#' template <- system.file("extdata", "template.tif", package = "constechr")
+#' aoi <- system.file("extdata", "aoi.gpkg", package = "constechr")
+#' rij <- read_rij_matrix(
+#'   system.file("extdata", "rij.rds", package = "constechr"),
+#'   template
+#' )
+#' dim(rij)
+#'
+#' # The AOI's cells on the template: cells 34 35 36 44 45 46 54 55 56
+#' aoi_raster <- rasterize_aoi(aoi, template, cells = "touches")
+#'
+#' # One column per AOI cell; sp_b has no values in the AOI, so it is dropped
+#' x <- clip_rij_matrix(rij, aoi_raster, template)
+#' as.matrix(x)
+#'
+#' # Keep every row
+#' dim(clip_rij_matrix(rij, aoi_raster, template, drop_empty = FALSE))
+clip_rij_matrix <- function(rij, aoi_raster, template, drop_empty = TRUE) {
+  call <- environment()
+  check_rij(rij, call)
+  aoi_raster <- as_raster_layer(aoi_raster, "aoi_raster", call)
+  template <- as_template(template, call)
+  check_flag(drop_empty, "drop_empty", call)
+  columns <- rij_aoi_columns(aoi_raster, template, call)
+  if (ncol(rij) != columns$n) {
+    cli::cli_abort(
+      c(
+        "{.arg rij} must have one column per {.arg template} cell with
+        data.",
+        "x" = "It has {ncol(rij)} column{?s}; the template has
+        {columns$n} cell{?s} with data."
+      ),
+      call = call
+    )
+  }
+  rij_clip_columns(rij, columns$j, drop_empty)
+}
+
+#' Check that an argument is an rij matrix with row names
+#'
+#' @param rij The value given.
+#' @param call The environment that errors name.
+#' @return `rij`, invisibly; an error if it is not a `dgCMatrix` or its row
+#'   names are missing, empty or repeated.
+#' @noRd
+check_rij <- function(rij, call) {
+  if (!inherits(rij, "dgCMatrix")) {
+    cli::cli_abort(
+      "{.arg rij} must be an rij matrix (a {.cls dgCMatrix}), not
+      {.obj_type_friendly {rij}}.",
+      call = call
+    )
+  }
+  check_rij_rownames(rij, call, arg = "rij")
+}
+
+#' The columns of an rij matrix that an AOI raster's cells fall in
+#'
+#' Worked out once per AOI and template, so a caller that clips many layers
+#' to the same AOI can reuse it with `rij_clip_columns()`.
+#'
+#' @param aoi_raster A one-layer `SpatRaster`.
+#' @param template A one-layer `SpatRaster` with a CRS.
+#' @param call The environment that errors name.
+#' @return A list: `j`, the rij column of each AOI cell with template data,
+#'   increasing; `cells`, those cells' terra cell numbers in the template;
+#'   `n`, the number of template cells with data (the rij matrix's column
+#'   count). An error if `aoi_raster` is not on the template's grid or does
+#'   not overlap it.
+#' @noRd
+rij_aoi_columns <- function(aoi_raster, template, call) {
+  offset <- grid_offset(aoi_raster, template, call)
+  local <- terra::cells(aoi_raster)
+  row <- terra::rowFromCell(aoi_raster, local) + offset[2]
+  col <- terra::colFromCell(aoi_raster, local) + offset[1]
+  inside <- row >= 1 & row <= terra::nrow(template) &
+    col >= 1 & col <= terra::ncol(template)
+  cells <- (row[inside] - 1) * terra::ncol(template) + col[inside]
+  columns <- template_columns(template, cells)
+  has_data <- !is.na(columns$j)
+  list(
+    j = columns$j[has_data],
+    cells = cells[has_data],
+    n = columns$n
+  )
+}
+
+#' Where an AOI raster sits on a template's grid
+#'
+#' @param x A one-layer `SpatRaster` (the `aoi_raster` argument).
+#' @param template A `SpatRaster` with a CRS.
+#' @param call The environment that errors name.
+#' @return The whole number of template columns and rows from the template's
+#'   top-left cell to `x`'s, as `c(col, row)`; an error if `x` has no CRS or
+#'   another CRS, resolution or cell origin, or does not overlap the
+#'   template.
+#' @noRd
+grid_offset <- function(x, template, call) {
+  res <- terra::res(template)
+  offset <- c(
+    (terra::xmin(x) - terra::xmin(template)) / res[1],
+    (terra::ymax(template) - terra::ymax(x)) / res[2]
+  )
+  tolerance <- 1e-6
+  same_grid <- !is.na(sf::st_crs(x)) &&
+    terra::same.crs(x, template) &&
+    all(abs(terra::res(x) - res) <= tolerance * res) &&
+    all(abs(offset - round(offset)) <= tolerance)
+  if (!same_grid) {
+    cli::cli_abort(
+      c(
+        "{.arg aoi_raster} must be on the {.arg template}'s grid (same CRS,
+        resolution and cell origin).",
+        "i" = "Make it with {.fn rasterize_aoi} on the template, or align it
+        with {.fn align_raster}."
+      ),
+      call = call
+    )
+  }
+  if (!extents_overlap(terra::ext(x), terra::ext(template))) {
+    cli::cli_abort(
+      "{.arg aoi_raster} does not overlap the {.arg template}.",
+      call = call
+    )
+  }
+  round(offset)
+}
+
+#' The rij columns of template cells
+#'
+#' Reads the template in blocks of rows (`terra::blocks()`) and counts its
+#' cells with data in terra's cell order.
+#'
+#' @param template A one-layer `SpatRaster`.
+#' @param cells Template cell numbers, increasing.
+#' @return A list: `j`, the rij column of each cell (its rank among the
+#'   template's cells with data), `NA` where the template is `NA`; `n`, the
+#'   number of template cells with data.
+#' @noRd
+template_columns <- function(template, cells) {
+  ncol <- terra::ncol(template)
+  j <- rep(NA_real_, length(cells))
+  before <- 0
+  blocks <- terra::blocks(template)
+  terra::readStart(template)
+  on.exit(terra::readStop(template))
+  for (b in seq_len(blocks$n)) {
+    first <- (blocks$row[b] - 1) * ncol
+    v <- terra::readValues(template, blocks$row[b], blocks$nrows[b], 1, ncol)
+    has_data <- !is.na(v)
+    here <- cells > first & cells <= first + length(v)
+    if (any(here)) {
+      local <- cells[here] - first
+      rank <- before + cumsum(has_data)[local]
+      rank[!has_data[local]] <- NA
+      j[here] <- rank
+    }
+    before <- before + sum(has_data)
+  }
+  list(j = j, n = before)
+}
+
+#' Keep given columns of an rij matrix, and optionally its non-empty rows
+#'
+#' @param rij A `dgCMatrix` with row names.
+#' @param j The columns to keep, increasing.
+#' @param drop_empty A single logical: drop the rows with no value other
+#'   than 0 or `NA` in the kept columns, and name them in a message.
+#' @return The clipped `dgCMatrix`.
+#' @noRd
+rij_clip_columns <- function(rij, j, drop_empty) {
+  x <- rij[, j, drop = FALSE]
+  if (!drop_empty) {
+    return(x)
+  }
+  values <- !is.na(x@x) & x@x != 0
+  keep <- seq_len(nrow(x)) %in% (x@i[values] + 1L)
+  dropped <- rownames(x)[!keep]
+  if (length(dropped) == 0) {
+    return(x)
+  }
+  cli::cli_inform(
+    "Dropped {length(dropped)} row{?s} of {.arg rij} with no values in the
+    AOI: {.val {dropped}}."
+  )
+  x[keep, , drop = FALSE]
 }

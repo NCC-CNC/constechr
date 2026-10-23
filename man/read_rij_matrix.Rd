@@ -90,5 +90,8 @@ if (requireNamespace("prioritizr", quietly = TRUE)) {
 }
 \seealso{
 \code{\link[=align_raster]{align_raster()}} to put a raster on the template's grid first.
+
+Other rij:
+\code{\link[=clip_rij_matrix]{clip_rij_matrix()}}
 }
 \concept{rij}

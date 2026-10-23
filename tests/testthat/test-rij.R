@@ -243,3 +243,294 @@ test_that("read_rij_matrix() checks a raster against the template", {
     read_rij_matrix(csv, template, type = "raster")
   })
 })
+
+# Tests for clip_rij_matrix(). The AOI cells come from the fixture table in
+# helper-fixtures.R (for example 34 35 36 44 45 46 54 55 56 for the inside
+# AOI under "touches"), and an AOI cell's rij column is its position among
+# the template's cells with data (rij_columns()): cell - 2 for cells 3 to
+# 10, cell - 4 from cell 13 on.
+
+test_that("clip_rij_matrix() keeps the AOI's cells and non-empty rows", {
+  template <- fixture_template()
+  aoi_raster <- rasterize_aoi(
+    fixture_aoi("inside"), template,
+    cells = "touches"
+  )
+  expect_message(
+    x <- clip_rij_matrix(fixture_rij(), aoi_raster, template),
+    "Dropped 1 row of `rij` with no values in the AOI: \"sp_b\".",
+    fixed = TRUE
+  )
+  expect_s4_class(x, "dgCMatrix")
+  expect_identical(dim(x), c(2L, 9L))
+  expect_identical(rownames(x), c("sp_a", "cover"))
+  expect_null(colnames(x))
+  # Columns are cells 34 35 36 44 45 46 54 55 56, in that order: sp_a is 1
+  # in 34 35 45 46 56, cover is 1.6 in 45.
+  expect_identical(x["sp_a", ], c(1, 1, 0, 0, 1, 1, 0, 0, 1))
+  expect_identical(x["cover", ], c(0, 0, 0, 0, 1.6, 0, 0, 0, 0))
+  expect_identical(
+    x,
+    fixture_rij()[
+      c("sp_a", "cover"),
+      rij_columns(c(34, 35, 36, 44, 45, 46, 54, 55, 56))
+    ]
+  )
+})
+
+test_that("drop_empty = FALSE keeps every row, without a message", {
+  template <- fixture_template()
+  aoi_raster <- rasterize_aoi(
+    fixture_aoi("inside"), template,
+    cells = "centre"
+  )
+  expect_no_message(
+    x <- clip_rij_matrix(
+      fixture_rij(), aoi_raster, template,
+      drop_empty = FALSE
+    )
+  )
+  expect_identical(
+    x,
+    fixture_rij()[, rij_columns(c(35, 36, 45, 46, 55, 56)), drop = FALSE]
+  )
+  expect_identical(x["sp_b", ], rep(0, 6))
+})
+
+test_that("clip_rij_matrix() matches wtw-data-prep2's rij_clip()", {
+  # wtw-data-prep2's natdata() (at 4e8333a) aligns pu_1km.tif (here
+  # fixture_pu()) to the template, builds rows "AOI" (the aligned raster)
+  # and "Idx" (terra cell numbers) with prioritizr::rij_matrix(), and
+  # rij_clip() binds them to the data rows, keeps the columns where "AOI" is
+  # > 0, then the rows whose sum is > 0. Its data rows on fixture_rij(),
+  # captured once with prioritizr 8.1.0, are below: values by "Idx" cell.
+  # For the single AOI, rij_clip() fails (its one column drops to a vector);
+  # clip_rij_matrix() returns the one column with no rows.
+  original <- list(
+    inside_touches = list(
+      cells = c(34, 35, 36, 44, 45, 46, 54, 55, 56),
+      rows = list(
+        sp_a = c(1, 1, 0, 0, 1, 1, 0, 0, 1),
+        cover = c(0, 0, 0, 0, 1.6, 0, 0, 0, 0)
+      )
+    ),
+    inside_centre = list(
+      cells = c(35, 36, 45, 46, 55, 56),
+      rows = list(sp_a = c(1, 0, 1, 1, 0, 1), cover = c(0, 0, 1.6, 0, 0, 0))
+    ),
+    edge_touches = list(
+      cells = c(78, 79, 80, 88, 89, 90),
+      rows = list(cover = c(0, 0, 0, 0, 2.2, 0))
+    ),
+    edge_centre = list(
+      cells = c(88, 89, 90),
+      rows = list(cover = c(0, 2.2, 0))
+    ),
+    straddle_touches = list(
+      cells = c(3, 13, 21, 22, 23),
+      rows = list(cover = c(0.4, 0, 0, 0, 0))
+    ),
+    straddle_centre = list(
+      cells = c(3, 13),
+      rows = list(cover = c(0.4, 0))
+    )
+  )
+  template <- fixture_template()
+  for (case in names(original)) {
+    parts <- strsplit(case, "_")[[1]]
+    # pu_1km.tif aligned to the template, as natdata() does.
+    pu <- align_raster(fixture_pu(parts[1], parts[2]), template)
+    x <- suppressMessages(clip_rij_matrix(fixture_rij(), pu, template))
+    rows <- original[[case]]$rows
+    expect_identical(as.matrix(x), do.call(rbind, rows), label = case)
+    # The columns are the "Idx" cells.
+    columns <- rij_columns(original[[case]]$cells)
+    expect_identical(
+      x, fixture_rij()[names(rows), columns, drop = FALSE],
+      label = case
+    )
+  }
+  pu <- align_raster(fixture_pu("single", "touches"), template)
+  x <- suppressMessages(clip_rij_matrix(fixture_rij(), pu, template))
+  expect_identical(dim(x), c(0L, 1L))
+})
+
+test_that("aoi_raster may be cropped, the full grid, past the edge or a file", {
+  template <- fixture_template()
+  expected <- fixture_rij()[, rij_columns(c(3, 13, 21, 22, 23)), drop = FALSE]
+  clip <- function(aoi_raster, template) {
+    clip_rij_matrix(fixture_rij(), aoi_raster, template, drop_empty = FALSE)
+  }
+  aoi <- fixture_aoi("straddle")
+  cropped <- rasterize_aoi(aoi, template, cells = "touches")
+  expect_identical(clip(cropped, template), expected)
+  full <- rasterize_aoi(aoi, template, cells = "touches", crop = FALSE)
+  expect_identical(clip(full, template), expected)
+  # fixture_pu() extends past the template's top-left corner; cells outside
+  # the template, and in its NA cells 1 2 11 12, have no column.
+  expect_identical(clip(fixture_pu("straddle"), template), expected)
+  # Paths to files, for aoi_raster and template.
+  expect_identical(
+    clip(
+      fixture_file(cropped, "aoi_raster", "INT4S"),
+      system.file("extdata", "template.tif", package = "constechr")
+    ),
+    expected
+  )
+})
+
+test_that("every non-NA AOI cell counts, whatever its value", {
+  template <- fixture_template()
+  aoi <- fixture_aoi("inside")
+  index <- rasterize_aoi(aoi, template, cells = "touches")
+  expected <- suppressMessages(
+    clip_rij_matrix(fixture_rij(), index, template)
+  )
+  # 0 and negative values are in the AOI (rij_clip() kept only values > 0).
+  for (value in c(0, -1)) {
+    aoi_raster <- rasterize_aoi(aoi, template, cells = "touches", value = value)
+    expect_identical(
+      suppressMessages(clip_rij_matrix(fixture_rij(), aoi_raster, template)),
+      expected,
+      label = value
+    )
+  }
+})
+
+test_that("rows with negative values are kept and NA-only rows dropped", {
+  template <- fixture_template()
+  aoi_raster <- rasterize_aoi(
+    fixture_aoi("single"), template,
+    cells = "touches"
+  )
+  # Cell 77 is column 73: "negative" is -2 there (and 5 outside the AOI),
+  # "na" is NA and "zero" holds a stored 0.
+  rij <- Matrix::sparseMatrix(
+    i = c(1, 1, 2, 3),
+    j = c(73, 74, 73, 73),
+    x = c(-2, 5, NA, 0),
+    dims = c(3, 96),
+    dimnames = list(c("negative", "na", "zero"), NULL)
+  )
+  expect_message(
+    x <- clip_rij_matrix(rij, aoi_raster, template),
+    "Dropped 2 rows of `rij` with no values in the AOI: \"na\" and \"zero\".",
+    fixed = TRUE
+  )
+  expect_identical(rownames(x), "negative")
+  expect_identical(as.matrix(x), matrix(-2, dimnames = list("negative", NULL)))
+})
+
+test_that("edge cases: no AOI cells with data, and one cell", {
+  template <- fixture_template()
+  # Cells 1 2 11 12 only, all NA in the template, kept with drop_na = FALSE.
+  bounds <- c(xmin = 1000000, ymin = 608000, xmax = 1002000, ymax = 610000)
+  aoi_raster <- rasterize_aoi(
+    bounds, template,
+    cells = "centre", drop_na = FALSE
+  )
+  expect_identical(terra::global(aoi_raster, "notNA")[[1]], 4)
+  expect_message(
+    x <- clip_rij_matrix(fixture_rij(), aoi_raster, template),
+    "Dropped 3 rows"
+  )
+  expect_identical(dim(x), c(0L, 0L))
+  x <- clip_rij_matrix(
+    fixture_rij(), aoi_raster, template,
+    drop_empty = FALSE
+  )
+  expect_identical(dim(x), c(3L, 0L))
+
+  # One cell, 45 (column 41): every feature has a value there but sp_b.
+  aoi_raster <- terra::rast(
+    nrows = 1, ncols = 1, xmin = 1004000, xmax = 1005000,
+    ymin = 605000, ymax = 606000, crs = fixture_crs(), vals = 1
+  )
+  x <- suppressMessages(clip_rij_matrix(fixture_rij(), aoi_raster, template))
+  expect_identical(
+    as.matrix(x),
+    matrix(c(1, 1.6), dimnames = list(c("sp_a", "cover"), NULL))
+  )
+})
+
+test_that("the template is read in blocks of rows", {
+  template <- fixture_file(fixture_template(), "template", "INT4S")
+  aoi_raster <- rasterize_aoi(fixture_aoi("edge"), template, cells = "touches")
+  steps <- terra::terraOptions(print = FALSE)$steps
+  terra::terraOptions(steps = 4)
+  on.exit(terra::terraOptions(steps = steps), add = TRUE)
+  expect_gt(terra::blocks(terra::rast(template))$n, 1)
+  x <- clip_rij_matrix(fixture_rij(), aoi_raster, template, drop_empty = FALSE)
+  expect_identical(
+    x,
+    fixture_rij()[, rij_columns(c(78, 79, 80, 88, 89, 90)), drop = FALSE]
+  )
+})
+
+test_that("clip_rij_matrix() checks its arguments", {
+  template <- fixture_template()
+  rij <- fixture_rij()
+  aoi_raster <- rasterize_aoi(
+    fixture_aoi("inside"), template,
+    cells = "touches"
+  )
+  expect_snapshot(error = TRUE, {
+    clip_rij_matrix(as.matrix(rij), aoi_raster, template)
+  })
+  expect_snapshot(error = TRUE, {
+    clip_rij_matrix(unname(rij), aoi_raster, template)
+  })
+  repeated <- rij
+  rownames(repeated) <- c("sp_a", "sp_a", "cover")
+  expect_snapshot(error = TRUE, {
+    clip_rij_matrix(repeated, aoi_raster, template)
+  })
+  expect_snapshot(error = TRUE, {
+    clip_rij_matrix(rij[, -1], aoi_raster, template)
+  })
+  expect_snapshot(error = TRUE, {
+    clip_rij_matrix(rij, 1, template)
+  })
+  expect_snapshot(error = TRUE, {
+    clip_rij_matrix(rij, c(aoi_raster, aoi_raster), template)
+  })
+  expect_snapshot(error = TRUE, {
+    clip_rij_matrix(rij, aoi_raster, "no-such-file.tif")
+  })
+  expect_snapshot(error = TRUE, {
+    clip_rij_matrix(rij, aoi_raster, template, drop_empty = NA)
+  })
+})
+
+test_that("clip_rij_matrix() checks aoi_raster against the template", {
+  template <- fixture_template()
+  rij <- fixture_rij()
+  aoi_raster <- rasterize_aoi(
+    fixture_aoi("inside"), template,
+    cells = "touches"
+  )
+  # Off the grid: half a cell over, coarser cells, another CRS, no CRS.
+  expect_snapshot(error = TRUE, {
+    clip_rij_matrix(rij, terra::shift(aoi_raster, 500, 0), template)
+  })
+  coarse <- rasterize_aoi(
+    fixture_aoi("inside"), template,
+    resolution = 2000, cells = "touches"
+  )
+  expect_snapshot(error = TRUE, {
+    clip_rij_matrix(rij, coarse, template)
+  })
+  utm <- terra::project(aoi_raster, "EPSG:32616", method = "near", res = 1000)
+  expect_snapshot(error = TRUE, {
+    clip_rij_matrix(rij, utm, template)
+  })
+  no_crs <- terra::deepcopy(aoi_raster)
+  terra::crs(no_crs) <- ""
+  expect_snapshot(error = TRUE, {
+    clip_rij_matrix(rij, no_crs, template)
+  })
+  # On the grid but wholly outside the template.
+  expect_snapshot(error = TRUE, {
+    clip_rij_matrix(rij, terra::shift(aoi_raster, 20000, 0), template)
+  })
+})
