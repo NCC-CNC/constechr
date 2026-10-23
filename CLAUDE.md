@@ -143,8 +143,10 @@ with full GitHub access in this repo (issues, labels, branches, commits,
 pushes, pull requests), as allowed by `.claude/settings.json`.
 
 1. Start of a session: read the latest handoff in `docs/handoffs/` (the last
-   file by name), then the open issues in the current milestone. Pick the next
-   issue whose dependencies are done.
+   file by name), then the current milestone's description. Its "Work order"
+   lists the issues in the order to do them; the next issue is the first
+   open one in that list. Work one issue per session, unless the owner asks
+   otherwise.
 2. One issue, one branch, one pull request:
    - branch `<issue number>-<short-slug>` from an up-to-date `main`;
    - run the local checks in "Commands" before pushing;
@@ -157,11 +159,16 @@ pushes, pull requests), as allowed by `.claude/settings.json`.
    issue (what, why, done criteria), not an addition to the open PR.
 5. A design decision that the issue needs (a default, a method) gets an ADR in
    the same PR, or its own issue labelled `decision` if it blocks others.
-6. End of a session: write a handoff (see "Session handoffs") and open it as
-   its own PR in the same session.
+6. End of a session: write a handoff (see "Session handoffs"). For a
+   one-issue session, commit the short handoff to the issue's own PR; for a
+   longer session, open it as its own PR.
 
 Never force-push, rewrite pushed history, or change repo settings without
 being asked.
+
+To start a session, the owner can say: "Work the next issue in constechr,
+following CLAUDE.md." That means: steps 1 to 6 above for one issue, then stop
+and report the PR.
 
 ## Where durable context lives
 
@@ -190,3 +197,8 @@ At the end of a session, write `docs/handoffs/<YYYY-MM-DD>_Handoff_vNN.md`
 - **Next actions**: numbered, as issue numbers in the order to pick them up,
   with why.
 - **Risks or decisions needed**: open questions that need the owner.
+
+A one-issue session writes a short handoff instead, a few lines under the same
+headings: the issue and its PR, anything learned that the PR does not say
+(surprises, gotchas, follow-up issues opened), and the next issue in the work
+order.
