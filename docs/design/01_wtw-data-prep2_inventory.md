@@ -355,6 +355,14 @@ datatype = NULL, overwrite = TRUE)`
   `NEWS.md`.
 - `resample`: resampling method, today implicitly nearest neighbour.
 - Returns the aligned `SpatRaster`.
+- As built (#16, ADR 0010): a `SpatRaster` read from a file and not changed
+  counts as a file input, like its path. `datatype = NULL` uses the input
+  file's data type; an in-memory input needs `datatype` to be written.
+  Values written as an integer type are rounded first (halves away from
+  zero), since GDAL would truncate them. An input whose extent misses the
+  template is an error. On the fixtures and the real mb_prairie AOI it gives
+  the same cells and values as `align_pu()` (an equivalence test records
+  the fixture outputs).
 
 ### Extracting layers on a national template (rij matrices)
 

@@ -1,5 +1,24 @@
-# constechr 0.0.0.9003
+# constechr 0.0.0.9004
 
+- New `align_raster()` puts any one-layer raster onto a template raster's
+  grid (CRS, extent, resolution) with `terra::project()` (#16). `filename =
+  NULL` writes `<input>_align.tif` beside a file input and keeps an
+  in-memory input in memory; `resample` sets the method (`"near"` by
+  default); `datatype = NULL` uses the input file's data type. Decisions in
+  ADR 0007 and ADR 0010. It replaces wtw-data-prep2's `align_pu()`
+  (`gdalUtilities::gdalwarp()`), which gives the same cells and values on the
+  test fixtures and on a real AOI on the national template. Intended changes
+  from `align_pu()`:
+  - the output carries the template's CRS (WKT), not gdalwarp's "unknown"
+    CRS label from a PROJ string;
+  - the grid is the template's exactly, not off by less than a nanometre;
+  - when reprojecting, a few cells at the input's edge can differ, because
+    terra transforms exactly where `gdalwarp` uses an approximate
+    transformer by default;
+  - cells outside an input with no NoData value are `NA`, not 0;
+  - values written as an integer type are rounded, not truncated, which
+    matters only for methods other than `"near"`;
+  - an input that does not overlap the template is an error.
 - New `polygonize_raster()` turns each cell of a one-layer raster that has
   a value into its own square polygon, as an `sf` layer (#15). `value`
   names the value column (default: the layer name) and `id` optionally adds

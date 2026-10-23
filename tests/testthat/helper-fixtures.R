@@ -168,6 +168,65 @@ fixture_aoi <- function(name = "inside") {
   )
 }
 
+# A planning-unit raster for an AOI, as wtw-data-prep2's `pu_1km.tif`: 1 in
+# the cells `fixture_aoi(name)` gets under `cells` ("touches" or "centre"),
+# NA elsewhere, on the template's grid cropped to the AOI (snapped out to
+# whole cells). The grid is extended 2 cells past the template first, so the
+# straddle AOI keeps its cells outside the template. Aligned to the template,
+# its 1s fall in the cells of the fixture table, before the template's NA
+# cells are dropped: for example 1 2 3 11 12 13 21 22 23 for straddle under
+# "touches". Needs terra and sf.
+fixture_pu <- function(name = "inside", cells = "touches") {
+  aoi <- terra::vect(fixture_aoi(name))
+  grid <- terra::extend(terra::rast(fixture_template()), 2)
+  grid <- terra::crop(grid, aoi, snap = "out")
+  x <- terra::rasterize(aoi, grid, field = 1, touches = cells == "touches")
+  names(x) <- "pu"
+  x
+}
+
+# The template reprojected to UTM zone 16N (EPSG:32616) at 1000 m, nearest
+# neighbour: an 11 x 11 raster of the template's cell numbers in another CRS,
+# for aligning back onto the template. Needs terra (and PROJ's database).
+fixture_template_utm <- function() {
+  terra::project(fixture_template(), "EPSG:32616", method = "near", res = 1000)
+}
+
+# Writes a fixture raster to `<name>.tif` in a new temporary folder and
+# returns the path, for functions that read or write files beside their
+# input. `...` goes to `terra::writeRaster()` (for example `NAflag = NA` for
+# a file with no NoData value). Needs terra.
+fixture_file <- function(x, name = names(x)[1], datatype = "INT1U", ...) {
+  dir <- tempfile("fixture")
+  dir.create(dir)
+  path <- file.path(dir, paste0(name, ".tif"))
+  terra::writeRaster(x, path, datatype = datatype, ...)
+  path
+}
+
+# The cell numbers and values of a raster's non-NA cells, as
+# list(cells, values). Needs terra.
+non_na_cells <- function(x) {
+  v <- terra::values(x, mat = FALSE)
+  list(cells = which(!is.na(v)), values = v[!is.na(v)])
+}
+
+# Whether a raster is on the template's grid (one layer, same extent and
+# resolution) and in its CRS. In memory it must also carry the template's
+# CRS text exactly; a GeoTIFF read back stores the CRS in its own form, so a
+# file is compared as a CRS (`terra::same.crs()`). Needs terra.
+on_template_grid <- function(x) {
+  template <- fixture_template()
+  same <- identical(dim(x), dim(template)) &&
+    identical(as.vector(terra::ext(x)), as.vector(terra::ext(template))) &&
+    identical(terra::res(x), terra::res(template)) &&
+    terra::same.crs(x, template)
+  if (same && terra::inMemory(x)) {
+    same <- identical(terra::crs(x), terra::crs(template))
+  }
+  same
+}
+
 # Feature values by cell (named by cell number); every other cell is 0.
 fixture_feature_values <- function() {
   list(
