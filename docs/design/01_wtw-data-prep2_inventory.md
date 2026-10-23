@@ -54,7 +54,7 @@ Destination key:
 | `aoi_to_grid()` | `02_aoi_to_1km_grid.R` | Wrapper: reads the AOI shapefile from `<project>/aoi/`, calls `create_1km_grid()`, writes `aoi.shp`, `pu_1km.shp`, `pu_1km.tif` (`INT1U`). | **constechr** use-case function `create_wtw_planning_units()`, built on the building blocks |
 | `create_1km_grid()` | `fct_create_1km_grid.R` | AOI (`sf`) to 1 km planning units on the national template raster: returns the reprojected AOI, cell polygons (`NCCID`, `PUID`) and a raster of 1s. | **constechr**: split into the building blocks `read_aoi()`, `rasterize_aoi()` and `polygonize_raster()`, and kept as the NAT_DATA use-case function `create_1km_grid()` that combines them |
 | `natdata()` | `03_natdata.R` | Reads `WTW_NAT_PREP_METADATA.csv` (active rows), aligns the AOI raster to the national template, builds the AOI and index rij rows, then for each layer: TIF to rij (or reads a prebuilt `.rds` rij), clips to the AOI, writes a GeoTIFF to `tifs/<path>/<prefix><name>.tif`. | Split into **constechr** functions (`read_rij_matrix()`, `clip_rij_matrix()`, `rij_matrix_to_raster()`, `write_rasters()`, `extract_layers()`, `read_natdata_metadata()`); the WTW conventions (catalogue, `tifs/<subdir>` layout) go in the use-case function `extract_wtw_natdata()`; wtw-data-prep2 only chooses layers (see "Planned functions") |
-| `align_pu()` | `fct_align_pu.R` | Aligns the AOI planning-unit raster to the national template's full extent and size with `gdalUtilities::gdalwarp`; writes `<name>_align.tif` beside the input and returns it. | **constechr**, as `align_raster()` (exported; method per phase 6 ADR) |
+| `align_pu()` | `fct_align_pu.R` | Aligns the AOI planning-unit raster to the national template's full extent and size with `gdalUtilities::gdalwarp`; writes `<name>_align.tif` beside the input and returns it. | **constechr**, as `align_raster()` (exported; terra preferred, see issue #10) |
 | `rij_clip()` | `utils_rij.R` | Binds data rij rows to the AOI and index rows, keeps columns inside the AOI and rows with any non-zero value. | **constechr**, as `clip_rij_matrix()` |
 | `rij_to_raster()` | `utils_rij.R` | For each data row, fills a raster on the national template from the index row, rounds unless the output type is float, crops to the AOI extent and writes a GeoTIFF. | **constechr**, split into `rij_matrix_to_raster()` (build) and `write_rasters()` (write) |
 | `create_wtw_metadata()` | `04_metadata.R` | Builds `wtw-metadata.csv`: per GeoTIFF, looks up national prep and species metadata, derives legend type, values, colours, labels, units, goal. | prep2 |
@@ -140,15 +140,16 @@ Design points for constechr:
   because GDAL truncates floats cast to integers. This is a method choice that
   changes results, so it belongs in the documentation and tests.
 - Alignment uses `gdalwarp`; another tool does the same with
-  `terra::rasterize()` only. Which to use, or both, is a phase 6 ADR.
+  `terra::rasterize()` only. terra is preferred, provided it gives the same
+  output as `gdalwarp`; checked in issue #10.
 
 ### The Python toolbox
 
 `wtw-utils/` converts regional data to planning units with statistics (sum,
 mean, area and so on) and units, using exactextract. These are the area and
 intersection calculations the ConsTech tools most need to agree on. They are
-Python, so they do not move into constechr, but the phase 6 ADR on area and
-intersection methods should take their methods into account, and R
+Python, so they do not move into constechr, but the ADR on area and
+intersection methods (issue #30) should take their methods into account, and R
 equivalents (for example with exactextractr) are candidates for a later
 constechr release.
 
@@ -210,7 +211,7 @@ Design sketch (provisional):
   index when there is one.
 
 AOI rasters without the national template cannot use the national 1 km data
-directly. To settle in the design check and the phase 6 alignment ADR.
+directly.
 
 ## Planned functions
 
@@ -221,7 +222,9 @@ made general; and the functions support the wider uses seen in other ConsTech
 repos (opportunity-screening-toolkit, conservation-profiles, erap-deer-code,
 natdata-to-aoi, wtw-data-clean; wtw-data-prep2-batch has no code yet).
 
-Signatures are sketches. Defaults marked "ADR" are settled in phase 6.
+Signatures are sketches. Method choices are parameters; where a building
+block leaves one without a default, callers choose, and use-case functions
+set the convention.
 
 The functions come in two layers:
 
@@ -270,7 +273,8 @@ cells = "touches", value = "index", crop = TRUE)`
   otherwise.
 - `cells`: `"touches"` (every cell the AOI touches; wtw-data-prep2 today,
   through a 1 km buffer) or `"centre"` (cell centre inside; toolkit and
-  erap-deer-code). Default: ADR. Replaces the hidden buffer.
+  erap-deer-code). No default in this building block: it changes which
+  cells an AOI gets, so callers choose. Replaces the hidden buffer.
 - `value`: what AOI cells hold. `"index"` (default): the cell number, in the
   template when given (so cells link back to the national template), else in
   the new raster. A number, such as `1`: that constant in every AOI cell
@@ -302,7 +306,7 @@ cells = "touches", value = "index", crop = TRUE)`
 
 ### Aligning rasters
 
-`align_raster(x, template, filename = NULL, method = "ADR",
+`align_raster(x, template, filename = NULL, method = "terra",
 resample = "near", datatype = NULL, overwrite = TRUE)`
 
 - From `align_pu()`.
@@ -312,7 +316,8 @@ resample = "near", datatype = NULL, overwrite = TRUE)`
 - `filename`: `NULL` gives `<input>_align.tif` beside a file input, as today;
   an in-memory input needs a path or returns in memory.
 - `method`: `"gdalwarp"` (today; gdalUtilities in `Suggests`) or `"terra"`
-  (`terra::project()` onto the template). Default: ADR.
+  (`terra::project()` onto the template). Default `"terra"`, provided it
+  gives the same output as `gdalwarp` (issue #10); otherwise decided there.
 - `resample`: resampling method, today implicitly nearest neighbour.
 - Returns the aligned `SpatRaster`.
 
@@ -361,7 +366,7 @@ multiband = FALSE, overwrite = TRUE)`
   file (`multiband = TRUE`, the toolkit's choice).
 - `round`: `NULL` rounds when `datatype` is an integer type (wtw-data-prep2
   today); `TRUE` or `FALSE` overrides. Other repos do not round, so this is a
-  method choice to document (ADR).
+  method choice, documented in the function's Method section.
 - Returns the paths written.
 
 `extract_layers(layers, aoi_raster, template, dir = NULL, prefix = "",
@@ -412,7 +417,7 @@ NAT_DATA (shared national data, used by several tools):
 
 `read_natdata_metadata()` (above) also belongs to this layer.
 
-`create_1km_grid(aoi, natdata_dir, cells = "ADR", value = "NCCID",
+`create_1km_grid(aoi, natdata_dir, cells = "touches", value = "NCCID",
 id = "PUID")`
 
 - The NAT_DATA 1 km planning units for an AOI, as a raster and polygons:
@@ -429,7 +434,7 @@ id = "PUID")`
 WTW projects (wtw-data-prep2, and other tools that build WTW projects):
 
 `create_wtw_planning_units(aoi, natdata_dir, project_dir = NULL,
-cells = "ADR")`
+cells = "touches")`
 
 - wtw-data-prep2's step 02 in one call: `create_1km_grid()`, then the WTW
   files.
