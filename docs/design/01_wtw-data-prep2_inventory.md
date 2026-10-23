@@ -398,6 +398,15 @@ change from wtw-data-prep2's (`ncc_1km` to `template`, `ncc_1km_idx` to
 - Uses the toolkit's column subset against a precomputed AOI mask instead of
   `rbind()` with `"AOI"` and `"Idx"` rows, which avoids copying very large
   matrices. The row-name convention disappears from the interface.
+- As built (#18, ADR 0012): AOI cells are those of `aoi_raster` that are
+  not `NA`, whatever their value; `aoi_raster` must be on the template's
+  grid but may be cropped, the full grid or reach past the template's edge.
+  A row is kept if any value in the AOI is neither 0 nor `NA`, and dropped
+  rows are named in a message. Columns keep terra's cell order, without
+  names. Internal helpers work out the AOI's columns once
+  (`rij_aoi_columns()`) and clip each layer (`rij_clip_columns()`), for
+  `extract_layers()`. On the fixtures and the mb_prairie AOI with
+  NAT_DATA_20261009 it gives the same matrices as `rij_clip()`'s data rows.
 
 `rij_matrix_to_raster(rij, template, aoi_raster)`
 

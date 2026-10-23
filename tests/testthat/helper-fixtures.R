@@ -253,6 +253,13 @@ fixture_features <- function() {
   terra::rast(layers)
 }
 
+# The rij columns of template cells: each cell's position among the
+# template's cells with data (cell - 2 for cells 3 to 10, cell - 4 from cell
+# 13 on), `NA` for the template's NA cells.
+rij_columns <- function(cells) {
+  match(cells, setdiff(seq_len(100), fixture_na_cells()))
+}
+
 # The features as an rij matrix (a `dgCMatrix`): one row per feature, one
 # column per non-NA template cell in cell order. Needs Matrix.
 fixture_rij <- function() {

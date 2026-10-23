@@ -1,5 +1,17 @@
-# constechr 0.0.0.9005
+# constechr 0.0.0.9006
 
+- New `clip_rij_matrix()` keeps the columns of an rij matrix that fall in
+  an AOI raster on the template's grid, and by default drops the rows with
+  no values there, naming them in a message (#18). Decisions in ADR 0012. It
+  replaces wtw-data-prep2's `rij_clip()`, without the `"AOI"` and `"Idx"`
+  rows, and gives the same matrices as its data rows on the test fixtures
+  and on NAT_DATA layers. Intended changes from that code: every AOI cell
+  that is not `NA` counts (not only values above 0), a row is kept if any
+  value in the AOI is not 0 (not if its sum is above 0, which dropped
+  negative values), an AOI of one cell works, dropped rows are reported, and
+  an AOI raster off the template's grid is an error.
+- The error for repeated row names in `read_rij_matrix()` now reads "The
+  row names of the rij matrix from `x` must be unique".
 - New `read_rij_matrix()` reads one data layer as an rij matrix on a
   template: one row per feature, one column per template cell with data
   (#17). A raster on the template's grid (a GeoTIFF path or a `SpatRaster`)
