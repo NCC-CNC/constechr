@@ -129,7 +129,8 @@ job. `CONTRIBUTING.md` Setup should match.
   in a building block.
 - Every exported function has roxygen docs (including its method), an
   example, and tests, including a known-answer test where it computes a
-  result.
+  result. Follow `docs/decisions/0006-documentation-and-testing-standards.md`
+  for what the docs and tests must contain.
 - A change that alters a function's results or arguments gets a `NEWS.md`
   entry and a version bump. Deprecate before removing or renaming.
 
