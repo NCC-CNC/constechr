@@ -11,8 +11,8 @@ constechr
 
 constechr (Conservation Technology R) is a shared R package of the functions
 ConsTech apps and pipelines use to prepare and extract conservation data, such
-as aligning an area of interest to the national 1 km grid or extracting
-national data for it. It exists so every ConsTech R tool calls the same
+as rasterizing an area of interest onto the national 1 km template raster
+or extracting national data for it. It exists so every ConsTech R tool calls the same
 function for the same task, and results are consistent and repeatable across
 tools. Tools install a tagged version and call these functions instead of
 keeping their own copies.
@@ -23,10 +23,11 @@ full brief.
 
 ## Project status
 
-Pre-build: the brief is written; the package skeleton and CI come next. The
-next milestone is v0.1.0: grid alignment, sparse-matrix (rij) helpers and
-national data extraction, with tests, used by wtw-data-prep2 in place of its
-own copies. Open GitHub issues are the live task tracker.
+Pre-build: the brief, ADRs, package skeleton, CI and auto-merge are in
+place, and `docs/design/01_wtw-data-prep2_inventory.md` lists the planned
+functions. The next milestone is v0.1.0: rasterizing and aligning AOIs, rij
+matrix helpers and national data extraction, with tests, used by
+wtw-data-prep2 in place of its own copies. Open GitHub issues are the live task tracker.
 
 ## Scope
 
@@ -116,6 +117,16 @@ job. `CONTRIBUTING.md` Setup should match.
 - Before writing a new function, check whether constechr or one of its
   dependencies already does the job; extend an existing function rather than
   add a near-duplicate.
+- Code moved in from other repos is refactored, not copied as is: add,
+  replace, split or merge functions as needed. No hard-coded values in
+  package functions: make them arguments, with documented defaults where a
+  sensible one exists. Output file paths are arguments too, with a
+  documented default where one makes sense.
+- Two layers: generic building blocks with no use-case conventions, and
+  use-case functions (named for their use case, such as `natdata_` or
+  `_wtw_`) that call the building blocks with that use case's conventions
+  as overridable defaults. Put each convention in one use-case function, not
+  in a building block.
 - Every exported function has roxygen docs (including its method), an
   example, and tests, including a known-answer test where it computes a
   result.
