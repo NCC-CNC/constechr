@@ -86,6 +86,7 @@ dim(clip_rij_matrix(rij, aoi_raster, template, drop_empty = FALSE))
 \code{\link[=rasterize_aoi]{rasterize_aoi()}} to make \code{aoi_raster}.
 
 Other rij:
-\code{\link[=read_rij_matrix]{read_rij_matrix()}}
+\code{\link[=read_rij_matrix]{read_rij_matrix()}},
+\code{\link[=rij_matrix_to_raster]{rij_matrix_to_raster()}}
 }
 \concept{rij}
