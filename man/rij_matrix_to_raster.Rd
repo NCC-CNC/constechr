@@ -85,6 +85,7 @@ terra::values(r)
 
 Other rij:
 \code{\link[=clip_rij_matrix]{clip_rij_matrix()}},
+\code{\link[=extract_layers]{extract_layers()}},
 \code{\link[=read_rij_matrix]{read_rij_matrix()}}
 }
 \concept{rij}

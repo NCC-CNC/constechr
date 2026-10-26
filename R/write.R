@@ -267,7 +267,16 @@ source_stem <- function(x) {
   if (any(terra::inMemory(x)) || length(sources) != 1 || !nzchar(sources)) {
     return(NULL)
   }
-  sub("\\.[^.]*$", "", basename(sources))
+  file_stem(sources)
+}
+
+#' File names without their folder and last extension
+#'
+#' @param path File paths.
+#' @return The names, such as `Forest_ha` for `data/Forest_ha.tif`.
+#' @noRd
+file_stem <- function(path) {
+  sub("\\.[^.]*$", "", basename(path))
 }
 
 #' Write a raster to a file, rounding before an integer data type

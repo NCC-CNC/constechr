@@ -93,6 +93,7 @@ if (requireNamespace("prioritizr", quietly = TRUE)) {
 
 Other rij:
 \code{\link[=clip_rij_matrix]{clip_rij_matrix()}},
+\code{\link[=extract_layers]{extract_layers()}},
 \code{\link[=rij_matrix_to_raster]{rij_matrix_to_raster()}}
 }
 \concept{rij}

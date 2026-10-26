@@ -1,5 +1,24 @@
-# constechr 0.0.0.9008
+# constechr 0.0.0.9009
 
+- New `extract_layers()` extracts many data layers on a template for an AOI
+  (#21): each layer (a GeoTIFF on the template or an `.rds` rij matrix) is
+  read, clipped to the AOI and rebuilt as rasters on the AOI raster's
+  extent, then returned in memory or, with `dir`, written to
+  `<dir>/<subdir>/<prefix><feature>.tif` (or one multi-band
+  `<prefix><layer file name>.tif` per layer with `multiband = TRUE`).
+  `layers` is a vector of paths or a table with `path` and optional
+  `prefix`, `datatype`, `subdir` and `type` columns that override the
+  arguments per layer. Missing files, unknown types, rasters off the grid,
+  missing data types and clashing output files are found before any layer
+  is read; empty features and layers are dropped and named in messages; an
+  optional `progress(i, n, layer)` callback reports progress. Decisions in
+  ADR 0015. It replaces the loop in wtw-data-prep2's `natdata()` and writes
+  the same files on the test fixtures and on NAT_DATA layers. Intended
+  changes from that code: checks before extracting, messages for dropped
+  features and skipped layers, errors that name the layer, and output
+  folders created as needed.
+- `rij_matrix_to_raster()` now builds its rasters through the same internal
+  helpers as `extract_layers()`; its results are unchanged.
 - New `write_rasters()` writes the layers of a raster to files: one GeoTIFF
   per layer, `<dir>/<prefix><layer name>.tif`, or all layers to one
   multi-band file, `filename` or, for a raster read from one file,

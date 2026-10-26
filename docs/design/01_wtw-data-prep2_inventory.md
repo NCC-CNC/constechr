@@ -457,7 +457,8 @@ multiband = FALSE, filename = NULL, overwrite = TRUE)`
   NAT_DATA_20261009 it writes the same files as `rij_to_raster()`.
 
 `extract_layers(layers, aoi_raster, template, dir = NULL, prefix = "",
-datatype = NULL, round_int = TRUE, progress = NULL)`
+datatype = NULL, round_int = TRUE, multiband = FALSE, drop_empty = TRUE,
+overwrite = TRUE, progress = NULL)`
 
 - The wrapper: `read_rij_matrix()`, `clip_rij_matrix()`, `rij_matrix_to_raster()`, then
   `write_rasters()` when `dir` is given (else returns the rasters).
@@ -478,6 +479,20 @@ datatype = NULL, round_int = TRUE, progress = NULL)`
   GeoTIFFs this way).
 - `progress`: optional callback `(i, n, layer)` (the toolkit's); frees memory
   between layers.
+- As built (#21, ADR 0015): `multiband`, `drop_empty` and `overwrite` are
+  passed through to the functions it calls. The `layers` table's optional
+  `prefix`, `datatype`, `subdir` and `type` columns override the arguments
+  per layer (`NA` uses the argument; other columns are ignored). Before any
+  layer is read, it checks for missing files, unknown types, rasters off
+  the grid and missing or invalid data types, and for output files that
+  clash, are a layer's input or exist with `overwrite = FALSE` (those that
+  can be named from raster headers); an `.rds` layer's files are checked
+  just before it is written. A failing layer stops the call with an error
+  naming it, keeping earlier layers' files. Layers with no values in the
+  AOI are skipped with a message. Returns a list of `SpatRaster`s named
+  after the layers' file stems, or the paths written. On the fixtures and
+  the mb_prairie AOI with NAT_DATA_20261009 (`CPCAD`, `eccc_ch.rds` and a
+  grassland layer) it writes the same files as `natdata()`.
 
 `read_natdata_metadata(natdata_dir, file = "WTW_NAT_PREP_METADATA.csv",
 active_only = TRUE)`

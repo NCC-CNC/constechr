@@ -303,3 +303,25 @@ layer_values <- function(x) {
     names(x)
   )
 }
+
+# Layer files for extract_layers(), written to a new temporary folder whose
+# path is returned, so tests can use the file names alone (and error
+# snapshots show the same paths on every system): `features.rds`
+# (`fixture_rij()`), `cover.tif` (the cover feature, one layer, FLT4S) and
+# `features.tif` (`fixture_features()`, three layers sp_a, sp_b and cover,
+# FLT4S). Needs terra and Matrix.
+fixture_layers_dir <- function() {
+  dir <- tempfile("layers")
+  dir.create(dir)
+  saveRDS(fixture_rij(), file.path(dir, "features.rds"))
+  features <- fixture_features()
+  terra::writeRaster(
+    features[["cover"]], file.path(dir, "cover.tif"),
+    datatype = "FLT4S"
+  )
+  terra::writeRaster(
+    features, file.path(dir, "features.tif"),
+    datatype = "FLT4S"
+  )
+  dir
+}
