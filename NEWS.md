@@ -1,5 +1,15 @@
-# constechr 0.0.0.9006
+# constechr 0.0.0.9007
 
+- New `rij_matrix_to_raster()` turns the rows of an rij matrix clipped to
+  an AOI back into rasters on the template's grid, one layer per row,
+  cropped to the AOI raster's extent and held in memory (#19). Decisions in
+  ADR 0013. It is the building half of wtw-data-prep2's `rij_to_raster()`,
+  and gives the same rasters before rounding and writing on the test
+  fixtures and on NAT_DATA layers. Intended changes from that code: values
+  are not rounded and no files are written (that moves to
+  `write_rasters()`), an rij matrix with no rows is an error instead of
+  returning `NULL`, and the national template is not copied in memory for
+  each layer.
 - New `clip_rij_matrix()` keeps the columns of an rij matrix that fall in
   an AOI raster on the template's grid, and by default drops the rows with
   no values there, naming them in a message (#18). Decisions in ADR 0012. It

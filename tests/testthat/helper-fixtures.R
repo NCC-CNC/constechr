@@ -275,3 +275,13 @@ fixture_rij <- function() {
     dimnames = list(names(values), NULL)
   )
 }
+
+# The values of each layer of a raster, in terra's cell order, as a list
+# named by layer. Needs terra.
+layer_values <- function(x) {
+  v <- terra::values(x, mat = TRUE)
+  stats::setNames(
+    lapply(seq_len(ncol(v)), function(i) unname(v[, i])),
+    names(x)
+  )
+}

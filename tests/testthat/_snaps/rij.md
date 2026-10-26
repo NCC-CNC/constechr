@@ -240,3 +240,71 @@
       Error in `clip_rij_matrix()`:
       ! `aoi_raster` does not overlap the `template`.
 
+# rij_matrix_to_raster() checks its arguments
+
+    Code
+      rij_matrix_to_raster(as.matrix(rij), template, aoi_raster)
+    Condition
+      Error in `rij_matrix_to_raster()`:
+      ! `rij` must be an rij matrix (a <dgCMatrix>), not a double matrix.
+
+---
+
+    Code
+      rij_matrix_to_raster(unname(rij), template, aoi_raster)
+    Condition
+      Error in `rij_matrix_to_raster()`:
+      ! Every row of `rij` must have a name.
+
+---
+
+    Code
+      rij_matrix_to_raster(rij[0, ], template, aoi_raster)
+    Condition
+      Error in `rij_matrix_to_raster()`:
+      ! `rij` must have at least one row, for the raster's layers.
+      i A raster cannot have no layers.
+
+---
+
+    Code
+      rij_matrix_to_raster(fixture_rij(), template, aoi_raster)
+    Condition
+      Error in `rij_matrix_to_raster()`:
+      ! `rij` must have one column per `aoi_raster` cell with `template` data.
+      x It has 96 columns; `aoi_raster` has 9 cells with template data.
+      i Clip it first with `clip_rij_matrix()`.
+
+---
+
+    Code
+      rij_matrix_to_raster(rij, "no-such-file.tif", aoi_raster)
+    Condition
+      Error in `rij_matrix_to_raster()`:
+      ! `template` must be an existing file; 'no-such-file.tif' does not exist.
+
+---
+
+    Code
+      rij_matrix_to_raster(rij, template, 1)
+    Condition
+      Error in `rij_matrix_to_raster()`:
+      ! `aoi_raster` must be a <SpatRaster> or a file path, not a number.
+
+---
+
+    Code
+      rij_matrix_to_raster(rij, template, terra::shift(aoi_raster, 500, 0))
+    Condition
+      Error in `rij_matrix_to_raster()`:
+      ! `aoi_raster` must be on the `template`'s grid (same CRS, resolution and cell origin).
+      i Make it with `rasterize_aoi()` on the template, or align it with `align_raster()`.
+
+---
+
+    Code
+      rij_matrix_to_raster(rij, template, terra::shift(aoi_raster, 20000, 0))
+    Condition
+      Error in `rij_matrix_to_raster()`:
+      ! `aoi_raster` does not overlap the `template`.
+

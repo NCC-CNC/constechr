@@ -412,6 +412,14 @@ change from wtw-data-prep2's (`ncc_1km` to `template`, `ncc_1km_idx` to
 
 - From `rij_to_raster()`, building only: returns a multi-layer `SpatRaster`
   (one layer per row) cropped to the AOI raster's extent. Writing is separate.
+- As built (#19, ADR 0013): `rij` is the matrix `clip_rij_matrix()`
+  returns for the same `aoi_raster` and `template` (one column per AOI cell
+  with template data); layers are named after its rows. A layer holds its
+  row's values in those cells, 0 where none is stored and `NA` elsewhere,
+  as doubles, not rounded. The extent is `aoi_raster`'s, cut to the
+  template. An `rij` with no rows is an error (terra has no raster without
+  layers). On the fixtures and the mb_prairie AOI with NAT_DATA_20261009 it
+  gives the same rasters as `rij_to_raster()` before rounding and writing.
 
 `write_rasters(x, dir, prefix = "", datatype = NULL, round = NULL,
 multiband = FALSE, overwrite = TRUE)`

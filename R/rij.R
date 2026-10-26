@@ -523,3 +523,109 @@ rij_clip_columns <- function(rij, j, drop_empty) {
   )
   x[keep, , drop = FALSE]
 }
+
+#' Rebuild rasters from an rij matrix
+#'
+#' Turns the rows of an rij matrix clipped to an area of interest (AOI) back
+#' into rasters on the template's grid, one layer per row, cropped to the AOI
+#' raster's extent. An rij matrix is a sparse matrix of feature values: one
+#' row per feature (`i`), one column per template cell with data (`j`, a
+#' planning unit in prioritizr's terms), as made by
+#' [prioritizr::rij_matrix()]. Use it after [clip_rij_matrix()] to get the
+#' AOI's national data as rasters; it builds them in memory and writes
+#' nothing.
+#'
+#' @param rij The rij matrix clipped to the AOI: a `Matrix::dgCMatrix` with
+#'   at least one row, unique row names, and one column per AOI cell with
+#'   template data, in terra's cell order, as [clip_rij_matrix()] returns
+#'   for the same `aoi_raster` and `template`.
+#' @param template The template raster the rij matrix was built on: a
+#'   `SpatRaster` with one layer and a CRS, or a path to a raster file. It
+#'   sets the output's grid and CRS; only which of its cells have data (are
+#'   not `NA`) is used, not its values.
+#' @param aoi_raster The AOI as a raster, as given to [clip_rij_matrix()]: a
+#'   `SpatRaster` with one layer, or a path to a raster file, on the
+#'   template's grid (same CRS, resolution and cell origin). Every cell that
+#'   is not `NA` is in the AOI, whatever its value. Its extent sets the
+#'   output's extent.
+#'
+#' @section Method:
+#' - **Grid**: the template's grid (CRS, resolution and cell origin) cropped
+#'   to `aoi_raster`'s extent; where `aoi_raster` reaches past the
+#'   template's edge, to the part inside the template. No resampling or
+#'   reprojection.
+#' - **Cells**: the AOI cells with template data are worked out from
+#'   `aoi_raster` and `template` as in [clip_rij_matrix()] (the cells of
+#'   `aoi_raster` that are not `NA`, where the template is not `NA`, in
+#'   terra's cell order), and column `j` of `rij` fills the `j`-th of them.
+#'   The template is read in blocks of rows, so a national template is not
+#'   held in memory whole.
+#' - **Values**: each layer holds its row's values in those cells, 0 where
+#'   the row stores no value, and `NA` in every other cell (outside the AOI,
+#'   or where the template is `NA`). Values are kept as they are: doubles,
+#'   not rounded and no areas; rounding for an integer file type is a choice
+#'   made when writing.
+#' - **Layer names**: the row names of `rij`.
+#'
+#' Method choices are recorded in ADR 0013.
+#'
+#' @return A `SpatRaster` held in memory, with one layer per row of `rij`,
+#'   named after the rows, on the template's grid and CRS, cropped to
+#'   `aoi_raster`'s extent within the template: the row's values in the AOI
+#'   cells with template data and `NA` elsewhere.
+#'
+#' @family rij
+#' @seealso [rasterize_aoi()] to make `aoi_raster`.
+#' @export
+#'
+#' @examples
+#' template <- system.file("extdata", "template.tif", package = "constechr")
+#' aoi <- system.file("extdata", "aoi.gpkg", package = "constechr")
+#' rij <- read_rij_matrix(
+#'   system.file("extdata", "rij.rds", package = "constechr"),
+#'   template
+#' )
+#'
+#' # The AOI's cells on the template: a 3 x 3 block, cells 34 to 56
+#' aoi_raster <- rasterize_aoi(aoi, template, cells = "touches")
+#' x <- clip_rij_matrix(rij, aoi_raster, template)
+#'
+#' # One layer per row of x, on the AOI raster's 3 x 3 cells
+#' r <- rij_matrix_to_raster(x, template, aoi_raster)
+#' r
+#' terra::values(r)
+rij_matrix_to_raster <- function(rij, template, aoi_raster) {
+  call <- environment()
+  if (inherits(rij, "dgCMatrix") && nrow(rij) == 0) {
+    cli::cli_abort(
+      c(
+        "{.arg rij} must have at least one row, for the raster's layers.",
+        "i" = "A raster cannot have no layers."
+      ),
+      call = call
+    )
+  }
+  check_rij(rij, call)
+  template <- as_template(template, call)
+  aoi_raster <- as_raster_layer(aoi_raster, "aoi_raster", call)
+  columns <- rij_aoi_columns(aoi_raster, template, call)
+  if (ncol(rij) != length(columns$cells)) {
+    cli::cli_abort(
+      c(
+        "{.arg rij} must have one column per {.arg aoi_raster} cell with
+        {.arg template} data.",
+        "x" = "It has {ncol(rij)} column{?s}; {.arg aoi_raster} has
+        {length(columns$cells)} cell{?s} with template data.",
+        "i" = "Clip it first with {.fn clip_rij_matrix}."
+      ),
+      call = call
+    )
+  }
+  grid <- terra::crop(terra::rast(template), terra::ext(aoi_raster))
+  local <- terra::cellFromXY(grid, terra::xyFromCell(template, columns$cells))
+  values <- matrix(NA_real_, terra::ncell(grid), nrow(rij))
+  values[local, ] <- as.matrix(Matrix::t(rij))
+  x <- terra::rast(grid, nlyrs = nrow(rij), names = rownames(rij))
+  terra::values(x) <- values
+  x
+}
