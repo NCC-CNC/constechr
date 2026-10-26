@@ -73,6 +73,7 @@ nrow(polygonize_raster(ones))
 \code{\link[=rasterize_aoi]{rasterize_aoi()}} makes the AOI rasters this function is used on.
 
 Other raster:
-\code{\link[=align_raster]{align_raster()}}
+\code{\link[=align_raster]{align_raster()}},
+\code{\link[=write_rasters]{write_rasters()}}
 }
 \concept{raster}

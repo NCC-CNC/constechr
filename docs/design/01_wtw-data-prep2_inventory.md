@@ -169,7 +169,7 @@ its own values):
 | `natdata()` | Layer type from file extension (`.tif` vs rij `.rds`) | Default detection, overridable. |
 | `align_pu()` | Output file `<input>_align.tif`; "pu" in the name | Becomes `align_raster()` with an output file argument, defaulting to `<input>_align.tif`. |
 | `rij_clip()`, `rij_to_raster()` | Row names `"AOI"`, `"Idx"` | Internal constants in one place, or arguments if exported. |
-| `rij_to_raster()` | Rounding unless the type matches `^FLT` or `^DOUBLE` | Explicit rounding argument, default from the output data type. |
+| `rij_to_raster()` | Rounding unless the type matches `^FLT` or `^DOUBLE` | `write_rasters(round_int = TRUE)`: rounds before integer types only; `FALSE` keeps terra's truncation (ADR 0014). |
 | `rij_to_raster()` | Output file name `<prefix><name>.tif` | Optional output folder and prefix; default returns rasters. |
 | `aoi_to_grid()` | Output data type `INT1U`; file names `aoi.shp`, `pu_1km.shp`, `pu_1km.tif` | Defaults of the use-case function `create_wtw_planning_units()` (arguments, overridable); the building blocks return objects. |
 
@@ -421,24 +421,43 @@ change from wtw-data-prep2's (`ncc_1km` to `template`, `ncc_1km_idx` to
   layers). On the fixtures and the mb_prairie AOI with NAT_DATA_20261009 it
   gives the same rasters as `rij_to_raster()` before rounding and writing.
 
-`write_rasters(x, dir, prefix = "", datatype = NULL, round = NULL,
-multiband = FALSE, overwrite = TRUE)`
+`write_rasters(x, dir, prefix = "", datatype = NULL, round_int = TRUE,
+multiband = FALSE, filename = NULL, overwrite = TRUE)`
 
-- The writing half of `rij_to_raster()`, usable for any rasters.
+- The writing half of `rij_to_raster()`, usable for any rasters. `x` is a
+  `SpatRaster` or a path to a raster file.
 - `datatype`: `NULL` uses each layer's stored data type when it can be
   inferred (a raster read from a file, `terra::datatype()`); an in-memory
   raster has none, so `datatype` is then required and the function stops
   with an error rather than guessing. Rasters from `rij_matrix_to_raster()` are in
   memory, so they always need it.
-- One file per layer, `<prefix><layer name>.tif` (today), or one multi-band
-  file (`multiband = TRUE`, the toolkit's choice).
-- `round`: `NULL` rounds when `datatype` is an integer type (wtw-data-prep2
-  today); `TRUE` or `FALSE` overrides. Other repos do not round, so this is a
-  method choice, documented in the function's Method section.
-- Returns the paths written.
+- Where the layers go (ADR 0014): one file per layer,
+  `<dir>/<prefix><layer name>.tif` (today); `filename` (a full path) for a
+  one-layer `x`, or for all layers with `multiband = TRUE` (the toolkit's
+  choice); `multiband = TRUE` without `filename` names the file after the
+  one file `x` is read from, `<dir>/<prefix><stem>.tif` (the toolkit's
+  names). `dir` and `prefix` are not used with `filename`.
+- `round_int`: `TRUE` (default) rounds halves away from zero before an
+  integer data type, as wtw-data-prep2 does; `FALSE` keeps terra's
+  truncation. Float types are never rounded. Other repos do not round, so
+  this is a method choice, documented in the function's Method section.
+- Returns the paths written, invisibly.
+- As built (#20, ADR 0014): every output path is checked before anything is
+  written, and a write that still fails removes the files the call created.
+  Errors only where the request cannot be met or is ambiguous: no `dir` (or
+  `filename`); `filename` with several layers and `multiband = FALSE`;
+  `multiband = TRUE` with no `filename` and no single source file to name
+  it after; `datatype = NULL` with an in-memory layer, or with different
+  stored types going into one file; layer names that cannot be file names
+  (empty, a path separator or a character Windows does not allow, repeated
+  ignoring case) with one file per layer; an output that is a file `x` is
+  read from; an existing file with `overwrite = FALSE`. `prefix` may hold a
+  path separator for a subfolder. The writing and rounding helper is shared
+  with `align_raster()`. On the fixtures and the mb_prairie AOI with
+  NAT_DATA_20261009 it writes the same files as `rij_to_raster()`.
 
 `extract_layers(layers, aoi_raster, template, dir = NULL, prefix = "",
-datatype = NULL, round = NULL, progress = NULL)`
+datatype = NULL, round_int = TRUE, progress = NULL)`
 
 - The wrapper: `read_rij_matrix()`, `clip_rij_matrix()`, `rij_matrix_to_raster()`, then
   `write_rasters()` when `dir` is given (else returns the rasters).
@@ -452,6 +471,9 @@ datatype = NULL, round = NULL, progress = NULL)`
   this argument, else the source GeoTIFF's stored type. A prebuilt `.rds`
   rij layer has no stored type, so it needs one of the first two, or the
   function stops before extracting anything.
+- `round_int` is passed to `write_rasters()` (ADR 0014). For a multi-band
+  file per layer, `extract_layers()` builds `filename` from the layer's file
+  stem (the toolkit's names), since its rasters are in memory.
 - `aoi_raster` may be the whole national template (erap-deer-code writes national
   GeoTIFFs this way).
 - `progress`: optional callback `(i, n, layer)` (the toolkit's); frees memory

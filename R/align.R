@@ -142,10 +142,7 @@ align_raster <- function(x, template, filename = NULL, resample = "near",
   if (is.null(filename)) {
     return(out)
   }
-  if (startsWith(datatype, "INT")) {
-    out <- round(out)
-  }
-  terra::writeRaster(out, filename, datatype = datatype, overwrite = overwrite)
+  write_raster_file(out, filename, datatype, overwrite = overwrite)
   terra::rast(filename)
 }
 
@@ -172,51 +169,6 @@ check_resample <- function(resample, call) {
     )
   }
   invisible(resample)
-}
-
-#' Check the `datatype` argument
-#'
-#' @param datatype The value given.
-#' @param call The environment that errors name.
-#' @return `datatype`, invisibly; an error if it is not one of terra's data
-#'   types.
-#' @noRd
-check_datatype <- function(datatype, call) {
-  types <- c(
-    "INT1U", "INT2U", "INT2S", "INT4U", "INT4S", "INT8U", "INT8S",
-    "FLT4S", "FLT8S"
-  )
-  if (!assertthat::is.string(datatype) || !(datatype %in% types)) {
-    cli::cli_abort(
-      c(
-        "{.arg datatype} must be one of terra's data types, not
-        {.obj_type_friendly {datatype}}.",
-        "i" = "Use one of {.or {.str {types}}}."
-      ),
-      call = call
-    )
-  }
-  invisible(datatype)
-}
-
-#' Check the `filename` argument
-#'
-#' @param filename The value given (not `NULL`).
-#' @param call The environment that errors name.
-#' @return `filename`, invisibly; an error if it is not a single, non-empty
-#'   string.
-#' @noRd
-check_filename <- function(filename, call) {
-  ok <- assertthat::is.string(filename) && !is.na(filename) &&
-    nzchar(filename)
-  if (!ok) {
-    cli::cli_abort(
-      "{.arg filename} must be {.code NULL} or a single file path, not
-      {.obj_type_friendly {filename}}.",
-      call = call
-    )
-  }
-  invisible(filename)
 }
 
 #' The file a raster reads its values from
@@ -262,36 +214,6 @@ input_datatype <- function(x, call) {
     )
   }
   datatype
-}
-
-#' Check that the output file can be written
-#'
-#' @param filename The output path.
-#' @param source The input's file path, or `NULL`.
-#' @param overwrite `TRUE` or `FALSE`.
-#' @param call The environment that errors name.
-#' @return `filename`, invisibly; an error if it is the input's file, or
-#'   exists and `overwrite` is `FALSE`.
-#' @noRd
-check_output_file <- function(filename, source, overwrite, call) {
-  is_input <- !is.null(source) && file.exists(filename) &&
-    normalizePath(filename) == normalizePath(source)
-  if (is_input) {
-    cli::cli_abort(
-      "{.arg filename} must not be the file {.arg x} is read from.",
-      call = call
-    )
-  }
-  if (!overwrite && file.exists(filename)) {
-    cli::cli_abort(
-      c(
-        "{.arg filename} already exists: {.file {filename}}.",
-        "i" = "Use {.code overwrite = TRUE} to replace it."
-      ),
-      call = call
-    )
-  }
-  invisible(filename)
 }
 
 #' Whether a raster's extent overlaps a template's, in the template's CRS
