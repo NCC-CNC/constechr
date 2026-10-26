@@ -6,8 +6,8 @@ Accepted
 
 ## Context
 
-#22 adds the first NAT_DATA use-case functions (inventory, "Use-case
-functions"): `natdata_template(natdata_dir, file = "_1km/idx.tif")` and
+Issue #22 adds the first NAT_DATA use-case functions (inventory,
+"Use-case functions"): `natdata_template(natdata_dir, file = "_1km/idx.tif")` and
 `read_natdata_metadata(natdata_dir, file = "WTW_NAT_PREP_METADATA.csv",
 active_only = TRUE)`. The inventory had `read_natdata_metadata()` map the
 catalogue onto `extract_layers()`'s columns, with `path` built from the
