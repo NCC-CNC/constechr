@@ -2,6 +2,7 @@
 
 export(align_raster)
 export(clip_rij_matrix)
+export(create_1km_grid)
 export(extract_layers)
 export(natdata_template)
 export(polygonize_raster)

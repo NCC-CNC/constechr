@@ -101,6 +101,7 @@ if (requireNamespace("prioritizr", quietly = TRUE)) {
 \code{\link[=extract_layers]{extract_layers()}} to extract the layers for an area of interest.
 
 Other natdata:
+\code{\link[=create_1km_grid]{create_1km_grid()}},
 \code{\link[=natdata_template]{natdata_template()}}
 }
 \concept{natdata}

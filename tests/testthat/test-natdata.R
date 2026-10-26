@@ -307,3 +307,298 @@ test_that("the catalogue and template extract as natdata() did", {
     expect_equal(file_values(path), expected[[file]][[2]], tolerance = 1e-7)
   }
 })
+
+# create_1km_grid() runs on fixture_natdata_idx_dir(): a NAT_DATA-like
+# folder whose _1km/idx.tif is fixture_template_bottom_left(), the 10 x 10
+# template numbered row by row from the bottom-left cell as NAT_DATA's
+# idx.tif is: terra cell c, in row r = (c - 1) %/% 10 + 1 and column
+# k = (c - 1) %% 10 + 1, holds (10 - r) * 10 + k. So the inside AOI's cells
+# 34 35 36 / 44 45 46 / 54 55 56 hold 64 65 66 / 54 55 56 / 44 45 46.
+
+# Each polygon's lower-left corner, as a two-column matrix.
+lower_left <- function(x) {
+  b <- t(sapply(sf::st_geometry(x), sf::st_bbox))
+  unname(b[, c("xmin", "ymin"), drop = FALSE])
+}
+
+test_that("create_1km_grid() gives the AOI, raster and polygons", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  grid <- create_1km_grid(fixture_aoi("inside"), natdata)
+  expect_named(grid, c("aoi", "aoi_raster", "polygons"))
+
+  # The AOI, dissolved, in the template's CRS
+  expect_s3_class(grid$aoi, "sf")
+  expect_identical(nrow(grid$aoi), 1L)
+  expect_named(grid$aoi, "geometry")
+  expect_true(sf::st_crs(grid$aoi) == sf::st_crs(fixture_template()))
+
+  # The raster: the AOI's 3 x 3 cells, holding idx.tif's values
+  r <- grid$aoi_raster
+  expect_identical(names(r), "NCCID")
+  expect_identical(
+    as.vector(terra::ext(r)), c(1003000, 1006000, 604000, 607000),
+    ignore_attr = TRUE
+  )
+  expect_identical(terra::res(r), c(1000, 1000))
+  expect_equal(
+    terra::values(r, mat = FALSE),
+    c(64, 65, 66, 54, 55, 56, 44, 45, 46)
+  )
+
+  # The polygons, sorted by NCCID (the bottom row first), PUID 1 to 9
+  p <- grid$polygons
+  expect_s3_class(p, "sf")
+  expect_named(p, c("NCCID", "PUID", "geometry"))
+  expect_equal(p$NCCID, c(44, 45, 46, 54, 55, 56, 64, 65, 66))
+  expect_identical(p$PUID, 1:9)
+  expect_identical(rownames(p), as.character(1:9))
+  expect_true(all(sf::st_geometry_type(p) == "POLYGON"))
+  expect_true(sf::st_crs(p) == sf::st_crs(fixture_template()))
+  expect_equal(
+    lower_left(p),
+    cbind(
+      rep(c(1003000, 1004000, 1005000), 3),
+      rep(c(604000, 605000, 606000), each = 3)
+    )
+  )
+  expect_equal(as.numeric(sf::st_area(p)), rep(1e6, 9))
+
+  # The raster holds each polygon's NCCID at its centre
+  xy <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(p)))
+  expect_equal(terra::extract(r, xy)[[1]], p$NCCID)
+})
+
+test_that("create_1km_grid() matches wtw-data-prep2's create_1km_grid()", {
+  # The vector grid from wtw-data-prep2's create_1km_grid() (at 4e8333a),
+  # run once with terra 1.9.34 and sf 1.1.2 on the fixture AOIs, with
+  # fixture_template_bottom_left() written as idx.tif: NCCID, PUID (1 to n)
+  # and each polygon's lower-left corner. Every polygon was a 1000 m square
+  # POLYGON of five points. Its columns were NCCID, geometry, PUID; here
+  # they are NCCID, PUID, geometry (intended change).
+  skip_if_not_installed("sf")
+  original <- list(
+    inside = list(
+      nccid = c(44, 45, 46, 54, 55, 56, 64, 65, 66),
+      xmin = rep(c(1003000, 1004000, 1005000), 3),
+      ymin = rep(c(604000, 605000, 606000), each = 3)
+    ),
+    edge = list(
+      nccid = c(18, 19, 20, 28, 29, 30),
+      xmin = rep(c(1007000, 1008000, 1009000), 2),
+      ymin = rep(c(601000, 602000), each = 3)
+    ),
+    straddle = list(
+      nccid = c(71, 72, 73, 83, 93),
+      xmin = c(1000000, 1001000, 1002000, 1002000, 1002000),
+      ymin = c(607000, 607000, 607000, 608000, 609000)
+    ),
+    single = list(nccid = 27, xmin = 1006000, ymin = 602000)
+  )
+  natdata <- fixture_natdata_idx_dir()
+  for (name in names(original)) {
+    p <- create_1km_grid(fixture_aoi(name), natdata)$polygons
+    expected <- original[[name]]
+    expect_equal(p$NCCID, expected$nccid, label = name)
+    expect_identical(p$PUID, seq_along(expected$nccid), label = name)
+    expect_equal(
+      lower_left(p), cbind(expected$xmin, expected$ymin),
+      label = name
+    )
+    expect_true(all(sf::st_geometry_type(p) == "POLYGON"), label = name)
+    points <- vapply(
+      sf::st_geometry(p), function(g) nrow(sf::st_coordinates(g)),
+      integer(1)
+    )
+    expect_true(all(points == 5L), label = name)
+    expect_equal(as.numeric(sf::st_area(p)), rep(1e6, nrow(p)), label = name)
+  }
+})
+
+test_that("index = \"cell\" gives terra cell numbers", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  grid <- create_1km_grid(fixture_aoi("inside"), natdata, index = "cell")
+  cells <- c(34, 35, 36, 44, 45, 46, 54, 55, 56)
+  expect_equal(terra::values(grid$aoi_raster, mat = FALSE), cells)
+  expect_identical(names(grid$aoi_raster), "NCCID")
+  # Sorted by cell number, which is terra's cell order: the top row first
+  expect_equal(grid$polygons$NCCID, cells)
+  expect_identical(grid$polygons$PUID, 1:9)
+  expect_equal(
+    lower_left(grid$polygons),
+    cbind(
+      rep(c(1003000, 1004000, 1005000), 3),
+      rep(c(606000, 605000, 604000), each = 3)
+    )
+  )
+  # The same with order = "cell"
+  expect_identical(
+    create_1km_grid(
+      fixture_aoi("inside"), natdata,
+      index = "cell", order = "cell"
+    )$polygons,
+    grid$polygons
+  )
+})
+
+test_that("order = \"cell\" keeps terra's cell order", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  grid <- create_1km_grid(fixture_aoi("inside"), natdata, order = "cell")
+  p <- grid$polygons
+  # The top row first, holding idx.tif's values, so PUIDs differ from the
+  # default's
+  expect_equal(p$NCCID, c(64, 65, 66, 54, 55, 56, 44, 45, 46))
+  expect_identical(p$PUID, 1:9)
+  expect_equal(
+    lower_left(p),
+    cbind(
+      rep(c(1003000, 1004000, 1005000), 3),
+      rep(c(606000, 605000, 604000), each = 3)
+    )
+  )
+  # The raster does not depend on the order
+  default <- create_1km_grid(fixture_aoi("inside"), natdata)
+  expect_equal(
+    terra::values(grid$aoi_raster, mat = FALSE),
+    terra::values(default$aoi_raster, mat = FALSE)
+  )
+})
+
+test_that("cells, value and id are passed on", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  # Centre: cells 35 36 45 46 55 56 hold 65 66 55 56 45 46
+  grid <- create_1km_grid(
+    fixture_aoi("inside"), natdata,
+    cells = "centre", value = "nccid", id = "pu"
+  )
+  expect_named(grid$polygons, c("nccid", "pu", "geometry"))
+  expect_equal(grid$polygons$nccid, c(45, 46, 55, 56, 65, 66))
+  expect_identical(grid$polygons$pu, 1:6)
+  expect_identical(names(grid$aoi_raster), "nccid")
+  expect_equal(
+    terra::values(grid$aoi_raster, mat = FALSE),
+    c(NA, 65, 66, NA, 55, 56, NA, 45, 46)
+  )
+
+  # id = NULL adds no planning-unit numbers, in either order
+  p <- create_1km_grid(fixture_aoi("inside"), natdata, id = NULL)$polygons
+  expect_named(p, c("NCCID", "geometry"))
+  expect_equal(p$NCCID, c(44, 45, 46, 54, 55, 56, 64, 65, 66))
+  p <- create_1km_grid(
+    fixture_aoi("inside"), natdata,
+    id = NULL, order = "cell"
+  )$polygons
+  expect_named(p, c("NCCID", "geometry"))
+  expect_equal(p$NCCID, c(64, 65, 66, 54, 55, 56, 44, 45, 46))
+})
+
+test_that("create_1km_grid() drops cells without data and handles edges", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+
+  # Straddle: cells 1 2 11 12 are NA in idx.tif, and cells off the template
+  # are not in the grid
+  grid <- create_1km_grid(fixture_aoi("straddle"), natdata)
+  expect_equal(grid$polygons$NCCID, c(71, 72, 73, 83, 93))
+  expect_identical(sum(!is.na(terra::values(grid$aoi_raster))), 5L)
+
+  # A single cell
+  grid <- create_1km_grid(fixture_aoi("single"), natdata, cells = "centre")
+  expect_equal(grid$polygons$NCCID, 27)
+  expect_identical(grid$polygons$PUID, 1L)
+
+  # An AOI inside a cell with no data: a warning, no polygons
+  aoi <- sf::st_bbox(
+    c(xmin = 1000200, ymin = 609200, xmax = 1000800, ymax = 609800),
+    crs = sf::st_crs(fixture_crs())
+  )
+  expect_warning(
+    grid <- create_1km_grid(aoi, natdata),
+    "no cells"
+  )
+  expect_identical(nrow(grid$polygons), 0L)
+  expect_named(grid$polygons, c("NCCID", "PUID", "geometry"))
+  expect_true(all(is.na(terra::values(grid$aoi_raster))))
+})
+
+test_that("create_1km_grid() reads and dissolves AOIs in other forms", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+
+  # Two polygons, dissolved into one AOI: the inside and single cells
+  two <- rbind(fixture_aoi("inside"), fixture_aoi("single"))
+  grid <- create_1km_grid(two, natdata)
+  expect_identical(nrow(grid$aoi), 1L)
+  expect_equal(
+    grid$polygons$NCCID,
+    c(27, 44, 45, 46, 54, 55, 56, 64, 65, 66)
+  )
+  expect_identical(grid$polygons$PUID, 1:10)
+
+  # An AOI in another CRS is reprojected to the template's: the inside AOI
+  # in longitude and latitude touches the same cells
+  lonlat <- sf::st_transform(fixture_aoi("inside"), 4326)
+  grid <- create_1km_grid(lonlat, natdata)
+  expect_true(sf::st_crs(grid$aoi) == sf::st_crs(fixture_template()))
+  expect_equal(grid$polygons$NCCID, c(44, 45, 46, 54, 55, 56, 64, 65, 66))
+
+  # A file, on the example NAT_DATA folder (values are terra cell numbers)
+  grid <- create_1km_grid(
+    system.file("extdata", "aoi.gpkg", package = "constechr"),
+    system.file("extdata", "natdata", package = "constechr")
+  )
+  expect_equal(grid$polygons$NCCID, c(34, 35, 36, 44, 45, 46, 54, 55, 56))
+})
+
+test_that("the raster clips rij matrices as rasterize_aoi()'s does", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  grid <- create_1km_grid(fixture_aoi("inside"), natdata)
+  expected <- clip_rij_matrix(
+    fixture_rij(),
+    rasterize_aoi(fixture_aoi("inside"), fixture_template(), cells = "touches"),
+    fixture_template(),
+    drop_empty = FALSE
+  )
+  expect_identical(
+    clip_rij_matrix(
+      fixture_rij(), grid$aoi_raster, natdata_template(natdata),
+      drop_empty = FALSE
+    ),
+    expected
+  )
+})
+
+test_that("create_1km_grid() gives clear errors", {
+  skip_if_not_installed("sf")
+  dir <- tempfile("grid_errors")
+  dir.create(dir)
+  old <- setwd(dir)
+  on.exit(setwd(old), add = TRUE)
+  natdata <- "natdata"
+  dir.create(file.path(natdata, "_1km"), recursive = TRUE)
+  terra::writeRaster(
+    fixture_template_bottom_left(), file.path(natdata, "_1km", "idx.tif")
+  )
+  dir.create("empty")
+  aoi <- fixture_aoi("inside")
+
+  expect_snapshot(error = TRUE, create_1km_grid(aoi, "no_such_folder"))
+  expect_snapshot(error = TRUE, create_1km_grid(aoi, "empty"))
+  expect_snapshot(error = TRUE, create_1km_grid(aoi, natdata, cells = "all"))
+  expect_snapshot(error = TRUE, create_1km_grid(aoi, natdata, value = ""))
+  expect_snapshot(error = TRUE, create_1km_grid(aoi, natdata, id = 1))
+  expect_snapshot(error = TRUE, {
+    create_1km_grid(aoi, natdata, value = "ID", id = "ID")
+  })
+  expect_snapshot(error = TRUE, create_1km_grid(aoi, natdata, index = "x"))
+  expect_snapshot(error = TRUE, {
+    create_1km_grid(aoi, natdata, order = c("value", "cell"))
+  })
+  expect_snapshot(error = TRUE, {
+    create_1km_grid(fixture_aoi("outside"), natdata)
+  })
+})

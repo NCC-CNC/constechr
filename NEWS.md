@@ -1,4 +1,20 @@
-# constechr 0.0.0.9010
+# constechr 0.0.0.9011
+
+- New `create_1km_grid()` makes an AOI's NAT_DATA 1 km planning units
+  (#23): `read_aoi()` in the national template's CRS, `rasterize_aoi()` on
+  `natdata_template()` (`cells = "touches"` by default) and
+  `polygonize_raster()`, returning `list(aoi, aoi_raster, polygons)` and
+  writing nothing. `index` chooses what `NCCID` holds: `"template"`, the
+  `idx.tif` value (default), or `"cell"`, the terra cell number. `order`
+  chooses the polygon and `PUID` order: `"value"`, sorted by `NCCID`
+  (default), or `"cell"`, terra's cell order. Decisions in ADR 0017. With
+  the defaults it gives the same `NCCID`, `PUID` and polygons as
+  wtw-data-prep2's `create_1km_grid()`, on the test fixtures and on a real
+  AOI. Intended changes from that code: the raster holds the `NCCID`s, not
+  1s, on the AOI's extent; the polygons' columns are `NCCID`, `PUID`,
+  `geometry` (not `NCCID`, `geometry`, `PUID`); the AOI is dissolved into
+  one polygon without attributes; and the "touches" rule is explicit, not
+  reached through a 1000 m buffer and a mask.
 
 - New `natdata_template()` opens the national 1 km template raster in a
   NAT_DATA folder, `_1km/idx.tif` by default (#22).

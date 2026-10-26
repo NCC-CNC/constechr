@@ -164,3 +164,77 @@
       Error in `read_natdata_metadata()`:
       ! The column names of 'natdata/repeated.csv' must be unique (ignoring spaces around them); path is repeated.
 
+# create_1km_grid() gives clear errors
+
+    Code
+      create_1km_grid(aoi, "no_such_folder")
+    Condition
+      Error in `create_1km_grid()`:
+      ! `natdata_dir` must be an existing folder; 'no_such_folder' is not one.
+
+---
+
+    Code
+      create_1km_grid(aoi, "empty")
+    Condition
+      Error in `create_1km_grid()`:
+      ! The national template in `natdata_dir` could not be opened.
+      Caused by error in `natdata_template()`:
+      ! `file` must be an existing file; 'empty/_1km/idx.tif' does not exist.
+
+---
+
+    Code
+      create_1km_grid(aoi, natdata, cells = "all")
+    Condition
+      Error in `create_1km_grid()`:
+      ! `cells` must be one of "touches" or "centre", not a string.
+
+---
+
+    Code
+      create_1km_grid(aoi, natdata, value = "")
+    Condition
+      Error in `create_1km_grid()`:
+      ! `value` must be a single, non-empty string, not `""`.
+
+---
+
+    Code
+      create_1km_grid(aoi, natdata, id = 1)
+    Condition
+      Error in `create_1km_grid()`:
+      ! `id` must be a single, non-empty string, not a number.
+
+---
+
+    Code
+      create_1km_grid(aoi, natdata, value = "ID", id = "ID")
+    Condition
+      Error in `create_1km_grid()`:
+      ! `id` must differ from `value`; both are "ID".
+
+---
+
+    Code
+      create_1km_grid(aoi, natdata, index = "x")
+    Condition
+      Error in `create_1km_grid()`:
+      ! `index` must be one of "template" or "cell", not "x".
+
+---
+
+    Code
+      create_1km_grid(aoi, natdata, order = c("value", "cell"))
+    Condition
+      Error in `create_1km_grid()`:
+      ! `order` must be one of "value" or "cell", not a character vector.
+
+---
+
+    Code
+      create_1km_grid(fixture_aoi("outside"), natdata)
+    Condition
+      Error in `rasterize_aoi()`:
+      ! `aoi` does not overlap the `template`.
+

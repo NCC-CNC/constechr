@@ -185,6 +185,189 @@ read_natdata_metadata <- function(natdata_dir,
   x
 }
 
+#' NAT_DATA 1 km planning units for an area of interest
+#'
+#' Makes the 1 km planning units of an area of interest (AOI) on the national
+#' template of a NAT_DATA folder (ConsTech's shared national data): the AOI
+#' in the template's CRS, a raster of the AOI's cells holding each cell's
+#' national ID, and one square polygon per cell with its national ID
+#' (`NCCID`) and a planning-unit number (`PUID`). It is the first step of
+#' building a Where To Work project, and the defaults give the planning units
+#' wtw-data-prep2 makes. Nothing is written.
+#'
+#' @param aoi The AOI: anything [read_aoi()] accepts (`sf`, `sfc` or
+#'   `SpatVector` polygons, a file path, or bounds with their CRS in an sf
+#'   `bbox`). Several polygons are dissolved into one.
+#' @param natdata_dir The NAT_DATA folder: a single path to an existing
+#'   folder, such as a dated release (`NAT_DATA_20261009`). Its template is
+#'   opened with [natdata_template()] (`_1km/idx.tif`). Where NAT_DATA lives
+#'   is each tool's own setting; this function only reads from it.
+#' @param cells The cell inclusion rule, one of `"touches"` (every cell the
+#'   AOI touches) or `"centre"` (every cell whose centre is inside the AOI).
+#'   The default, `"touches"`, gives the cells wtw-data-prep2 gives.
+#' @param value The name of the column of national IDs in the polygons, and
+#'   of the raster's layer: a single, non-empty string. The default,
+#'   `"NCCID"`, is NAT_DATA's name.
+#' @param id `NULL` or the name of a column that numbers the polygons 1 to
+#'   n in their order (see `order`): a single, non-empty string, different
+#'   from `value`. The default, `"PUID"`, is the planning-unit ID of Where To
+#'   Work projects. `NULL` adds none.
+#' @param index What the national ID (`value`) is, one of:
+#'   - `"template"` (the default): the template's value in each cell. In
+#'     NAT_DATA, `_1km/idx.tif` numbers its cells row by row from the
+#'     bottom-left cell; this is the shared national ID that wtw-data-prep2
+#'     writes as `NCCID` and other tools join on.
+#'   - `"cell"`: the cell's number in the template in terra's numbering (row
+#'     by row from the top-left cell, starting at 1), which links each cell
+#'     directly to the columns of NAT_DATA's rij matrices.
+#' @param order The order of the polygons, and so of `id`, one of:
+#'   - `"value"` (the default): sorted by national ID (`value`), smallest
+#'     first, as wtw-data-prep2 orders them.
+#'   - `"cell"`: terra's cell order (row by row from the top-left cell), as
+#'     [polygonize_raster()] returns them.
+#'
+#'   With `index = "cell"` the two orders are the same.
+#'
+#' @section Method:
+#' 1. **Template**: [natdata_template()] opens `natdata_dir`'s
+#'    `_1km/idx.tif` (1 km cells in Canada_Albers_WGS_1984); its values stay
+#'    on disk.
+#' 2. **AOI**: [read_aoi()] in the template's CRS, dissolved into one
+#'    polygon; reprojection, when needed, moves each vertex with PROJ.
+#' 3. **Cells**: [rasterize_aoi()] on the template at its own resolution,
+#'    with `cells`, raster (not vector) intersection: `"touches"` is GDAL's
+#'    all-touched rule, `"centre"` cell centres inside the AOI. AOI cells
+#'    where the template has no data (`NA`, off the national template's
+#'    land) are dropped. The raster is cropped to the AOI's bounding box,
+#'    snapped out to whole cells, and holds the national ID (`index`) in the
+#'    AOI's cells and `NA` elsewhere.
+#' 4. **Polygons**: [polygonize_raster()], one square polygon per AOI cell
+#'    (cells are not merged), holding the same national ID as the raster.
+#' 5. **Order**: with `order = "value"`, the polygons are sorted by national
+#'    ID, then `id` numbers them 1 to n.
+#'
+#' No areas are computed and no values are rounded. With the defaults, the
+#' cells, `NCCID`, `PUID` and polygons are those of wtw-data-prep2's
+#' `create_1km_grid()`, which reached the "touches" rule through a 1000 m
+#' buffer and a mask. Unlike it, the raster holds the national IDs, not 1s,
+#' on the AOI's extent, and the polygons' columns are `value`, `id` and then
+#' `geometry`. Decisions are recorded in ADR 0008 and ADR 0017.
+#'
+#' If the AOI's bounding box does not overlap the template, the function
+#' stops with an error. If it overlaps but gets no cells, it warns, and the
+#' raster is all `NA` and the polygons have no rows.
+#'
+#' @return A list, with nothing written:
+#'   - `aoi`: the AOI as [read_aoi()] returns it, an `sf` data frame with one
+#'     polygon or multipolygon and no attributes, in the template's CRS;
+#'   - `aoi_raster`: a `SpatRaster` with one layer named `value`, on the
+#'     template's grid (cropped to the AOI): the national ID in the AOI's
+#'     cells and `NA` elsewhere. It can be passed as the `aoi_raster` of
+#'     [extract_layers()] and [clip_rij_matrix()], which use only which
+#'     cells are not `NA`;
+#'   - `polygons`: an `sf` data frame with one `POLYGON` row per AOI cell, in
+#'     the template's CRS, with the columns `value` (the national ID, as in
+#'     the raster), `id` (an integer, 1 to n) unless `id = NULL`, and
+#'     `geometry`.
+#'
+#' @family natdata
+#' @seealso [rasterize_aoi()] and [polygonize_raster()], the building blocks
+#'   it calls.
+#' @export
+#'
+#' @examples
+#' # A small NAT_DATA-like folder: its _1km/idx.tif is a 10 x 10 template
+#' natdata_dir <- system.file("extdata", "natdata", package = "constechr")
+#' aoi <- system.file("extdata", "aoi.gpkg", package = "constechr")
+#'
+#' grid <- create_1km_grid(aoi, natdata_dir)
+#' grid$polygons
+#' terra::values(grid$aoi_raster, mat = FALSE)
+#'
+#' # Only cells whose centre is inside the AOI, in terra's cell order,
+#' # without planning-unit numbers
+#' create_1km_grid(
+#'   aoi, natdata_dir,
+#'   cells = "centre", id = NULL, order = "cell"
+#' )$polygons
+#'
+#' # Terra cell numbers as the ID (the example template's values are its cell
+#' # numbers, so here they are the same as the default's)
+#' create_1km_grid(aoi, natdata_dir, index = "cell")$polygons$NCCID
+create_1km_grid <- function(aoi, natdata_dir, cells = "touches",
+                            value = "NCCID", id = "PUID",
+                            index = "template", order = "value") {
+  call <- environment()
+  check_natdata_dir(natdata_dir, call)
+  check_cells(cells, call)
+  check_column_name(value, "value", call)
+  if (!is.null(id)) {
+    check_column_name(id, "id", call)
+    if (identical(id, value)) {
+      cli::cli_abort(
+        "{.arg id} must differ from {.arg value}; both are {.str {id}}.",
+        call = call
+      )
+    }
+  }
+  check_choice(index, "index", c("template", "cell"), call)
+  check_choice(order, "order", c("value", "cell"), call)
+
+  template <- tryCatch(
+    natdata_template(natdata_dir),
+    error = function(e) {
+      cli::cli_abort(
+        "The national template in {.arg natdata_dir} could not be opened.",
+        parent = e,
+        call = call
+      )
+    }
+  )
+  aoi <- read_aoi(aoi, crs = template)
+  aoi_raster <- rasterize_aoi(
+    aoi, template,
+    cells = cells,
+    value = if (identical(index, "cell")) "index" else "template"
+  )
+  names(aoi_raster) <- value
+
+  polygons <- polygonize_raster(aoi_raster, value = value, id = id)
+  if (identical(order, "value")) {
+    polygons <- polygons[order(polygons[[value]]), ]
+    rownames(polygons) <- NULL
+    if (!is.null(id)) {
+      polygons[[id]] <- seq_len(nrow(polygons))
+    }
+  }
+
+  list(aoi = aoi, aoi_raster = aoi_raster, polygons = polygons)
+}
+
+#' Check an argument that takes one of a few strings
+#'
+#' @param x The value given.
+#' @param arg The argument's name.
+#' @param choices The accepted strings.
+#' @param call The environment that errors name.
+#' @return `x`, invisibly; an error if it is not one of `choices`.
+#' @noRd
+check_choice <- function(x, arg, choices, call) {
+  if (assertthat::is.string(x) && !(x %in% choices)) {
+    cli::cli_abort(
+      "{.arg {arg}} must be one of {.or {.str {choices}}}, not {.str {x}}.",
+      call = call
+    )
+  }
+  if (!assertthat::is.string(x)) {
+    cli::cli_abort(
+      "{.arg {arg}} must be one of {.or {.str {choices}}}, not
+      {.obj_type_friendly {x}}.",
+      call = call
+    )
+  }
+  invisible(x)
+}
+
 #' Check the `natdata_dir` argument
 #'
 #' @param natdata_dir The value given.

@@ -52,6 +52,7 @@ rasterize_aoi(aoi, template, cells = "touches")
 }
 \seealso{
 Other natdata:
+\code{\link[=create_1km_grid]{create_1km_grid()}},
 \code{\link[=read_natdata_metadata]{read_natdata_metadata()}}
 }
 \concept{natdata}

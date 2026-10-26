@@ -425,3 +425,17 @@ fixture_natdata_dir <- function(catalogue = fixture_catalogue()) {
 fixture_catalogue_names <- function() {
   sub("^ ", "", names(fixture_catalogue()))
 }
+
+# A NAT_DATA-like folder holding only `_1km/idx.tif`, written from
+# `template` (INT4S), in a new temporary folder whose path is returned. The
+# default, `fixture_template_bottom_left()`, numbers its cells from the
+# bottom-left as NAT_DATA's idx.tif does. Needs terra.
+fixture_natdata_idx_dir <- function(template = fixture_template_bottom_left()) {
+  dir <- tempfile("natdata")
+  dir.create(file.path(dir, "_1km"), recursive = TRUE)
+  terra::writeRaster(
+    template, file.path(dir, "_1km", "idx.tif"),
+    datatype = "INT4S"
+  )
+  dir
+}
