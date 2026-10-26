@@ -7,6 +7,10 @@
 # - template.tif: fixture_template(), INT4S, NA where the template is NA.
 # - aoi.gpkg: fixture_aoi("inside"), one layer named "aoi".
 # - rij.rds: fixture_rij(), a dgCMatrix.
+# - natdata/: a NAT_DATA-like folder, write_fixture_natdata(): _1km/idx.tif
+#   (the template, as template.tif), themes/species/features.rds,
+#   themes/habitat/cover.tif and WTW_NAT_PREP_METADATA.csv
+#   (fixture_catalogue(), with NAT_DATA's byte order mark and header).
 
 source(file.path("tests", "testthat", "helper-fixtures.R"))
 
@@ -26,3 +30,7 @@ unlink(aoi_path)
 sf::st_write(fixture_aoi("inside"), aoi_path, layer = "aoi", quiet = TRUE)
 
 saveRDS(fixture_rij(), file.path(dir, "rij.rds"))
+
+natdata <- file.path(dir, "natdata")
+unlink(natdata, recursive = TRUE)
+write_fixture_natdata(natdata)

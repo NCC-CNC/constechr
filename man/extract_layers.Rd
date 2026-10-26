@@ -15,7 +15,8 @@ extract_layers(
   multiband = FALSE,
   drop_empty = TRUE,
   overwrite = TRUE,
-  progress = NULL
+  progress = NULL,
+  path_column = "path"
 )
 }
 \arguments{
@@ -24,23 +25,25 @@ extract_layers(
 \item a character vector of file paths: GeoTIFFs on the template's grid, or
 \code{.rds} files holding rij matrices built on the template (such as
 NAT_DATA's species layers); or
-\item a data frame with one row per layer and a \code{path} column of file paths,
-and optionally any of these columns, each overriding the matching
-argument for its layer (\code{NA} uses the argument):
+\item a data frame with one row per layer and a column of file paths, named
+by \code{path_column} (\code{path} by default), and optionally any of these
+columns, each overriding the matching argument for its layer (\code{NA}
+uses the argument):
 \itemize{
 \item \code{prefix}: put before the layer's file names (\code{""} for none);
 \item \code{datatype}: the data type of the layer's files;
 \item \code{subdir}: the subfolder of \code{dir} the layer's files go in (\code{NA} or
 \code{""} for \code{dir} itself); it may hold path separators;
-\item \code{type}: what the file holds, \code{"auto"}, \code{"raster"} or \code{"rij"}, as in
-\code{\link[=read_rij_matrix]{read_rij_matrix()}}; \code{NA} is \code{"auto"}, which decides by extension
-(\code{.tif} and \code{.tiff} are rasters, \code{.rds} an rij matrix).
+\item \code{format}: what the file holds, \code{"auto"}, \code{"raster"} or \code{"rij"}, as
+in \code{\link[=read_rij_matrix]{read_rij_matrix()}}'s \code{type}; \code{NA} is \code{"auto"}, which decides by
+extension (\code{.tif} and \code{.tiff} are rasters, \code{.rds} an rij matrix).
 }
 }
 
 Other columns are ignored, so a layer catalogue can be passed with its
-own columns kept. A layer may appear more than once (for example
-written to two subfolders).}
+own columns kept, such as the one \code{\link[=read_natdata_metadata]{read_natdata_metadata()}} returns
+(with \code{path_column = "file"}). A layer may appear more than once (for
+example written to two subfolders).}
 
 \item{aoi_raster}{The AOI as a raster: a \code{SpatRaster} with one layer, or
 a path to a raster file, on the template's grid (same CRS, resolution
@@ -97,6 +100,12 @@ output file exists.}
 layer is extracted as \code{progress(i, n, layer)}: \code{i} is the layer's
 number, \code{n} the number of layers and \code{layer} its path. Use it to report
 progress, for example in a Shiny app or a log.}
+
+\item{path_column}{A single string: the name of the column of \code{layers}
+that holds the layers' file paths, when \code{layers} is a data frame. The
+default, \code{"path"}, is constechr's own column name; use \code{"file"} for the
+catalogue from \code{\link[=read_natdata_metadata]{read_natdata_metadata()}}, whose \code{path} column is each
+layer's folder. Not used when \code{layers} is a vector of paths.}
 }
 \value{
 Without \code{dir}, a list of \code{SpatRaster}s held in memory, one per
@@ -165,11 +174,11 @@ error names the layer, and the files of the layers before it are kept.
 large.
 }
 
-Method choices are recorded in ADR 0015, and those of the functions it
-calls in ADRs 0011 to 0014. With \code{layers} built from NAT_DATA's catalogue
-(\code{path} as \verb{<folder>/<file>}, \code{subdir} as the folder, its \code{prefix} and
-\code{datatype}) and \code{dir} as \verb{<project>/tifs}, it writes the same files as
-wtw-data-prep2's \code{natdata()}. Intended changes from that code: everything
+Method choices are recorded in ADRs 0015 and 0016, and those of the
+functions it calls in ADRs 0011 to 0014. With \code{layers} from
+\code{\link[=read_natdata_metadata]{read_natdata_metadata()}}, \code{path_column = "file"} and \code{dir} as
+\verb{<project>/tifs}, it writes the same files as wtw-data-prep2's
+\code{natdata()}. Intended changes from that code: everything
 that can be checked is checked before extracting, dropped features and
 skipped layers are named in messages, and an error names the layer.
 }
@@ -216,9 +225,19 @@ if (requireNamespace("prioritizr", quietly = TRUE)) {
   )
   names(x)
 }
+
+# A table whose file paths are in another column, such as NAT_DATA's
+# catalogue (see read_natdata_metadata())
+layers <- data.frame(folder = "species", file = rij, datatype = "INT1U")
+paths <- extract_layers(
+  layers, aoi_raster, template,
+  dir = dir, path_column = "file"
+)
+basename(paths)
 }
 \seealso{
-\code{\link[=rasterize_aoi]{rasterize_aoi()}} to make \code{aoi_raster}.
+\code{\link[=rasterize_aoi]{rasterize_aoi()}} to make \code{aoi_raster}; \code{\link[=read_natdata_metadata]{read_natdata_metadata()}}
+and \code{\link[=natdata_template]{natdata_template()}} for NAT_DATA's layers and template.
 
 Other rij:
 \code{\link[=clip_rij_matrix]{clip_rij_matrix()}},

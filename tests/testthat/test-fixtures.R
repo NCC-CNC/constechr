@@ -123,3 +123,54 @@ test_that("inst/extdata files match the fixtures", {
   expect_true(file.exists(path))
   expect_identical(readRDS(path), fixture_rij())
 })
+
+test_that("the fixture catalogue is written with NAT_DATA's header", {
+  path <- write_catalogue(fixture_catalogue(), tempfile(fileext = ".csv"))
+  bytes <- readBin(path, "raw", 3)
+  expect_identical(bytes, as.raw(c(0xef, 0xbb, 0xbf)))
+  header <- readLines(path, n = 1, encoding = "UTF-8")
+  header <- sub(paste0("^", intToUtf8(0xFEFF)), "", header)
+  expect_identical(
+    header,
+    paste0(
+      "product_id,type,category,legend_name,theme_group_name,short_name,",
+      " file_name,path,prefix,wtw_file_name,datatype,legend_type,",
+      "legend_color,legend_label,values,unit,provenance,visible,hidden,",
+      "downloadable,external,active"
+    )
+  )
+  expect_length(readLines(path), 5)
+})
+
+test_that("inst/extdata/natdata matches the fixtures", {
+  skip_if_not_installed("terra")
+  skip_if_not_installed("Matrix")
+  natdata <- system.file("extdata", "natdata", package = "constechr")
+  expect_true(dir.exists(natdata))
+
+  x <- terra::rast(file.path(natdata, "_1km", "idx.tif"))
+  template <- fixture_template()
+  expect_true(terra::compareGeom(x, template, stopOnError = FALSE))
+  expect_true(terra::same.crs(x, template))
+  expect_equal(terra::values(x), terra::values(template))
+
+  expect_identical(
+    readRDS(file.path(natdata, "themes", "species", "features.rds")),
+    fixture_rij()
+  )
+  path <- file.path(natdata, "themes", "habitat", "cover.tif")
+  expect_identical(terra::datatype(terra::rast(path)), "FLT4S")
+  expect_equal(
+    file_values(path), cover_values(c(0.4, 1.6, 2.2, 7.25)),
+    tolerance = 1e-7
+  )
+
+  # Compared as lines, so either line ending matches
+  path <- file.path(natdata, "WTW_NAT_PREP_METADATA.csv")
+  expected <- write_catalogue(fixture_catalogue(), tempfile(fileext = ".csv"))
+  expect_identical(readBin(path, "raw", 3), as.raw(c(0xef, 0xbb, 0xbf)))
+  expect_identical(
+    readLines(path, encoding = "UTF-8"),
+    readLines(expected, encoding = "UTF-8")
+  )
+})

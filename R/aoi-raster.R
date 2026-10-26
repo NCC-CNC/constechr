@@ -369,14 +369,15 @@ as_raster_layer <- function(x, arg, call, one_layer = TRUE) {
 #'
 #' @param template A `SpatRaster` or a path to a raster file.
 #' @param call The environment that errors name.
+#' @param arg The argument's name, for errors.
 #' @return A `SpatRaster`; an error if it cannot be read, has no CRS or has
 #'   more than one layer.
 #' @noRd
-as_template <- function(template, call) {
-  template <- as_raster_layer(template, "template", call)
+as_template <- function(template, call, arg = "template") {
+  template <- as_raster_layer(template, arg, call)
   if (is.na(sf::st_crs(template))) {
     cli::cli_abort(
-      "{.arg template} has no coordinate reference system.",
+      "{.arg {arg}} has no coordinate reference system.",
       call = call
     )
   }

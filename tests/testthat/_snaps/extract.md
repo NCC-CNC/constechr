@@ -26,7 +26,7 @@
       extract_layers(1, pu, template)
     Condition
       Error in `extract_layers()`:
-      ! `layers` must be file paths or a data frame with a path column, not a number.
+      ! `layers` must be file paths or a data frame, not a number.
 
 ---
 
@@ -34,7 +34,33 @@
       extract_layers(data.frame(file = "features.rds"), pu, template)
     Condition
       Error in `extract_layers()`:
-      ! `layers` must be file paths or a data frame with a path column, not a data frame.
+      ! `layers` must have a path column of file paths.
+      i Set `path_column` to the name of the column that holds them.
+
+---
+
+    Code
+      extract_layers(data.frame(path = "features.rds"), pu, template, path_column = "file")
+    Condition
+      Error in `extract_layers()`:
+      ! `layers` must have a file column of file paths.
+      i Set `path_column` to the name of the column that holds them.
+
+---
+
+    Code
+      extract_layers("features.rds", pu, template, path_column = c("a", "b"))
+    Condition
+      Error in `extract_layers()`:
+      ! `path_column` must be a single, non-empty string, not a character vector.
+
+---
+
+    Code
+      extract_layers(data.frame(file = 1), pu, template, path_column = "file")
+    Condition
+      Error in `extract_layers()`:
+      ! The file column of `layers` must hold strings, not a number.
 
 ---
 
@@ -64,10 +90,11 @@
 ---
 
     Code
-      extract_layers(data.frame(path = "features.rds", type = "matrix"), pu, template)
+      extract_layers(data.frame(path = "features.rds", format = "matrix"), pu,
+      template)
     Condition
       Error in `extract_layers()`:
-      ! The type column of `layers` must hold "auto", "raster", or "rij".
+      ! The format column of `layers` must hold "auto", "raster", or "rij".
       x Not allowed: "matrix".
 
 ---
@@ -77,7 +104,7 @@
     Condition
       Error in `extract_layers()`:
       ! Can't tell from their extension whether these layers are rasters or rij matrices: 'layer'.
-      i Set their type ("raster" or "rij") in a type column of `layers`.
+      i Set their format ("raster" or "rij") in a format column of `layers`.
 
 ---
 

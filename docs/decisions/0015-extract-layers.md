@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Accepted; decision 2 amended by 0016-natdata-catalogue-and-template.md
+(the `type` column is renamed `format`, and `path_column` names the column
+of file paths)
 
 ## Context
 

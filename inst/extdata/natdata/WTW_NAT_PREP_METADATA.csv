@@ -1,0 +1,5 @@
+﻿product_id,type,category,legend_name,theme_group_name,short_name, file_name,path,prefix,wtw_file_name,datatype,legend_type,legend_color,legend_label,values,unit,provenance,visible,hidden,downloadable,external,active
+1,theme,species,Fixture species,Fixture species,FIX_SP,features.rds,themes/species,T_,,INT1U,manual,"#00000000, #a6cee3","Non Habitat, Habitat","0, 1",km2,national,FALSE,FALSE,TRUE,TRUE,TRUE
+2,theme,habitat,Fixture cover,Fixture cover,FIX_COVER,cover.tif,themes/habitat,T_,,INT2U,continuous,Greens,,,ha,national,FALSE,FALSE,TRUE,TRUE,TRUE
+3,weight,habitat,Fixture cover,,FIX_COVER_W,cover.tif,themes/habitat,W_,,FLT4S,continuous,Blues,,,ha,national,FALSE,FALSE,TRUE,TRUE,TRUE
+4,include,protected,Retired areas,,RETIRED,retired.tif,includes,I_NAT_,I_NAT_retired.tif,INT1U,manual,"#00000000, #7fbc41","not included, included","0, 1",km2,national,TRUE,FALSE,TRUE,TRUE,FALSE
