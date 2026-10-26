@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted; the `NCCID` left open in decision 1 is settled by
+0017-natdata-1km-grid-ids-and-order.md
 
 ## Context
 

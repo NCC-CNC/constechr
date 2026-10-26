@@ -321,7 +321,9 @@ cells, value = "index", drop_na = TRUE, crop = TRUE)`
   sorted by value as `terra::as.polygons()`'s default `dissolve = TRUE`
   gave in `create_1km_grid()`. The two orders agree for `value = "index"`
   from `rasterize_aoi()`; with `idx.tif`'s bottom-left numbering they give
-  different `PUID`s (recorded in `NEWS.md` as an intended change).
+  different `PUID`s (recorded in `NEWS.md` as an intended change). The
+  NAT_DATA use-case function `create_1km_grid()` sorts by `NCCID` by
+  default, so its `PUID`s are today's (ADR 0017).
 - `value`: name of the column holding the cell's raster value; defaults to
   the layer name. For an AOI raster from `rasterize_aoi()` the value is the
   template's cell index; wtw-data-prep2 passes `value = "NCCID"`.
@@ -540,18 +542,31 @@ NAT_DATA (shared national data, used by several tools):
 `read_natdata_metadata()` (above) also belongs to this layer.
 
 `create_1km_grid(aoi, natdata_dir, cells = "touches", value = "NCCID",
-id = "PUID")`
+id = "PUID", index = "template", order = "value")`
 
 - The NAT_DATA 1 km planning units for an AOI, as a raster and polygons:
   `read_aoi()` in the template's CRS, `rasterize_aoi()` on
-  `natdata_template()` (cell values are national cell numbers), then
-  `polygonize_raster(value = value, id = id)`.
+  `natdata_template()`, then `polygonize_raster(value = value, id = id)`.
 - `value` and `id` default to NAT_DATA's column names `NCCID` and `PUID`.
+- `index` (ADR 0017): what `NCCID` holds, `"template"` (default: the
+  `idx.tif` value, today's shared national ID) or `"cell"` (the terra cell
+  number, which links to rij columns). The raster holds the same values as
+  the `NCCID` column.
+- `order` (ADR 0017): `"value"` (default) sorts the polygons by `NCCID`
+  before numbering `PUID`, reproducing today's `pu_1km.shp`; `"cell"` keeps
+  `polygonize_raster()`'s terra cell order. The sort lives here, not in
+  `polygonize_raster()`.
 - Returns the AOI, the raster and the polygons; writes nothing.
 - The same job as wtw-data-prep2's `create_1km_grid()`, erap-deer-code's
   copy of it, and the toolkit's AOI step. The name keeps "grid" here
   because the result includes the polygon grid, and "1km" because the 1 km
   national template is the NAT_DATA convention it sets up.
+- As built (#23, ADR 0017): returns `list(aoi, aoi_raster, polygons)`;
+  `id = NULL` adds no `PUID`; AOI cells where the template is `NA` are
+  dropped, and the raster is cropped to the AOI. On NAT_DATA_20261009 and
+  the mb_prairie AOI, the defaults give the same 70,630 planning units as
+  wtw-data-prep2's `pu_1km.shp` (`NCCID`, `PUID` and geometry), in about
+  6 seconds.
 
 WTW projects (wtw-data-prep2, and other tools that build WTW projects):
 
