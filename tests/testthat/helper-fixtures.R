@@ -276,6 +276,24 @@ fixture_rij <- function() {
   )
 }
 
+# The values of every cell of a raster file, in terra's cell order, with
+# NoData as NA (terra reads it as NaN from float files). Needs terra.
+file_values <- function(path) {
+  v <- terra::values(terra::rast(path), mat = FALSE)
+  v[is.nan(v)] <- NA
+  v
+}
+
+# The cover feature's values on the 10 x 10 template, with `v` the values of
+# its cells 3, 45, 89 and 100 (for example rounded or truncated to integers),
+# 0 in the other cells with data and NA in the template's NA cells.
+cover_values <- function(v) {
+  out <- rep(0, 100)
+  out[c(3, 45, 89, 100)] <- v
+  out[fixture_na_cells()] <- NA
+  out
+}
+
 # The values of each layer of a raster, in terra's cell order, as a list
 # named by layer. Needs terra.
 layer_values <- function(x) {

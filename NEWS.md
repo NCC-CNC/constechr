@@ -1,5 +1,21 @@
-# constechr 0.0.0.9007
+# constechr 0.0.0.9008
 
+- New `write_rasters()` writes the layers of a raster to files: one GeoTIFF
+  per layer, `<dir>/<prefix><layer name>.tif`, or all layers to one
+  multi-band file, `filename` or, for a raster read from one file,
+  `<dir>/<prefix><source file stem>.tif` (#20). A one-layer raster can go
+  straight to `filename`. `datatype = NULL` uses each layer's stored data
+  type; `round_int = TRUE` rounds halves away from zero before integer types
+  (`FALSE` keeps terra's truncation) and floats are never rounded. All
+  output paths are checked before anything is written, and files a failed
+  call created are removed. Decisions in ADR 0014. It is the writing half of
+  wtw-data-prep2's `rij_to_raster()`, and writes the same files on the test
+  fixtures and on NAT_DATA layers. Intended changes from that code: layer
+  names that cannot be file names, an output that is the input's own file,
+  and existing files with `overwrite = FALSE` are errors, and a failed call
+  leaves no new files.
+- `align_raster()` now writes through the same internal writer as
+  `write_rasters()`; its results are unchanged.
 - New `rij_matrix_to_raster()` turns the rows of an rij matrix clipped to
   an AOI back into rasters on the template's grid, one layer per row,
   cropped to the AOI raster's extent and held in memory (#19). Decisions in

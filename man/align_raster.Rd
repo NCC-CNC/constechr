@@ -124,6 +124,7 @@ align_raster(utm, template)
 template's full grid directly.
 
 Other raster:
-\code{\link[=polygonize_raster]{polygonize_raster()}}
+\code{\link[=polygonize_raster]{polygonize_raster()}},
+\code{\link[=write_rasters]{write_rasters()}}
 }
 \concept{raster}
