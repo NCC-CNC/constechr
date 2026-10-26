@@ -122,6 +122,9 @@ job. `CONTRIBUTING.md` Setup should match.
   package functions: make them arguments, with documented defaults where a
   sensible one exists. Output file paths are arguments too, with a
   documented default where one makes sense.
+- Favour flexible functions: accept any reasonable combination of arguments
+  and inputs, and error only when a request is ambiguous or cannot be met
+  safely. Don't add restrictions the design doesn't need.
 - Two layers: generic building blocks with no use-case conventions, and
   use-case functions (named for their use case, such as `natdata_` or
   `_wtw_`) that call the building blocks with that use case's conventions
