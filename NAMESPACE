@@ -2,6 +2,7 @@
 
 export(align_raster)
 export(clip_rij_matrix)
+export(extract_layers)
 export(polygonize_raster)
 export(rasterize_aoi)
 export(read_aoi)

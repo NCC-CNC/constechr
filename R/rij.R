@@ -142,15 +142,9 @@ rij_layer_type <- function(x, type, call) {
   if (type != "auto") {
     return(type)
   }
-  extension <- tolower(regmatches(x, regexpr("[^./\\\\]*$", x)))
-  if (!grepl("\\.[^./\\\\]*$", x)) {
-    extension <- ""
-  }
-  if (extension %in% c("tif", "tiff")) {
-    return("raster")
-  }
-  if (extension == "rds") {
-    return("rij")
+  type <- type_from_extension(x)
+  if (!is.na(type)) {
+    return(type)
   }
   cli::cli_abort(
     c(
@@ -160,6 +154,21 @@ rij_layer_type <- function(x, type, call) {
     ),
     call = call
   )
+}
+
+#' A layer's type from its file extension
+#'
+#' @param path File paths.
+#' @return For each path, `"raster"` for `.tif` and `.tiff`, `"rij"` for
+#'   `.rds` (ignoring case), and `NA` for any other or no extension.
+#' @noRd
+type_from_extension <- function(path) {
+  extension <- tolower(regmatches(path, regexpr("[^./\\\\]*$", path)))
+  extension[!grepl("\\.[^./\\\\]*$", path)] <- ""
+  type <- rep(NA_character_, length(path))
+  type[extension %in% c("tif", "tiff")] <- "raster"
+  type[extension == "rds"] <- "rij"
+  type
 }
 
 #' Whether prioritizr is installed
@@ -172,16 +181,12 @@ prioritizr_installed <- function() {
   requireNamespace("prioritizr", quietly = TRUE)
 }
 
-#' A raster layer as an rij matrix
+#' Check that prioritizr is installed, to convert rasters to rij matrices
 #'
-#' @param x A path to a raster file or a `SpatRaster`.
-#' @param template A one-layer `SpatRaster`.
 #' @param call The environment that errors name.
-#' @return A `dgCMatrix`, one row per layer: named after the file for a path
-#'   to a one-layer file, else after the layers. An error if prioritizr is not
-#'   installed or `x` is not on the template's grid.
+#' @return `TRUE`, invisibly; an error if prioritizr is not installed.
 #' @noRd
-rij_from_raster <- function(x, template, call) {
+check_prioritizr <- function(call) {
   if (!prioritizr_installed()) {
     cli::cli_abort(
       c(
@@ -192,6 +197,20 @@ rij_from_raster <- function(x, template, call) {
       call = call
     )
   }
+  invisible(TRUE)
+}
+
+#' A raster layer as an rij matrix
+#'
+#' @param x A path to a raster file or a `SpatRaster`.
+#' @param template A one-layer `SpatRaster`.
+#' @param call The environment that errors name.
+#' @return A `dgCMatrix`, one row per layer: named after the file for a path
+#'   to a one-layer file, else after the layers. An error if prioritizr is not
+#'   installed or `x` is not on the template's grid.
+#' @noRd
+rij_from_raster <- function(x, template, call) {
+  check_prioritizr(call)
   path <- if (assertthat::is.string(x)) x else NULL
   x <- as_raster_layer(x, "x", call, one_layer = FALSE)
   same_grid <- terra::compareGeom(x, template, stopOnError = FALSE)
@@ -207,7 +226,7 @@ rij_from_raster <- function(x, template, call) {
   }
   rij <- prioritizr::rij_matrix(template, x)
   if (!is.null(path) && terra::nlyr(x) == 1) {
-    rownames(rij) <- sub("\\.[^.]*$", "", basename(path))
+    rownames(rij) <- file_stem(path)
   }
   rij
 }
@@ -217,30 +236,39 @@ rij_from_raster <- function(x, template, call) {
 #' @param x A path to an `.rds` file.
 #' @param template A one-layer `SpatRaster`.
 #' @param call The environment that errors name.
+#' @param cells The number of template cells with data, if already known
+#'   (it is counted from `template` otherwise).
+#' @param what What errors call the file, at the start of a sentence:
+#'   `"{.arg x}"` (the default), or for example `"The layer"`.
 #' @return The `dgCMatrix` the file holds; an error if it cannot be read,
 #'   holds something else, or has a column count that does not match the
 #'   template's cells with data.
 #' @noRd
-rij_from_rds <- function(x, template, call) {
+rij_from_rds <- function(x, template, call,
+                         cells = terra::global(template, "notNA")[[1]],
+                         what = "{.arg x}") {
   rij <- tryCatch(readRDS(x), error = function(e) NULL)
   if (is.null(rij)) {
     cli::cli_abort(
-      "{.arg x} could not be read as an {.file .rds} file.",
+      paste(what, "could not be read as an {.file .rds} file."),
       call = call
     )
   }
   if (!inherits(rij, "dgCMatrix")) {
     cli::cli_abort(
-      "{.arg x} must hold an rij matrix (a {.cls dgCMatrix}), not
-      {.obj_type_friendly {rij}}.",
+      paste(
+        what, "must hold an rij matrix (a {.cls dgCMatrix}), not",
+        "{.obj_type_friendly {rij}}."
+      ),
       call = call
     )
   }
-  cells <- terra::global(template, "notNA")[[1]]
   if (ncol(rij) != cells) {
     cli::cli_abort(
       c(
-        "{.arg x} must have one column per {.arg template} cell with data.",
+        paste(
+          what, "must have one column per {.arg template} cell with data."
+        ),
         "x" = "It has {ncol(rij)} column{?s}; the template has {cells}
         cell{?s} with data."
       ),
@@ -257,11 +285,15 @@ rij_from_rds <- function(x, template, call) {
 #' @param arg The argument errors name: `"x"` (the default) for a matrix
 #'   read from `x` by `read_rij_matrix()`, or the name of an argument that is
 #'   the matrix itself, such as `"rij"`.
+#' @param what `NULL` (the default) to name the matrix after `arg`, or what
+#'   errors call it, such as `"the layer's rij matrix"`.
 #' @return `rij`, invisibly; an error if its row names are missing, empty or
 #'   not unique.
 #' @noRd
-check_rij_rownames <- function(rij, call, arg = "x") {
-  what <- if (arg == "x") "the rij matrix from {.arg x}" else "{.arg {arg}}"
+check_rij_rownames <- function(rij, call, arg = "x", what = NULL) {
+  if (is.null(what)) {
+    what <- if (arg == "x") "the rij matrix from {.arg x}" else "{.arg {arg}}"
+  }
   names <- rownames(rij)
   if (is.null(names) || anyNA(names) || !all(nzchar(names))) {
     cli::cli_abort(
@@ -504,9 +536,13 @@ template_columns <- function(template, cells) {
 #' @param j The columns to keep, increasing.
 #' @param drop_empty A single logical: drop the rows with no value other
 #'   than 0 or `NA` in the kept columns, and name them in a message.
+#' @param layer `NULL` (the default) for a message naming the `rij`
+#'   argument, or the path of the layer `rij` was read from, for a message
+#'   naming it (from `extract_layers()`), which says the layer is skipped
+#'   when every row is dropped.
 #' @return The clipped `dgCMatrix`.
 #' @noRd
-rij_clip_columns <- function(rij, j, drop_empty) {
+rij_clip_columns <- function(rij, j, drop_empty, layer = NULL) {
   x <- rij[, j, drop = FALSE]
   if (!drop_empty) {
     return(x)
@@ -517,10 +553,21 @@ rij_clip_columns <- function(rij, j, drop_empty) {
   if (length(dropped) == 0) {
     return(x)
   }
-  cli::cli_inform(
-    "Dropped {length(dropped)} row{?s} of {.arg rij} with no values in the
-    AOI: {.val {dropped}}."
-  )
+  if (is.null(layer)) {
+    cli::cli_inform(
+      "Dropped {length(dropped)} row{?s} of {.arg rij} with no values in the
+      AOI: {.val {dropped}}."
+    )
+  } else if (any(keep)) {
+    cli::cli_inform(
+      "Dropped {length(dropped)} row{?s} of {.file {layer}} with no values
+      in the AOI: {.val {dropped}}."
+    )
+  } else {
+    cli::cli_inform(
+      "Skipped {.file {layer}}: no values in the AOI."
+    )
+  }
   x[keep, , drop = FALSE]
 }
 
@@ -621,10 +668,41 @@ rij_matrix_to_raster <- function(rij, template, aoi_raster) {
       call = call
     )
   }
+  rij_fill_grid(rij, rij_aoi_grid(aoi_raster, template, columns$cells))
+}
+
+#' The output grid of an AOI's rasters, and where its cells fall in it
+#'
+#' Worked out once per AOI and template, so a caller that builds many
+#' layers for the same AOI can reuse it with `rij_fill_grid()`.
+#'
+#' @param aoi_raster A one-layer `SpatRaster` on the template's grid.
+#' @param template A one-layer `SpatRaster`.
+#' @param cells The template cell numbers of the AOI cells with template
+#'   data, in terra's cell order (`rij_aoi_columns()$cells`).
+#' @return A list: `grid`, a `SpatRaster` with no values, the template's
+#'   grid cropped to `aoi_raster`'s extent; `local`, the cell of `grid` each
+#'   of `cells` falls in.
+#' @noRd
+rij_aoi_grid <- function(aoi_raster, template, cells) {
   grid <- terra::crop(terra::rast(template), terra::ext(aoi_raster))
-  local <- terra::cellFromXY(grid, terra::xyFromCell(template, columns$cells))
+  local <- terra::cellFromXY(grid, terra::xyFromCell(template, cells))
+  list(grid = grid, local = local)
+}
+
+#' Rasters from the rows of a clipped rij matrix
+#'
+#' @param rij A `dgCMatrix` with at least one row, named, and one column per
+#'   cell of `aoi_grid$local`.
+#' @param aoi_grid The list `rij_aoi_grid()` returns.
+#' @return A `SpatRaster` in memory, one layer per row of `rij`, named after
+#'   the rows: the row's values in its cells, 0 where none is stored, `NA`
+#'   elsewhere.
+#' @noRd
+rij_fill_grid <- function(rij, aoi_grid) {
+  grid <- aoi_grid$grid
   values <- matrix(NA_real_, terra::ncell(grid), nrow(rij))
-  values[local, ] <- as.matrix(Matrix::t(rij))
+  values[aoi_grid$local, ] <- as.matrix(Matrix::t(rij))
   x <- terra::rast(grid, nlyrs = nrow(rij), names = rownames(rij))
   terra::values(x) <- values
   x
