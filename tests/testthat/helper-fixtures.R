@@ -325,3 +325,103 @@ fixture_layers_dir <- function() {
   )
   dir
 }
+
+# A NAT_DATA layer catalogue for the fixtures, as a data frame with the
+# columns of WTW_NAT_PREP_METADATA.csv in NAT_DATA_20261009, in its order and
+# spelling (its header has a leading space in " file_name"). Layers 1 to 3
+# are those wtw-data-prep2's natdata() was run on in test-extract.R; layer 4
+# is not active, and its file does not exist.
+#
+#   type     path            file_name     prefix  datatype  active
+#   theme    themes/species  features.rds  T_      INT1U     TRUE
+#   theme    themes/habitat  cover.tif     T_      INT2U     TRUE
+#   weight   themes/habitat  cover.tif     W_      FLT4S     TRUE
+#   include  includes        retired.tif   I_NAT_  INT1U     FALSE
+fixture_catalogue <- function() {
+  data.frame(
+    product_id = 1:4,
+    type = c("theme", "theme", "weight", "include"),
+    category = c("species", "habitat", "habitat", "protected"),
+    legend_name = c(
+      "Fixture species", "Fixture cover", "Fixture cover", "Retired areas"
+    ),
+    theme_group_name = c("Fixture species", "Fixture cover", "", ""),
+    short_name = c("FIX_SP", "FIX_COVER", "FIX_COVER_W", "RETIRED"),
+    ` file_name` = c("features.rds", "cover.tif", "cover.tif", "retired.tif"),
+    path = c("themes/species", "themes/habitat", "themes/habitat", "includes"),
+    prefix = c("T_", "T_", "W_", "I_NAT_"),
+    wtw_file_name = c("", "", "", "I_NAT_retired.tif"),
+    datatype = c("INT1U", "INT2U", "FLT4S", "INT1U"),
+    legend_type = c("manual", "continuous", "continuous", "manual"),
+    legend_color = c(
+      "#00000000, #a6cee3", "Greens", "Blues", "#00000000, #7fbc41"
+    ),
+    legend_label = c("Non Habitat, Habitat", "", "", "not included, included"),
+    values = c("0, 1", "", "", "0, 1"),
+    unit = c("km2", "ha", "ha", "km2"),
+    provenance = "national",
+    visible = c(FALSE, FALSE, FALSE, TRUE),
+    hidden = FALSE,
+    downloadable = TRUE,
+    external = TRUE,
+    active = c(TRUE, TRUE, TRUE, FALSE),
+    check.names = FALSE
+  )
+}
+
+# Writes a catalogue data frame to `path` as NAT_DATA writes
+# WTW_NAT_PREP_METADATA.csv: UTF-8 with a byte order mark (`bom`), column
+# names as they are and unquoted, fields quoted only when they hold a comma
+# or a quote, `NA` as an empty field, and `eol` line endings. Returns `path`,
+# invisibly.
+write_catalogue <- function(x, path, bom = TRUE, eol = "\n") {
+  field <- function(v) {
+    v <- ifelse(is.na(v), "", as.character(v))
+    quote <- grepl("[\",]", v)
+    v[quote] <- paste0("\"", gsub("\"", "\"\"", v[quote]), "\"")
+    v
+  }
+  rows <- if (nrow(x) > 0) do.call(paste, c(lapply(x, field), sep = ","))
+  lines <- c(paste(names(x), collapse = ","), rows)
+  bytes <- charToRaw(enc2utf8(paste0(paste(lines, collapse = eol), eol)))
+  if (bom) {
+    bytes <- c(as.raw(c(0xef, 0xbb, 0xbf)), bytes)
+  }
+  writeBin(bytes, path)
+  invisible(path)
+}
+
+# Writes a NAT_DATA-like folder at `dir`: `_1km/idx.tif` (the template,
+# INT4S), `themes/species/features.rds` (`fixture_rij()`),
+# `themes/habitat/cover.tif` (the cover feature, FLT4S) and
+# `WTW_NAT_PREP_METADATA.csv` (`catalogue`, with `write_catalogue()`).
+# Returns `dir`, invisibly. Needs terra and Matrix.
+write_fixture_natdata <- function(dir, catalogue = fixture_catalogue()) {
+  for (folder in c("_1km", "themes/species", "themes/habitat")) {
+    dir.create(file.path(dir, folder), recursive = TRUE, showWarnings = FALSE)
+  }
+  terra::writeRaster(
+    fixture_template(), file.path(dir, "_1km", "idx.tif"),
+    datatype = "INT4S", overwrite = TRUE, gdal = "COMPRESS=DEFLATE"
+  )
+  saveRDS(fixture_rij(), file.path(dir, "themes", "species", "features.rds"))
+  terra::writeRaster(
+    fixture_features()[["cover"]],
+    file.path(dir, "themes", "habitat", "cover.tif"),
+    datatype = "FLT4S", overwrite = TRUE, gdal = "COMPRESS=DEFLATE"
+  )
+  write_catalogue(catalogue, file.path(dir, "WTW_NAT_PREP_METADATA.csv"))
+  invisible(dir)
+}
+
+# A NAT_DATA-like folder from `write_fixture_natdata()` in a new temporary
+# folder, whose path is returned. Needs terra and Matrix.
+fixture_natdata_dir <- function(catalogue = fixture_catalogue()) {
+  write_fixture_natdata(tempfile("natdata"), catalogue)
+}
+
+# The fixture catalogue's column names once read: as written, with
+# " file_name" trimmed.
+fixture_catalogue_names <- function() {
+  sub("^ ", "", names(fixture_catalogue()))
+}

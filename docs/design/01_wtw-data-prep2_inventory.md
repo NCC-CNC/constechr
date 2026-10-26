@@ -458,16 +458,18 @@ multiband = FALSE, filename = NULL, overwrite = TRUE)`
 
 `extract_layers(layers, aoi_raster, template, dir = NULL, prefix = "",
 datatype = NULL, round_int = TRUE, multiband = FALSE, drop_empty = TRUE,
-overwrite = TRUE, progress = NULL)`
+overwrite = TRUE, progress = NULL, path_column = "path")`
 
 - The wrapper: `read_rij_matrix()`, `clip_rij_matrix()`, `rij_matrix_to_raster()`, then
   `write_rasters()` when `dir` is given (else returns the rasters).
-- `layers`: file paths, or a table with constechr's own column names: `path`
-  (required) and optional `prefix`, `datatype` and `subdir` (output
-  subfolder). Any source of layers can build that table;
-  `read_natdata_metadata()` maps NAT_DATA's catalogue columns onto it, so
-  `extract_layers()` does not depend on NAT_DATA's column names. Callers pick
-  the rows (layers) they want.
+- `layers`: file paths, or a table with a column of file paths, named by
+  `path_column` (default `"path"`), and optional `prefix`, `datatype`,
+  `subdir` (output subfolder) and `format` (`"auto"`, `"raster"`, `"rij"`)
+  columns. Any source of layers can build that table. NAT_DATA's catalogue,
+  as `read_natdata_metadata()` returns it, is passed as it is with
+  `path_column = "file"` (its `path` column is each layer's folder, and its
+  `type` column is ignored; ADR 0016). Callers pick the rows (layers) they
+  want.
 - `datatype` (when writing): taken per layer from the `layers` table, else
   this argument, else the source GeoTIFF's stored type. A prebuilt `.rds`
   rij layer has no stored type, so it needs one of the first two, or the
@@ -479,9 +481,10 @@ overwrite = TRUE, progress = NULL)`
   GeoTIFFs this way).
 - `progress`: optional callback `(i, n, layer)` (the toolkit's); frees memory
   between layers.
-- As built (#21, ADR 0015): `multiband`, `drop_empty` and `overwrite` are
-  passed through to the functions it calls. The `layers` table's optional
-  `prefix`, `datatype`, `subdir` and `type` columns override the arguments
+- As built (#21, ADR 0015; #22, ADR 0016): `multiband`, `drop_empty` and
+  `overwrite` are passed through to the functions it calls. The `layers`
+  table's optional `prefix`, `datatype`, `subdir` and `format` (named
+  `type` until #22) columns override the arguments
   per layer (`NA` uses the argument; other columns are ignored). Before any
   layer is read, it checks for missing files, unknown types, rasters off
   the grid and missing or invalid data types, and for output files that
@@ -499,12 +502,23 @@ active_only = TRUE)`
 
 - The NAT_DATA layer catalogue, read the same way by wtw-data-prep2 and the
   toolkit. NAT_DATA is shared ConsTech data, so this is not specific to
-  wtw-data-prep2. Returns the catalogue with its own columns kept, plus the
-  `path`, `prefix`, `datatype` and `subdir` columns `extract_layers()` takes
-  (`path` built from the catalogue's folder and file name columns).
+  wtw-data-prep2. The catalogue cannot change, so every one of its columns
+  is returned as it is (same names, values and meanings; `path` stays the
+  folder relative to NAT_DATA). Two columns are added: `file`, the full
+  path (`file.path(natdata_dir, path, file_name)`), and `subdir`, a copy of
+  `path`; each only if the catalogue has no column of that name. Its own
+  `prefix` and `datatype` already mean what `extract_layers()` expects, so
+  the table goes to `extract_layers(path_column = "file")` as it is.
 - `file`: the catalogue's file name within `natdata_dir`, defaulting to
   today's `WTW_NAT_PREP_METADATA.csv` (the toolkit already exposes it as
   `metadata_csv`).
+- As built (#22, ADR 0016): read with `utils::read.csv()` (byte order mark
+  skipped, names not made syntactic, then trimmed of spaces, as the header
+  has `" file_name"`). `active_only = TRUE` keeps rows where `active` is
+  `TRUE` (dropping `FALSE` and `NA`) and errors without a logical `active`
+  column; `path` and `file_name` are required. The layers' files are
+  checked by `extract_layers()`, not here. Reading the species `.xlsx` is
+  out of scope.
 
 ### Use-case functions
 
@@ -519,6 +533,9 @@ NAT_DATA (shared national data, used by several tools):
 - The national template raster within a NAT_DATA folder. The one place the
   template's location is written down; other functions take the
   `SpatRaster` it returns.
+- As built (#22, ADR 0016): `terra::rast(file.path(natdata_dir, file))`
+  with argument checks, values left on disk; one layer and a CRS are
+  required, as for every template.
 
 `read_natdata_metadata()` (above) also belongs to this layer.
 
@@ -552,8 +569,9 @@ cells = "touches")`
 layers = read_natdata_metadata(natdata_dir))`
 
 - wtw-data-prep2's step 03 in one call: `extract_layers()` with the
-  NAT_DATA catalogue, writing to `<project_dir>/tifs/<subdir>/` with each
-  layer's prefix and data type, as today.
+  NAT_DATA catalogue and `path_column = "file"`, writing to
+  `<project_dir>/tifs/<subdir>/` with each layer's prefix and data type, as
+  today.
 
 `create_wtw_project_folder(path, folders = wtw_project_folders())`
 

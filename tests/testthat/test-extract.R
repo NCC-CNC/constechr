@@ -72,9 +72,9 @@ test_that("raster layers are named after the file or their layers", {
     ignore_attr = TRUE
   )
 
-  # A type column reads a raster with another extension
+  # A format column reads a raster with another extension
   file.copy("cover.tif", "cover.dat")
-  layers <- data.frame(path = "cover.dat", type = "raster")
+  layers <- data.frame(path = "cover.dat", format = "raster")
   y <- extract_layers(layers, pu, template)
   expect_identical(names(y), "cover")
   expect_identical(names(y$cover), "cover")
@@ -284,7 +284,7 @@ test_that("layers tables keep other columns and accept factors and NAs", {
     prefix = NA,
     datatype = "INT1U",
     subdir = "",
-    type = NA
+    format = NA
   )
   paths <- suppressMessages(
     extract_layers(
@@ -306,6 +306,52 @@ test_that("layers tables keep other columns and accept factors and NAs", {
     ),
     character()
   )
+})
+
+test_that("path_column names the column of paths; type is not format", {
+  old <- setwd(fixture_layers_dir())
+  on.exit(setwd(old), add = TRUE)
+  dir <- tempfile("extract")
+  # A catalogue-like table: path is a folder, file the layer's file, and
+  # type a role (like NAT_DATA's include, theme or weight), all ignored
+  layers <- data.frame(
+    path = "not/a/file",
+    file = "features.rds",
+    type = "theme",
+    datatype = "INT1U",
+    subdir = "species"
+  )
+  paths <- suppressMessages(
+    extract_layers(
+      layers, fixture_pu("inside"), fixture_template(),
+      dir = dir, path_column = "file"
+    )
+  )
+  expect_identical(
+    unname(paths),
+    file.path(dir, "species", c("sp_a.tif", "cover.tif"))
+  )
+  expect_equal(file_values(paths[["sp_a"]]), inside_sp_a)
+
+  # path_column is not used with a vector of paths
+  x <- suppressMessages(
+    extract_layers(
+      "features.rds", fixture_pu("inside"), fixture_template(),
+      path_column = "file"
+    )
+  )
+  expect_identical(names(x), "features")
+
+  # The progress callback gets the path from path_column
+  calls <- list()
+  suppressMessages(
+    extract_layers(
+      layers, fixture_pu("inside"), fixture_template(),
+      path_column = "file",
+      progress = function(i, n, layer) calls[[i]] <<- layer
+    )
+  )
+  expect_identical(calls, list("features.rds"))
 })
 
 test_that("extract_layers() matches wtw-data-prep2's natdata()", {
@@ -387,6 +433,18 @@ test_that("invalid arguments give clear errors before extracting", {
     extract_layers(data.frame(file = "features.rds"), pu, template)
   })
   expect_snapshot(error = TRUE, {
+    extract_layers(
+      data.frame(path = "features.rds"), pu, template,
+      path_column = "file"
+    )
+  })
+  expect_snapshot(error = TRUE, {
+    extract_layers("features.rds", pu, template, path_column = c("a", "b"))
+  })
+  expect_snapshot(error = TRUE, {
+    extract_layers(data.frame(file = 1), pu, template, path_column = "file")
+  })
+  expect_snapshot(error = TRUE, {
     extract_layers(c("features.rds", NA, ""), pu, template)
   })
   expect_snapshot(error = TRUE, {
@@ -399,7 +457,7 @@ test_that("invalid arguments give clear errors before extracting", {
   })
   expect_snapshot(error = TRUE, {
     extract_layers(
-      data.frame(path = "features.rds", type = "matrix"), pu, template
+      data.frame(path = "features.rds", format = "matrix"), pu, template
     )
   })
   expect_snapshot(error = TRUE, {
@@ -548,9 +606,9 @@ test_that("a layer failing while extracted is named; earlier files are kept", {
   expect_setequal(list.files(dir), c("sp_a.tif", "cover.tif"))
 
   # An .rds layer whose features would overwrite a later layer's input
-  # file: sp_a.tif here is an rij matrix too, read as one by its type
+  # file: sp_a.tif here is an rij matrix too, read as one by its format
   file.copy("features.rds", "sp_a.tif")
-  layers <- data.frame(path = c("features.rds", "sp_a.tif"), type = "rij")
+  layers <- data.frame(path = c("features.rds", "sp_a.tif"), format = "rij")
   expect_snapshot(error = TRUE, {
     suppressMessages(
       extract_layers(layers, pu, template, dir = ".", datatype = "INT1U")

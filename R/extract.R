@@ -13,20 +13,22 @@
 #'   - a character vector of file paths: GeoTIFFs on the template's grid, or
 #'     `.rds` files holding rij matrices built on the template (such as
 #'     NAT_DATA's species layers); or
-#'   - a data frame with one row per layer and a `path` column of file paths,
-#'     and optionally any of these columns, each overriding the matching
-#'     argument for its layer (`NA` uses the argument):
+#'   - a data frame with one row per layer and a column of file paths, named
+#'     by `path_column` (`path` by default), and optionally any of these
+#'     columns, each overriding the matching argument for its layer (`NA`
+#'     uses the argument):
 #'     - `prefix`: put before the layer's file names (`""` for none);
 #'     - `datatype`: the data type of the layer's files;
 #'     - `subdir`: the subfolder of `dir` the layer's files go in (`NA` or
 #'       `""` for `dir` itself); it may hold path separators;
-#'     - `type`: what the file holds, `"auto"`, `"raster"` or `"rij"`, as in
-#'       [read_rij_matrix()]; `NA` is `"auto"`, which decides by extension
-#'       (`.tif` and `.tiff` are rasters, `.rds` an rij matrix).
+#'     - `format`: what the file holds, `"auto"`, `"raster"` or `"rij"`, as
+#'       in [read_rij_matrix()]'s `type`; `NA` is `"auto"`, which decides by
+#'       extension (`.tif` and `.tiff` are rasters, `.rds` an rij matrix).
 #'
 #'   Other columns are ignored, so a layer catalogue can be passed with its
-#'   own columns kept. A layer may appear more than once (for example
-#'   written to two subfolders).
+#'   own columns kept, such as the one [read_natdata_metadata()] returns
+#'   (with `path_column = "file"`). A layer may appear more than once (for
+#'   example written to two subfolders).
 #' @param aoi_raster The AOI as a raster: a `SpatRaster` with one layer, or
 #'   a path to a raster file, on the template's grid (same CRS, resolution
 #'   and cell origin), as in [clip_rij_matrix()]. Every cell that is not
@@ -73,6 +75,11 @@
 #'   layer is extracted as `progress(i, n, layer)`: `i` is the layer's
 #'   number, `n` the number of layers and `layer` its path. Use it to report
 #'   progress, for example in a Shiny app or a log.
+#' @param path_column A single string: the name of the column of `layers`
+#'   that holds the layers' file paths, when `layers` is a data frame. The
+#'   default, `"path"`, is constechr's own column name; use `"file"` for the
+#'   catalogue from [read_natdata_metadata()], whose `path` column is each
+#'   layer's folder. Not used when `layers` is a vector of paths.
 #'
 #' @section Method:
 #' - **AOI cells**: the cells of `aoi_raster` that are not `NA`, where the
@@ -116,11 +123,11 @@
 #'   ([gc()]) after each one, since some national rij matrices are very
 #'   large.
 #'
-#' Method choices are recorded in ADR 0015, and those of the functions it
-#' calls in ADRs 0011 to 0014. With `layers` built from NAT_DATA's catalogue
-#' (`path` as `<folder>/<file>`, `subdir` as the folder, its `prefix` and
-#' `datatype`) and `dir` as `<project>/tifs`, it writes the same files as
-#' wtw-data-prep2's `natdata()`. Intended changes from that code: everything
+#' Method choices are recorded in ADRs 0015 and 0016, and those of the
+#' functions it calls in ADRs 0011 to 0014. With `layers` from
+#' [read_natdata_metadata()], `path_column = "file"` and `dir` as
+#' `<project>/tifs`, it writes the same files as wtw-data-prep2's
+#' `natdata()`. Intended changes from that code: everything
 #' that can be checked is checked before extracting, dropped features and
 #' skipped layers are named in messages, and an error names the layer.
 #'
@@ -136,7 +143,8 @@
 #'   multi-band file.
 #'
 #' @family rij
-#' @seealso [rasterize_aoi()] to make `aoi_raster`.
+#' @seealso [rasterize_aoi()] to make `aoi_raster`; [read_natdata_metadata()]
+#'   and [natdata_template()] for NAT_DATA's layers and template.
 #' @export
 #'
 #' @examples
@@ -181,12 +189,22 @@
 #'   )
 #'   names(x)
 #' }
+#'
+#' # A table whose file paths are in another column, such as NAT_DATA's
+#' # catalogue (see read_natdata_metadata())
+#' layers <- data.frame(folder = "species", file = rij, datatype = "INT1U")
+#' paths <- extract_layers(
+#'   layers, aoi_raster, template,
+#'   dir = dir, path_column = "file"
+#' )
+#' basename(paths)
 extract_layers <- function(layers, aoi_raster, template, dir = NULL,
                            prefix = "", datatype = NULL, round_int = TRUE,
                            multiband = FALSE, drop_empty = TRUE,
-                           overwrite = TRUE, progress = NULL) {
+                           overwrite = TRUE, progress = NULL,
+                           path_column = "path") {
   call <- environment()
-  layers <- as_layers(layers, call)
+  layers <- as_layers(layers, path_column, call)
   aoi_raster <- as_raster_layer(aoi_raster, "aoi_raster", call)
   template <- as_template(template, call)
   check_flag(drop_empty, "drop_empty", call)
@@ -271,29 +289,53 @@ extract_layers <- function(layers, aoi_raster, template, dir = NULL,
 #' The `layers` argument as a table
 #'
 #' @param layers The value given: a character vector of paths or a data
-#'   frame with a `path` column.
+#'   frame with a column of paths.
+#' @param path_column The name of the column of paths in a data frame.
 #' @param call The environment that errors name.
-#' @return A data frame with character columns `path`, `prefix`, `datatype`,
-#'   `subdir` and `type`, `NA` where not given; an error if `layers` is
-#'   neither, a path is missing or not an existing file, or a column is not
-#'   character.
+#' @return A data frame with character columns `path` (from `path_column`),
+#'   `prefix`, `datatype`, `subdir` and `format`, `NA` where not given; an
+#'   error if `path_column` is not a single, non-empty string, `layers` is
+#'   neither a vector of paths nor a data frame with that column, a path is
+#'   missing or not an existing file, or a column is not character.
 #' @noRd
-as_layers <- function(layers, call) {
-  if (is.character(layers)) {
-    layers <- data.frame(path = layers)
-  }
-  if (!is.data.frame(layers) || !"path" %in% names(layers)) {
+as_layers <- function(layers, path_column, call) {
+  ok <- assertthat::is.string(path_column) && !is.na(path_column) &&
+    nzchar(path_column)
+  if (!ok) {
     cli::cli_abort(
-      "{.arg layers} must be file paths or a data frame with a {.field path}
-      column, not {.obj_type_friendly {layers}}.",
+      "{.arg path_column} must be a single, non-empty string, not
+      {.obj_type_friendly {path_column}}.",
       call = call
     )
   }
-  columns <- c("path", "prefix", "datatype", "subdir", "type")
+  if (is.character(layers)) {
+    layers <- stats::setNames(data.frame(layers), path_column)
+  }
+  if (!is.data.frame(layers)) {
+    cli::cli_abort(
+      "{.arg layers} must be file paths or a data frame, not
+      {.obj_type_friendly {layers}}.",
+      call = call
+    )
+  }
+  if (!path_column %in% names(layers)) {
+    cli::cli_abort(
+      c(
+        "{.arg layers} must have a {.field {path_column}} column of file
+        paths.",
+        "i" = "Set {.arg path_column} to the name of the column that holds
+        them."
+      ),
+      call = call
+    )
+  }
+  columns <- c(path_column, "prefix", "datatype", "subdir", "format")
   table <- lapply(columns, function(column) {
     layer_column(layers, column, call)
   })
-  table <- data.frame(stats::setNames(table, columns))
+  table <- data.frame(
+    stats::setNames(table, c("path", columns[-1]))
+  )
   empty <- as.character(which(is.na(table$path) | !nzchar(table$path)))
   if (length(empty) > 0) {
     cli::cli_abort(
@@ -349,18 +391,18 @@ layer_column <- function(layers, column, call) {
 #'
 #' @param layers The table from `as_layers()`.
 #' @param call The environment that errors name.
-#' @return `"raster"` or `"rij"` for each layer; an error if a `type` is
+#' @return `"raster"` or `"rij"` for each layer; an error if a `format` is
 #'   not `"auto"`, `"raster"` or `"rij"`, or `"auto"` cannot tell from the
 #'   extension.
 #' @noRd
 layer_types <- function(layers, call) {
   types <- c("auto", "raster", "rij")
-  type <- layers$type
+  type <- layers$format
   bad <- unique(type[!is.na(type) & !type %in% types])
   if (length(bad) > 0) {
     cli::cli_abort(
       c(
-        "The {.field type} column of {.arg layers} must hold
+        "The {.field format} column of {.arg layers} must hold
         {.or {.str {types}}}.",
         "x" = "Not allowed: {.str {bad}}."
       ),
@@ -375,8 +417,8 @@ layer_types <- function(layers, call) {
       c(
         "Can't tell from their extension whether these layers are rasters or
         rij matrices: {.file {unknown}}.",
-        "i" = "Set their type ({.str raster} or {.str rij}) in a
-        {.field type} column of {.arg layers}."
+        "i" = "Set their format ({.str raster} or {.str rij}) in a
+        {.field format} column of {.arg layers}."
       ),
       call = call
     )

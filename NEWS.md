@@ -1,4 +1,22 @@
-# constechr 0.0.0.9009
+# constechr 0.0.0.9010
+
+- New `natdata_template()` opens the national 1 km template raster in a
+  NAT_DATA folder, `_1km/idx.tif` by default (#22).
+- New `read_natdata_metadata()` reads NAT_DATA's layer catalogue,
+  `WTW_NAT_PREP_METADATA.csv` by default, keeping only active layers by
+  default (#22). Every catalogue column is kept as it is; `file` (each
+  layer's full path) and `subdir` (a copy of its folder, `path`) are
+  added, so the table goes straight to
+  `extract_layers(path_column = "file")`. Column names are trimmed of
+  spaces and a byte order mark. Decisions in ADR 0016. It replaces the
+  catalogue reading in wtw-data-prep2's `natdata()`, and with
+  `extract_layers()` writes the same files on the test fixtures.
+- `extract_layers()`'s per-layer `type` column (`"auto"`, `"raster"`,
+  `"rij"`) is renamed `format`, so a catalogue's own `type` column (such as
+  NAT_DATA's `include`, `theme`, `weight`) is ignored instead of failing
+  (#22, ADR 0016). Tables with a `type` column for this must rename it.
+- `extract_layers()` gains `path_column`, the name of the `layers` column
+  of file paths; the default, `"path"`, keeps its behaviour (#22).
 
 - New `extract_layers()` extracts many data layers on a template for an AOI
   (#21): each layer (a GeoTIFF on the template or an `.rds` rij matrix) is
