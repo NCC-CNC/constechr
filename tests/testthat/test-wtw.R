@@ -8,20 +8,9 @@
 # only cells 21 and 22 (NCCID 71 and 72): its box covers rows 1 to 3, its
 # planning units only row 3.
 
-# The extent of a raster as c(xmin, xmax, ymin, ymax), unnamed.
-extent_of <- function(x) {
-  unname(as.vector(terra::ext(x)))
-}
-
 # Each polygon's corner coordinates, as a list of two-column matrices.
 polygon_coords <- function(x) {
   lapply(sf::st_geometry(x), function(g) unname(sf::st_coordinates(g)[, 1:2]))
-}
-
-# The NoData value of a raster file's first band, as GDAL reports it.
-file_nodata <- function(path) {
-  line <- grep("NoData Value=", terra::describe(path), value = TRUE)[1]
-  as.numeric(sub(".*NoData Value=", "", line))
 }
 
 # The fields of a .dbf file, read from its header: a data frame with each
@@ -560,5 +549,470 @@ test_that("create_wtw_planning_units() gives clear errors", {
   })
   expect_snapshot(error = TRUE, {
     create_wtw_planning_units(aoi, "no_such_folder")
+  })
+})
+
+# extract_wtw_natdata() runs on fixture_natdata_dir(): a NAT_DATA-like
+# folder whose _1km/idx.tif is the 10 x 10 template (each cell holding its
+# terra cell number) and whose catalogue has three active layers:
+#
+#   path            file_name     prefix  datatype
+#   themes/species  features.rds  T_      INT1U     (sp_a, sp_b, cover)
+#   themes/habitat  cover.tif     T_      INT2U     (cover)
+#   themes/habitat  cover.tif     W_      FLT4S     (cover)
+#
+# The inside AOI's planning units are cells 34 35 36 / 44 45 46 / 54 55 56,
+# so every layer file is on the 3 x 3 grid x 1,003,000 to 1,006,000, y
+# 604,000 to 607,000. sp_b has no values there and is dropped.
+
+# The files wtw-data-prep2's natdata() (at 4e8333a) wrote for the inside AOI
+# on this folder (captured with terra 1.9.34; see test-extract.R): each
+# file's data type and values, in the order written.
+natdata_step03_files <- function() {
+  list(
+    "themes/species/T_sp_a.tif" = list("INT1U", c(1, 1, 0, 0, 1, 1, 0, 0, 1)),
+    "themes/species/T_cover.tif" = list("INT1U", c(0, 0, 0, 0, 2, 0, 0, 0, 0)),
+    "themes/habitat/T_cover.tif" = list("INT2U", c(0, 0, 0, 0, 2, 0, 0, 0, 0)),
+    "themes/habitat/W_cover.tif" = list(
+      "FLT4S", c(0, 0, 0, 0, 1.6, 0, 0, 0, 0)
+    )
+  )
+}
+
+# Runs `expr`, muffling its messages, and returns them.
+messages_of <- function(expr) {
+  messages <- character()
+  withCallingHandlers(
+    expr,
+    message = function(m) {
+      messages <<- c(messages, conditionMessage(m))
+      invokeRestart("muffleMessage")
+    }
+  )
+  messages
+}
+
+# The path of each file below its "tifs" folder.
+below_tifs <- function(paths) {
+  sub(".*/tifs/", "", gsub("\\\\", "/", unname(paths)))
+}
+
+test_that("extract_wtw_natdata() matches wtw-data-prep2's step 03", {
+  skip_if_not_installed("sf")
+  skip_if_not_installed("prioritizr")
+  natdata <- fixture_natdata_dir()
+  project <- fixture_project("inside")
+  paths <- suppressMessages(extract_wtw_natdata(natdata, project))
+
+  expected <- natdata_step03_files()
+  tifs <- file.path(project, "tifs")
+  expect_identical(unname(paths), file.path(tifs, names(expected)))
+  expect_named(paths, c("sp_a", "cover", "cover", "cover"))
+  for (file in names(expected)) {
+    path <- file.path(tifs, file)
+    r <- terra::rast(path)
+    expect_identical(terra::datatype(r), expected[[file]][[1]], label = file)
+    expect_identical(
+      extent_of(r), c(1003000, 1006000, 604000, 607000),
+      label = file
+    )
+    expect_true(terra::same.crs(r, fixture_template()), label = file)
+    expect_equal(
+      file_values(path), expected[[file]][[2]],
+      tolerance = 1e-7, label = file
+    )
+  }
+
+  # Nothing else is written: no aoi/pu_1km_align.tif by default
+  expect_setequal(
+    list.files(project, recursive = TRUE),
+    c("aoi/pu_1km.tif", file.path("tifs", names(expected)))
+  )
+})
+
+test_that("extract_wtw_natdata() follows create_wtw_planning_units()", {
+  skip_if_not_installed("sf")
+  skip_if_not_installed("prioritizr")
+  natdata <- fixture_natdata_dir()
+
+  # Step 02 then step 03, with the project's aoi/pu_1km.tif
+  project <- tempfile("project")
+  pu <- create_wtw_planning_units(fixture_aoi("inside"), natdata, project)
+  suppressMessages(extract_wtw_natdata(natdata, project))
+  written <- folder_rasters(file.path(project, "tifs"))
+  expect_setequal(names(written), names(natdata_step03_files()))
+
+  # The same files as from fixture_pu()'s pu_1km.tif
+  reference <- fixture_project("inside")
+  suppressMessages(extract_wtw_natdata(natdata, reference))
+  expect_identical(written, folder_rasters(file.path(reference, "tifs")))
+
+  # The raster create_wtw_planning_units() returns gives the same files
+  other <- tempfile("project")
+  suppressMessages(
+    extract_wtw_natdata(natdata, other, aoi_raster = pu$aoi_raster)
+  )
+  expect_identical(written, folder_rasters(file.path(other, "tifs")))
+  expect_identical(list.files(other), "tifs")
+
+  # So does the path of a pu_1km.tif elsewhere
+  other <- tempfile("project")
+  suppressMessages(extract_wtw_natdata(
+    natdata, other,
+    aoi_raster = file.path(project, "aoi", "pu_1km.tif")
+  ))
+  expect_identical(written, folder_rasters(file.path(other, "tifs")))
+})
+
+test_that("align_file writes the planning units on the template's grid", {
+  skip_if_not_installed("sf")
+  skip_if_not_installed("prioritizr")
+  natdata <- fixture_natdata_dir()
+
+  # NULL (the default) writes no aligned file
+  project <- fixture_project("inside")
+  suppressMessages(extract_wtw_natdata(natdata, project))
+  expect_false(file.exists(file.path(project, "aoi", "pu_1km_align.tif")))
+
+  # Given: 1 in the planning units on the template's full grid, INT1U,
+  # NoData 255, one layer named "layer", as wtw-data-prep2 wrote it
+  project <- fixture_project("inside")
+  paths <- suppressMessages(
+    extract_wtw_natdata(natdata, project, align_file = "aoi/pu_1km_align.tif")
+  )
+  path <- file.path(project, "aoi", "pu_1km_align.tif")
+  r <- terra::rast(path)
+  expect_true(on_template_grid(r))
+  expect_identical(terra::datatype(r), "INT1U")
+  expect_identical(file_nodata(path), 255)
+  expect_identical(names(r), "layer")
+  expected <- rep(NA_real_, 100)
+  expected[c(34, 35, 36, 44, 45, 46, 54, 55, 56)] <- 1
+  expect_equal(file_values(path), expected)
+  expect_false(path %in% paths)
+  expect_length(paths, 4)
+
+  # The same as align_raster() on pu_1km.tif, as wtw-data-prep2's
+  # align_pu() made it (ADR 0007)
+  aligned <- align_raster(
+    file.path(project, "aoi", "pu_1km.tif"), fixture_template(),
+    filename = tempfile(fileext = ".tif")
+  )
+  expect_identical(
+    terra::values(r, mat = FALSE),
+    terra::values(aligned, mat = FALSE)
+  )
+
+  # From the raster create_wtw_planning_units() returns (NCCID values), in
+  # a new folder: the same 1s
+  project <- tempfile("project")
+  pu <- create_wtw_planning_units(fixture_aoi("inside"), natdata)
+  suppressMessages(extract_wtw_natdata(
+    natdata, project,
+    aoi_raster = pu$aoi_raster, align_file = "aligned/pu.tif"
+  ))
+  aligned_path <- file.path(project, "aligned", "pu.tif")
+  expect_equal(file_values(aligned_path), expected)
+  expect_identical(terra::datatype(terra::rast(aligned_path)), "INT1U")
+})
+
+test_that("layers, tifs_dir and extract_layers()'s arguments are passed on", {
+  skip_if_not_installed("sf")
+  skip_if_not_installed("prioritizr")
+  natdata <- fixture_natdata_dir()
+  catalogue <- read_natdata_metadata(natdata)
+  args <- list(
+    list(),
+    list(layers = catalogue[1, ]),
+    list(layers = catalogue$file[2]),
+    list(round_int = FALSE),
+    list(multiband = TRUE),
+    list(drop_empty = FALSE)
+  )
+  for (a in args) {
+    label <- paste(names(a), collapse = ", ")
+    project <- fixture_project("inside")
+    paths <- suppressMessages(do.call(
+      extract_wtw_natdata,
+      c(list(natdata, project, tifs_dir = "data/national"), a)
+    ))
+    reference <- tempfile("reference")
+    expected <- suppressMessages(do.call(
+      extract_layers,
+      c(
+        list(
+          layers = if (is.null(a$layers)) catalogue else a$layers,
+          aoi_raster = file.path(project, "aoi", "pu_1km.tif"),
+          template = natdata_template(natdata),
+          dir = reference, path_column = "file"
+        ),
+        a[names(a) != "layers"]
+      )
+    ))
+    expect_identical(names(paths), names(expected), label = label)
+    expect_identical(
+      folder_rasters(file.path(project, "data", "national")),
+      folder_rasters(reference),
+      label = label
+    )
+  }
+
+  # Known answers: round_int = FALSE truncates cover's 1.6 to 1
+  project <- fixture_project("inside")
+  suppressMessages(extract_wtw_natdata(natdata, project, round_int = FALSE))
+  expect_equal(
+    file_values(file.path(project, "tifs/themes/habitat/T_cover.tif")),
+    c(0, 0, 0, 0, 1, 0, 0, 0, 0)
+  )
+
+  # multiband = TRUE: one file per layer, named after the layer's file
+  project <- fixture_project("inside")
+  paths <- suppressMessages(
+    extract_wtw_natdata(natdata, project, multiband = TRUE)
+  )
+  expect_identical(
+    below_tifs(paths),
+    c(
+      "themes/species/T_features.tif", "themes/habitat/T_cover.tif",
+      "themes/habitat/W_cover.tif"
+    )
+  )
+  expect_identical(names(terra::rast(paths[[1]])), c("sp_a", "cover"))
+
+  # drop_empty = FALSE keeps sp_b, all 0s
+  project <- fixture_project("inside")
+  suppressMessages(extract_wtw_natdata(natdata, project, drop_empty = FALSE))
+  expect_equal(
+    file_values(file.path(project, "tifs/themes/species/T_sp_b.tif")),
+    rep(0, 9)
+  )
+})
+
+test_that("empty features and layers are dropped, named in messages", {
+  skip_if_not_installed("sf")
+  skip_if_not_installed("prioritizr")
+  natdata <- fixture_natdata_dir()
+
+  # The edge AOI (cells 78 79 80 88 89 90): sp_a and sp_b have no values
+  # there; cover is 2.2 in cell 89
+  project <- fixture_project("edge")
+  messages <- messages_of(
+    paths <- extract_wtw_natdata(natdata, project, progress = NULL)
+  )
+  expect_match(messages, "sp_a", all = FALSE)
+  expect_match(messages, "sp_b", all = FALSE)
+  expect_identical(
+    below_tifs(paths),
+    c(
+      "themes/species/T_cover.tif", "themes/habitat/T_cover.tif",
+      "themes/habitat/W_cover.tif"
+    )
+  )
+  expect_equal(
+    file_values(file.path(project, "tifs/themes/habitat/T_cover.tif")),
+    c(0, 0, 0, 0, 2, 0)
+  )
+
+  # The single AOI (cell 77): no feature of features.rds has a value there,
+  # so the layer is skipped
+  project <- fixture_project("single")
+  layers <- read_natdata_metadata(natdata)[1, ]
+  messages <- messages_of(
+    paths <- extract_wtw_natdata(
+      natdata, project,
+      layers = layers, progress = NULL
+    )
+  )
+  expect_length(paths, 0)
+  expect_match(messages, "features.rds", all = FALSE)
+  expect_false(dir.exists(file.path(project, "tifs", "themes", "species")))
+})
+
+test_that("progress reports each layer, by default with a message", {
+  skip_if_not_installed("sf")
+  skip_if_not_installed("prioritizr")
+  natdata <- fixture_natdata_dir()
+
+  # The default: one message per layer
+  project <- fixture_project("inside")
+  messages <- messages_of(extract_wtw_natdata(natdata, project))
+  expect_identical(
+    trimws(grep("^Layer", messages, value = TRUE)),
+    c(
+      "Layer 1 of 3: features.rds", "Layer 2 of 3: cover.tif",
+      "Layer 3 of 3: cover.tif"
+    )
+  )
+
+  # NULL: none
+  messages <- messages_of(
+    extract_wtw_natdata(natdata, project, progress = NULL)
+  )
+  expect_false(any(grepl("^Layer", messages)))
+
+  # A function: called with i, n and the layer's path
+  calls <- list()
+  suppressMessages(extract_wtw_natdata(
+    natdata, project,
+    progress = function(i, n, layer) {
+      calls[[length(calls) + 1]] <<- list(i, n, basename(layer))
+    }
+  ))
+  expect_equal(
+    calls,
+    list(
+      list(1, 3, "features.rds"), list(2, 3, "cover.tif"),
+      list(3, 3, "cover.tif")
+    )
+  )
+})
+
+test_that("overwrite replaces files, or stops before extracting", {
+  skip_if_not_installed("sf")
+  skip_if_not_installed("prioritizr")
+  natdata <- fixture_natdata_dir()
+
+  # TRUE (the default) replaces the files, including align_file
+  project <- fixture_project("edge")
+  suppressMessages(extract_wtw_natdata(
+    natdata, project,
+    align_file = "aoi/pu_1km_align.tif"
+  ))
+  terra::writeRaster(
+    fixture_pu("inside"), file.path(project, "aoi", "pu_1km.tif"),
+    datatype = "INT1U", overwrite = TRUE
+  )
+  suppressMessages(extract_wtw_natdata(
+    natdata, project,
+    align_file = "aoi/pu_1km_align.tif"
+  ))
+  expect_equal(
+    file_values(file.path(project, "tifs/themes/habitat/T_cover.tif")),
+    c(0, 0, 0, 0, 2, 0, 0, 0, 0)
+  )
+  aligned <- file_values(file.path(project, "aoi", "pu_1km_align.tif"))
+  expect_identical(
+    which(!is.na(aligned)),
+    c(34L, 35L, 36L, 44L, 45L, 46L, 54L, 55L, 56L)
+  )
+
+  # FALSE with an existing layer file: an error before anything is written
+  project <- fixture_project("inside")
+  habitat <- file.path(project, "tifs", "themes", "habitat")
+  dir.create(habitat, recursive = TRUE)
+  file.create(file.path(habitat, "W_cover.tif"))
+  expect_error(
+    suppressMessages(extract_wtw_natdata(natdata, project, overwrite = FALSE)),
+    "already exist"
+  )
+  expect_setequal(
+    list.files(project, recursive = TRUE),
+    c("aoi/pu_1km.tif", "tifs/themes/habitat/W_cover.tif")
+  )
+
+  # FALSE with an existing align_file: an error before extracting
+  project <- fixture_project("inside")
+  file.create(file.path(project, "aoi", "pu_1km_align.tif"))
+  expect_error(
+    extract_wtw_natdata(
+      natdata, project,
+      align_file = "aoi/pu_1km_align.tif", overwrite = FALSE
+    ),
+    "already exist"
+  )
+  expect_false(dir.exists(file.path(project, "tifs")))
+
+  # FALSE without existing files writes them
+  project <- fixture_project("inside")
+  paths <- suppressMessages(
+    extract_wtw_natdata(natdata, project, overwrite = FALSE)
+  )
+  expect_true(all(file.exists(paths)))
+})
+
+test_that("extract_wtw_natdata() works on the example NAT_DATA folder", {
+  skip_if_not_installed("sf")
+  skip_if_not_installed("prioritizr")
+  natdata <- system.file("extdata", "natdata", package = "constechr")
+  project <- tempfile("project")
+  create_wtw_planning_units(
+    system.file("extdata", "aoi.gpkg", package = "constechr"),
+    natdata, project
+  )
+  paths <- suppressMessages(extract_wtw_natdata(natdata, project))
+  expect_identical(below_tifs(paths), names(natdata_step03_files()))
+  expect_equal(file_values(paths[[1]]), c(1, 1, 0, 0, 1, 1, 0, 0, 1))
+})
+
+test_that("extract_wtw_natdata() gives clear errors", {
+  skip_if_not_installed("sf")
+  dir <- tempfile("wtw_natdata_errors")
+  dir.create(dir)
+  old <- setwd(dir)
+  on.exit(setwd(old), add = TRUE)
+  natdata <- "natdata"
+  write_fixture_natdata(natdata)
+  dir.create(file.path("no_template", "_1km"), recursive = TRUE)
+  file.create("a_file")
+  dir.create(file.path("project", "aoi"), recursive = TRUE)
+  terra::writeRaster(
+    fixture_pu("inside"), file.path("project", "aoi", "pu_1km.tif"),
+    datatype = "INT1U"
+  )
+  file.create(file.path("project", "aoi", "pu_1km_align.tif"))
+
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata("no_such_folder", "project")
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, NULL)
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, 1)
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "a_file")
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", tifs_dir = NULL)
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", tifs_dir = "/tifs")
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", align_file = "")
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", align_file = "C:/align.tif")
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", round_int = NA)
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", multiband = "no")
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", progress = "yes")
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "new_project")
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", aoi_raster = 1)
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", align_file = "aoi/pu_1km.tif")
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(
+      natdata, "project",
+      align_file = "aoi/pu_1km_align.tif", overwrite = FALSE
+    )
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(
+      "no_template", "project",
+      layers = file.path(natdata, "themes", "habitat", "cover.tif")
+    )
   })
 })

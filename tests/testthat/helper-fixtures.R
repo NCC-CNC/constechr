@@ -473,3 +473,42 @@ lower_left <- function(x) {
   b <- t(sapply(sf::st_geometry(x), sf::st_bbox))
   unname(b[, c("xmin", "ymin"), drop = FALSE])
 }
+
+# The extent of a raster as c(xmin, xmax, ymin, ymax), unnamed. Needs terra.
+extent_of <- function(x) {
+  unname(as.vector(terra::ext(x)))
+}
+
+# The NoData value of a raster file's first band, as GDAL reports it. Needs
+# terra.
+file_nodata <- function(path) {
+  line <- grep("NoData Value=", terra::describe(path), value = TRUE)[1]
+  as.numeric(sub(".*NoData Value=", "", line))
+}
+
+# A WTW project folder holding aoi/pu_1km.tif for an AOI, as wtw-data-prep2's
+# step 02 writes it (`fixture_pu(name)`, INT1U), in a new temporary folder
+# whose path is returned. Needs terra and sf.
+fixture_project <- function(name = "inside") {
+  project <- tempfile("project")
+  dir.create(file.path(project, "aoi"), recursive = TRUE)
+  terra::writeRaster(
+    fixture_pu(name), file.path(project, "aoi", "pu_1km.tif"),
+    datatype = "INT1U"
+  )
+  project
+}
+
+# Each raster file under a folder, as a list named by relative path of its
+# data type, extent, NoData value, layer names and values. Needs terra.
+folder_rasters <- function(dir) {
+  files <- sort(list.files(dir, recursive = TRUE))
+  stats::setNames(lapply(files, function(f) {
+    path <- file.path(dir, f)
+    r <- terra::rast(path)
+    list(
+      datatype = terra::datatype(r), extent = extent_of(r),
+      nodata = file_nodata(path), names = names(r), values = file_values(path)
+    )
+  }), files)
+}

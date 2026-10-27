@@ -318,16 +318,7 @@ create_1km_grid <- function(aoi, natdata_dir, cells = "touches",
   check_choice(index, "index", c("template", "cell"), call)
   check_choice(order, "order", c("value", "cell"), call)
 
-  template <- tryCatch(
-    natdata_template(natdata_dir),
-    error = function(e) {
-      cli::cli_abort(
-        "The national template in {.arg natdata_dir} could not be opened.",
-        parent = e,
-        call = call
-      )
-    }
-  )
+  template <- open_natdata_template(natdata_dir, call)
   aoi <- read_aoi(aoi, crs = template)
   aoi_raster <- rasterize_aoi(
     aoi, template,
@@ -346,6 +337,26 @@ create_1km_grid <- function(aoi, natdata_dir, cells = "touches",
   }
 
   list(aoi = aoi, aoi_raster = aoi_raster, polygons = polygons)
+}
+
+#' Open a NAT_DATA folder's template for a use-case function
+#'
+#' @param natdata_dir The NAT_DATA folder, already checked.
+#' @param call The environment that errors name.
+#' @return The template from `natdata_template()`; an error naming
+#'   `natdata_dir`, with the cause as its parent, if it cannot be opened.
+#' @noRd
+open_natdata_template <- function(natdata_dir, call) {
+  tryCatch(
+    natdata_template(natdata_dir),
+    error = function(e) {
+      cli::cli_abort(
+        "The national template in {.arg natdata_dir} could not be opened.",
+        parent = e,
+        call = call
+      )
+    }
+  )
 }
 
 #' Check an argument that takes one of a few strings

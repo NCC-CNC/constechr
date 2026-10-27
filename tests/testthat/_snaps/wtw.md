@@ -104,3 +104,137 @@
       Error in `create_1km_grid()`:
       ! `natdata_dir` must be an existing folder; 'no_such_folder' is not one.
 
+# extract_wtw_natdata() gives clear errors
+
+    Code
+      extract_wtw_natdata("no_such_folder", "project")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `natdata_dir` must be an existing folder; 'no_such_folder' is not one.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, NULL)
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `project_dir` must be a single folder path, not NULL.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, 1)
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `project_dir` must be a single folder path, not a number.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "a_file")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `project_dir` must be a folder; 'a_file' is a file.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", tifs_dir = NULL)
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `tifs_dir` must be a single folder path, not NULL.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", tifs_dir = "/tifs")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `tifs_dir` must be a path relative to `project_dir`, not '/tifs'.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_file = "")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `align_file` must be `NULL` or a single file path, not `""`.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_file = "C:/align.tif")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `align_file` must be a path relative to `project_dir`, not 'C:/align.tif'.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", round_int = NA)
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `round_int` must be `TRUE` or `FALSE`, not `NA`.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", multiband = "no")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `multiband` must be `TRUE` or `FALSE`, not a string.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", progress = "yes")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `progress` must be `NULL` or a function, not a string.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "new_project")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `aoi_raster` must be an existing file; 'new_project/aoi/pu_1km.tif' does not exist.
+      i Write the project's planning units with `create_wtw_planning_units()` first, or pass the raster it returns.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", aoi_raster = 1)
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `aoi_raster` must be a <SpatRaster> or a file path, not a number.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_file = "aoi/pu_1km.tif")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `align_file` must not be the file `aoi_raster` is read from: 'project/aoi/pu_1km.tif'.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_file = "aoi/pu_1km_align.tif",
+        overwrite = FALSE)
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `overwrite` is `FALSE`, but a file to write already exists.
+      x 'project/aoi/pu_1km_align.tif'
+
+---
+
+    Code
+      extract_wtw_natdata("no_template", "project", layers = file.path(natdata,
+        "themes", "habitat", "cover.tif"))
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! The national template in `natdata_dir` could not be opened.
+      Caused by error in `natdata_template()`:
+      ! `file` must be an existing file; 'no_template/_1km/idx.tif' does not exist.
+

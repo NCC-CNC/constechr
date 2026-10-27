@@ -216,5 +216,8 @@ pu <- create_wtw_planning_units(
 \seealso{
 \code{\link[=create_1km_grid]{create_1km_grid()}}, which makes the planning units, and
 \code{\link[=write_rasters]{write_rasters()}}, which writes the raster.
+
+Other wtw:
+\code{\link[=extract_wtw_natdata]{extract_wtw_natdata()}}
 }
 \concept{wtw}
