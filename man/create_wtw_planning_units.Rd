@@ -218,6 +218,8 @@ pu <- create_wtw_planning_units(
 \code{\link[=write_rasters]{write_rasters()}}, which writes the raster.
 
 Other wtw:
-\code{\link[=extract_wtw_natdata]{extract_wtw_natdata()}}
+\code{\link[=create_wtw_project_folder]{create_wtw_project_folder()}},
+\code{\link[=extract_wtw_natdata]{extract_wtw_natdata()}},
+\code{\link[=wtw_project_folders]{wtw_project_folders()}}
 }
 \concept{wtw}

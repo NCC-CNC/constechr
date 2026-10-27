@@ -512,3 +512,29 @@ folder_rasters <- function(dir) {
     )
   }), files)
 }
+
+# The folders below `dir`, as paths relative to it with `/` between folder
+# names, sorted by byte as wtw_project_folders() sorts them.
+folders_below <- function(dir) {
+  sort(list.dirs(dir, full.names = FALSE)[-1], method = "radix")
+}
+
+# The 32 folders wtw-data-prep2's step 01 (`create_project_folder()`)
+# creates inside a project folder, captured once from that function and
+# sorted by byte.
+wtw_step01_folders <- function() {
+  c(
+    "aoi", "dataprep", "dataprep/national", "dataprep/regional",
+    "dataprep/tmp", "tifs", "tifs/excludes", "tifs/includes", "tifs/themes",
+    "tifs/themes/habitat", "tifs/themes/species",
+    "tifs/themes/species/eccc_ch", "tifs/themes/species/eccc_sar",
+    "tifs/themes/species/iucn_amph", "tifs/themes/species/iucn_bird",
+    "tifs/themes/species/iucn_mamm", "tifs/themes/species/iucn_rept",
+    "tifs/themes/species/ncc_sar_aoh", "tifs/themes/species/ncc_sdm",
+    "tifs/themes/species/nsc_end", "tifs/themes/species/nsc_sar",
+    "tifs/themes/species/nsc_spp", "tifs/weights", "tifs/weights/carbon",
+    "tifs/weights/climate", "tifs/weights/connectivity",
+    "tifs/weights/eservices", "tifs/weights/hotspots",
+    "tifs/weights/pressures", "wtw", "wtw/metadata", "wtw/runs"
+  )
+}

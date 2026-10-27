@@ -1,4 +1,16 @@
-# constechr 0.0.0.9014
+# constechr 0.0.0.9015
+
+- New `create_wtw_project_folder()` and `wtw_project_folders()` are
+  wtw-data-prep2's step 01 folders (#26): `create_wtw_project_folder()`
+  creates a WTW project folder and the folders in `folders`, keeping
+  existing folders and files, and returns their paths.
+  `wtw_project_folders()` is the default list, the 32 folders
+  wtw-data-prep2's `create_project_folder()` creates; with `layers` (a
+  NAT_DATA catalogue from `read_natdata_metadata()`), the theme and weight
+  folders are `tifs/<subdir>` for its layers instead, the folders
+  `extract_wtw_natdata()` writes to. Decisions in ADR 0021. The
+  `dataprep/dataprep.csv` template step 01 also writes is not written (it
+  is #27).
 
 - New `extract_wtw_natdata()` is wtw-data-prep2's step 03 in one call
   (#25): `natdata_template()` and `extract_layers()` with the NAT_DATA

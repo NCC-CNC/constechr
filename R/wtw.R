@@ -424,6 +424,288 @@ extract_wtw_natdata <- function(natdata_dir, project_dir,
   invisible(paths)
 }
 
+#' Create the folders of a Where To Work project
+#'
+#' Creates a Where To Work (WTW) project folder and the folders inside it,
+#' by default the layout wtw-data-prep2's step 01 creates
+#' ([wtw_project_folders()]). Use it to start a WTW project before writing
+#' its files with [create_wtw_planning_units()] and [extract_wtw_natdata()],
+#' which also create the folders they write to. It creates folders only;
+#' the `dataprep/dataprep.csv` template that step 01 also writes is not
+#' written.
+#'
+#' @param project_dir The WTW project folder: a single folder path. It is
+#'   created if missing, as are any missing folders above it. Where the
+#'   project lives is each tool's own setting.
+#' @param folders The folders to create inside `project_dir`: a character
+#'   vector of paths relative to it, with `/` or a backslash between folder
+#'   names.
+#'   The default, [wtw_project_folders()], is the WTW project layout
+#'   wtw-data-prep2 creates; `wtw_project_folders(layers)` takes the theme
+#'   and weight folders from a NAT_DATA catalogue instead, and any other
+#'   list gives another layout. The folders above each one are created too,
+#'   so `"tifs/themes/species"` alone also creates `tifs` and
+#'   `tifs/themes`. A folder named more than once is created once. `NULL` or
+#'   an empty vector creates only `project_dir`.
+#'
+#' @section Method:
+#' `project_dir`, then each folder of `folders` in order, is created with
+#' [dir.create()] (`recursive = TRUE`) unless it exists. Existing folders
+#' and the files in them are kept as they are, as wtw-data-prep2 does, so
+#' calling it on an existing project only adds the folders that are
+#' missing. Nothing is written or removed, and no file is created.
+#'
+#' Arguments are checked before any folder is created: a folder path that
+#' is absolute, empty or `NA`, or that names an existing file, is an error.
+#' If a folder cannot be created (for example, without permission), the
+#' error names it, and the folders already created are kept.
+#'
+#' With the defaults, the folders are those of wtw-data-prep2's step 01
+#' (`create_project_folder()`): the same 32 folders inside `project_dir`.
+#' Decisions are recorded in ADR 0021.
+#'
+#' @return The paths of the folders in `folders`, invisibly: a character
+#'   vector of `file.path(project_dir, folders)`, in the order of `folders`
+#'   without repeats (`character(0)` when `folders` is empty). The folders
+#'   exist on disk as a side effect.
+#'
+#' @family wtw
+#' @seealso [wtw_project_folders()], the default folder list.
+#' @export
+#'
+#' @examples
+#' # Today's WTW project layout
+#' project_dir <- file.path(tempdir(), "wtw_folders")
+#' paths <- create_wtw_project_folder(project_dir)
+#' list.dirs(project_dir, full.names = FALSE)
+#'
+#' # The theme and weight folders of a NAT_DATA catalogue
+#' natdata_dir <- system.file("extdata", "natdata", package = "constechr")
+#' layers <- read_natdata_metadata(natdata_dir)
+#' project_dir <- file.path(tempdir(), "wtw_folders_natdata")
+#' paths <- create_wtw_project_folder(
+#'   project_dir, wtw_project_folders(layers)
+#' )
+#' list.dirs(file.path(project_dir, "tifs"), full.names = FALSE)
+#'
+#' # Another layout
+#' paths <- create_wtw_project_folder(
+#'   file.path(tempdir(), "other_layout"), c("aoi", "rasters/themes")
+#' )
+#' paths
+create_wtw_project_folder <- function(project_dir,
+                                      folders = wtw_project_folders()) {
+  call <- environment()
+  check_project_dir(project_dir, call, null_ok = FALSE)
+  folders <- check_folders(folders, call)
+  paths <- file.path(project_dir, folders)
+
+  is_file <- file.exists(paths) & !dir.exists(paths)
+  if (any(is_file)) {
+    cli::cli_abort(
+      c(
+        "{.arg folders} must not name existing files.",
+        "x" = "{cli::qty(sum(is_file))}{?A file/Files}:
+        {.file {paths[is_file]}}."
+      ),
+      call = call
+    )
+  }
+
+  for (path in c(project_dir, paths)) {
+    if (!dir.exists(path)) {
+      dir.create(path, recursive = TRUE, showWarnings = FALSE)
+    }
+    if (!dir.exists(path)) {
+      cli::cli_abort(
+        "The folder {.file {path}} could not be created.",
+        call = call
+      )
+    }
+  }
+  invisible(paths)
+}
+
+#' Folders of a Where To Work project
+#'
+#' The folders of a Where To Work (WTW) project, as paths relative to the
+#' project folder: the default `folders` of [create_wtw_project_folder()].
+#' Without `layers`, it is the layout wtw-data-prep2's step 01 creates, with
+#' a fixed list of theme and weight folders. With `layers`, the theme and
+#' weight folders are those [extract_wtw_natdata()] writes the layers to, so
+#' the layout follows a NAT_DATA catalogue as it changes.
+#'
+#' @param layers `NULL` (the default) for wtw-data-prep2's theme and weight
+#'   folders, or a data frame of layers with a `subdir` column, such as the
+#'   catalogue [read_natdata_metadata()] returns (whose `subdir` is each
+#'   layer's NAT_DATA folder, for example `"themes/species/eccc_ch"`). Each
+#'   layer's `subdir` gives the folder `tifs/<subdir>`, the folder
+#'   [extract_wtw_natdata()] writes it to. `NA` and `""` add no folder (those
+#'   layers are written to `tifs` itself); other columns are ignored.
+#'
+#' @section Method:
+#' The folders are, as paths with `/` between folder names:
+#' - always: `aoi`; `tifs` with `tifs/themes`, `tifs/weights`,
+#'   `tifs/includes` and `tifs/excludes`; `wtw` with `wtw/metadata` and
+#'   `wtw/runs`; and `dataprep` with `dataprep/national`,
+#'   `dataprep/regional` and `dataprep/tmp`;
+#' - with `layers = NULL`, wtw-data-prep2's theme and weight folders:
+#'   `tifs/themes/species` with one folder per species source (`eccc_ch`,
+#'   `eccc_sar`, `iucn_amph`, `iucn_bird`, `iucn_rept`, `iucn_mamm`,
+#'   `nsc_end`, `nsc_sar`, `nsc_spp`, `ncc_sdm` and `ncc_sar_aoh`),
+#'   `tifs/themes/habitat`, and `tifs/weights` with `carbon`, `climate`,
+#'   `connectivity`, `eservices`, `pressures` and `hotspots`;
+#' - with `layers`, `tifs/<subdir>` for each layer's `subdir` instead, with
+#'   backslashes turned into `/`, repeated `/` and a leading `./` or
+#'   trailing `/` removed.
+#'
+#' The folders above each folder are added (`tifs/themes/species` for
+#' `tifs/themes/species/eccc_ch`), repeats are removed and the list is
+#' sorted by byte (C locale), so each folder comes after the folder it is
+#' in and the order is the same on every system.
+#'
+#' With `layers = NULL`, the folders are the 32 that wtw-data-prep2's
+#' `create_project_folder()` creates. With NAT_DATA_20261009's catalogue
+#' (its active layers) they are the same 32 folders. Decisions are recorded
+#' in ADR 0021.
+#'
+#' @return A character vector of folder paths relative to the project
+#'   folder, sorted, with `/` between folder names.
+#'
+#' @family wtw
+#' @seealso [read_natdata_metadata()], which reads a NAT_DATA catalogue.
+#' @export
+#'
+#' @examples
+#' # wtw-data-prep2's layout
+#' wtw_project_folders()
+#'
+#' # The theme and weight folders of a NAT_DATA catalogue
+#' natdata_dir <- system.file("extdata", "natdata", package = "constechr")
+#' wtw_project_folders(read_natdata_metadata(natdata_dir))
+#'
+#' # Add a folder to the layout
+#' create_wtw_project_folder(
+#'   file.path(tempdir(), "wtw_extra"),
+#'   c(wtw_project_folders(), "tifs/themes/regional")
+#' )
+wtw_project_folders <- function(layers = NULL) {
+  call <- environment()
+  subdirs <- if (is.null(layers)) {
+    c(
+      paste0(
+        "themes/species/",
+        c(
+          "eccc_ch", "eccc_sar", "iucn_amph", "iucn_bird", "iucn_rept",
+          "iucn_mamm", "nsc_end", "nsc_sar", "nsc_spp", "ncc_sdm",
+          "ncc_sar_aoh"
+        )
+      ),
+      "themes/habitat",
+      paste0(
+        "weights/",
+        c(
+          "carbon", "climate", "connectivity", "eservices", "pressures",
+          "hotspots"
+        )
+      )
+    )
+  } else {
+    layer_subdirs(layers, call)
+  }
+  folders <- c(
+    "aoi",
+    "tifs", "tifs/themes", "tifs/weights", "tifs/includes", "tifs/excludes",
+    paste0("tifs/", subdirs),
+    "wtw", "wtw/metadata", "wtw/runs",
+    "dataprep", "dataprep/national", "dataprep/regional", "dataprep/tmp"
+  )
+  folders <- unlist(lapply(strsplit(folders, "/", fixed = TRUE), function(x) {
+    vapply(seq_along(x), function(i) {
+      paste(x[seq_len(i)], collapse = "/")
+    }, character(1))
+  }))
+  sort(unique(folders), method = "radix")
+}
+
+#' The folders of layers below `tifs`
+#'
+#' @param layers The value given to `wtw_project_folders()`.
+#' @param call The environment that errors name.
+#' @return The unique, non-empty values of `layers`'s `subdir` column, with
+#'   `/` between folder names; an error if `layers` is not a data frame with
+#'   a `subdir` column of strings, or a value is an absolute path or holds
+#'   `..`.
+#' @noRd
+layer_subdirs <- function(layers, call) {
+  if (!is.data.frame(layers) || !"subdir" %in% names(layers)) {
+    cli::cli_abort(
+      c(
+        "{.arg layers} must be {.code NULL} or a data frame with a
+        {.field subdir} column.",
+        "i" = "{.fn read_natdata_metadata} returns a NAT_DATA catalogue with
+        one."
+      ),
+      call = call
+    )
+  }
+  subdirs <- layer_column(layers, "subdir", call)
+  subdirs <- gsub("/+", "/", gsub("\\\\", "/", subdirs[!is.na(subdirs)]))
+  subdirs <- sub("/$", "", sub("^(\\./)+", "", subdirs))
+  subdirs <- unique(subdirs[nzchar(subdirs) & subdirs != "."])
+  absolute <- grepl("^([A-Za-z]:|/|~)", subdirs)
+  parent <- grepl("(^|/)\\.\\.(/|$)", subdirs)
+  bad <- subdirs[absolute | parent]
+  if (length(bad) > 0) {
+    cli::cli_abort(
+      c(
+        "The {.field subdir} column of {.arg layers} must hold folders inside
+        {.file tifs}.",
+        "x" = "Not allowed: {.str {bad}}."
+      ),
+      call = call
+    )
+  }
+  subdirs
+}
+
+#' Check the `folders` argument
+#'
+#' @param folders The value given.
+#' @param call The environment that errors name.
+#' @return `folders` without repeats (`character(0)` for `NULL`); an error
+#'   if it is not a character vector of non-empty, relative paths.
+#' @noRd
+check_folders <- function(folders, call) {
+  if (is.null(folders)) {
+    return(character(0))
+  }
+  if (!is.character(folders)) {
+    cli::cli_abort(
+      "{.arg folders} must be {.code NULL} or a character vector of folder
+      paths, not {.obj_type_friendly {folders}}.",
+      call = call
+    )
+  }
+  if (anyNA(folders) || !all(nzchar(folders))) {
+    cli::cli_abort(
+      "{.arg folders} must not hold {.code NA} or empty paths.",
+      call = call
+    )
+  }
+  absolute <- folders[grepl("^([A-Za-z]:|[/\\\\~])", folders)]
+  if (length(absolute) > 0) {
+    cli::cli_abort(
+      c(
+        "{.arg folders} must be paths relative to {.arg project_dir}.",
+        "x" = "Not relative: {.file {absolute}}."
+      ),
+      call = call
+    )
+  }
+  unique(folders)
+}
+
 #' Check the `project_dir` argument
 #'
 #' @param project_dir The value given.
