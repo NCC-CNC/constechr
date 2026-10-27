@@ -1133,13 +1133,15 @@ test_that("create_wtw_project_folder() keeps an existing project", {
 })
 
 test_that("create_wtw_project_folder() takes any folder list", {
-  # Folders above each folder are created; repeats once; either separator
+  # Folders above each folder are created; repeats once; a backslash is a
+  # separator on every system
   project <- file.path(tempfile("parent"), "project")
   paths <- create_wtw_project_folder(
-    project, c("rasters/themes", "aoi", "rasters\\weights", "aoi")
+    project,
+    c("rasters/themes", "aoi", "rasters\\weights", "aoi", "rasters/weights")
   )
   expect_identical(
-    paths, file.path(project, c("rasters/themes", "aoi", "rasters\\weights"))
+    paths, file.path(project, c("rasters/themes", "aoi", "rasters/weights"))
   )
   expect_identical(
     folders_below(project),

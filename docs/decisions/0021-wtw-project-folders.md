@@ -41,9 +41,11 @@ them for the layers of an older catalogue.
    anything is created.
 3. **`folders`** is a character vector of paths relative to `project_dir`
    (`/` or `\`); `NULL` or an empty vector creates only `project_dir`.
-   Absolute, empty and `NA` paths are errors; a repeated path is created
-   once. It returns `file.path(project_dir, folders)`, invisibly, without
-   repeats.
+   A backslash is turned into `/` on every system (on Linux it would
+   otherwise be part of a folder's name), so a list gives the same folders
+   everywhere. Absolute, empty and `NA` paths are errors; a repeated path
+   is created once. It returns `file.path(project_dir, folders)`, with
+   `/`, invisibly, without repeats.
 4. **`wtw_project_folders(layers = NULL)`** returns relative paths with
    `/`, each folder's parents included, sorted by byte (C locale) so the
    list is the same on every system and each folder follows its parent.

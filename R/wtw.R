@@ -439,9 +439,10 @@ extract_wtw_natdata <- function(natdata_dir, project_dir,
 #'   project lives is each tool's own setting.
 #' @param folders The folders to create inside `project_dir`: a character
 #'   vector of paths relative to it, with `/` or a backslash between folder
-#'   names.
-#'   The default, [wtw_project_folders()], is the WTW project layout
-#'   wtw-data-prep2 creates; `wtw_project_folders(layers)` takes the theme
+#'   names (a backslash is read as `/` on every system, so a list gives the
+#'   same folders on Windows and Linux). The default,
+#'   [wtw_project_folders()], is the WTW project layout wtw-data-prep2
+#'   creates; `wtw_project_folders(layers)` takes the theme
 #'   and weight folders from a NAT_DATA catalogue instead, and any other
 #'   list gives another layout. The folders above each one are created too,
 #'   so `"tifs/themes/species"` alone also creates `tifs` and
@@ -465,8 +466,9 @@ extract_wtw_natdata <- function(natdata_dir, project_dir,
 #' Decisions are recorded in ADR 0021.
 #'
 #' @return The paths of the folders in `folders`, invisibly: a character
-#'   vector of `file.path(project_dir, folders)`, in the order of `folders`
-#'   without repeats (`character(0)` when `folders` is empty). The folders
+#'   vector of `file.path(project_dir, folders)`, with backslashes in
+#'   `folders` turned into `/`, in the order of `folders` without repeats
+#'   (`character(0)` when `folders` is empty). The folders
 #'   exist on disk as a side effect.
 #'
 #' @family wtw
@@ -673,8 +675,9 @@ layer_subdirs <- function(layers, call) {
 #'
 #' @param folders The value given.
 #' @param call The environment that errors name.
-#' @return `folders` without repeats (`character(0)` for `NULL`); an error
-#'   if it is not a character vector of non-empty, relative paths.
+#' @return `folders` with backslashes turned into `/`, without repeats
+#'   (`character(0)` for `NULL`); an error if it is not a character vector
+#'   of non-empty, relative paths.
 #' @noRd
 check_folders <- function(folders, call) {
   if (is.null(folders)) {
@@ -703,7 +706,7 @@ check_folders <- function(folders, call) {
       call = call
     )
   }
-  unique(folders)
+  unique(gsub("\\\\", "/", folders))
 }
 
 #' Check the `project_dir` argument

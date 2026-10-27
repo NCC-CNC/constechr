@@ -13,9 +13,10 @@ project lives is each tool's own setting.}
 
 \item{folders}{The folders to create inside \code{project_dir}: a character
 vector of paths relative to it, with \code{/} or a backslash between folder
-names.
-The default, \code{\link[=wtw_project_folders]{wtw_project_folders()}}, is the WTW project layout
-wtw-data-prep2 creates; \code{wtw_project_folders(layers)} takes the theme
+names (a backslash is read as \code{/} on every system, so a list gives the
+same folders on Windows and Linux). The default,
+\code{\link[=wtw_project_folders]{wtw_project_folders()}}, is the WTW project layout wtw-data-prep2
+creates; \code{wtw_project_folders(layers)} takes the theme
 and weight folders from a NAT_DATA catalogue instead, and any other
 list gives another layout. The folders above each one are created too,
 so \code{"tifs/themes/species"} alone also creates \code{tifs} and
@@ -24,8 +25,9 @@ an empty vector creates only \code{project_dir}.}
 }
 \value{
 The paths of the folders in \code{folders}, invisibly: a character
-vector of \code{file.path(project_dir, folders)}, in the order of \code{folders}
-without repeats (\code{character(0)} when \code{folders} is empty). The folders
+vector of \code{file.path(project_dir, folders)}, with backslashes in
+\code{folders} turned into \code{/}, in the order of \code{folders} without repeats
+(\code{character(0)} when \code{folders} is empty). The folders
 exist on disk as a side effect.
 }
 \description{
