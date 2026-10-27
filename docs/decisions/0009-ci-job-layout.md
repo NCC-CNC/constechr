@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by 0022-ci-linux-container.md
 
 ## Context
 

@@ -26,6 +26,9 @@ while its API settles, and it is used only by ConsTech tools.
   and a version bump.
 - A release is a Git tag (`vX.Y.Z`) on `main`, matching the `DESCRIPTION`
   version.
+- Before each release, check that the pinned CI image is current (ADR
+  0022): the `rocker/geospatial` tag in `.github/workflows/ci.yml` is on
+  the current R minor version. If not, bump it in its own PR first.
 - Distribution is from GitHub only, not CRAN or an r-universe. Tools install
   a tag, for example `pak::pak("NCC-CNC/constechr@v0.1.0")`, and record it in
   their `renv.lock`.

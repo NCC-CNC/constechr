@@ -474,6 +474,13 @@ lower_left <- function(x) {
   unname(b[, c("xmin", "ymin"), drop = FALSE])
 }
 
+# A vector file read as an sf data frame. Not sf::read_sf(): that returns a
+# tibble, which needs tibble (not a dependency), so it fails in the check
+# without Suggests. Needs sf.
+read_vector <- function(path) {
+  sf::st_read(path, quiet = TRUE, stringsAsFactors = FALSE)
+}
+
 # The extent of a raster as c(xmin, xmax, ymin, ymax), unnamed. Needs terra.
 extent_of <- function(x) {
   unname(as.vector(terra::ext(x)))

@@ -136,6 +136,13 @@ job. `CONTRIBUTING.md` Setup should match.
   for what the docs and tests must contain.
 - A change that alters a function's results or arguments gets a `NEWS.md`
   entry and a version bump. Deprecate before removing or renaming.
+- CI's Ubuntu check runs in a pinned `rocker/geospatial` image, now
+  `4.6.1` (ADR 0022). Bump the tag in its own PR
+  (`ci: bump rocker/geospatial to X.Y.Z`) when a new R minor version is
+  released, with the Ubuntu codename in its P3M URL if that changes, and
+  check it before every release. Never use `latest`. If a new dependency
+  needs a system library the image lacks, follow ADR 0022 rather than
+  adding apt installs to the workflow.
 
 ## How work happens
 

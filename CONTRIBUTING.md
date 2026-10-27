@@ -35,7 +35,9 @@ Rscript -e "devtools::check()"       # full R CMD check (build, tests, examples)
 
 CI runs the same checks on every pull request and weekly:
 `styler::style_pkg(dry = "fail")`, the lint, and R CMD check (which runs the
-tests) on Ubuntu and Windows. Any formatting change, lint, or
+tests) on Windows with all dependencies and without Suggests, and on Ubuntu
+in a pinned `rocker/geospatial` container with current CRAN packages
+(ADR 0022). Any formatting change, lint, or
 check error or warning fails it, so if these pass locally CI should too. The
 Ubuntu check job also runs the formatting check and the lint, and reports
 test coverage (`covr::package_coverage()`) in its log. To try the working

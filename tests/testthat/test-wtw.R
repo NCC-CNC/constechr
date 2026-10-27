@@ -46,7 +46,7 @@ test_that("pu_1km.shp's NCCID field keeps the template's type (ADR 0019)", {
   expect_identical(fields$name, c("NCCID", "PUID"))
   expect_identical(fields$type, c("N", "N"))
   expect_identical(fields$decimals, c(0L, 0L))
-  p <- sf::read_sf(path)
+  p <- read_vector(path)
   expect_identical(p$NCCID, nccid)
   expect_identical(p$PUID, 1:9)
 
@@ -60,7 +60,7 @@ test_that("pu_1km.shp's NCCID field keeps the template's type (ADR 0019)", {
   expect_identical(fields$name, c("NCCID", "PUID"))
   expect_gt(fields$decimals[1], 0L)
   expect_identical(fields$decimals[2], 0L)
-  expect_identical(sf::read_sf(path)$NCCID, as.numeric(nccid))
+  expect_identical(read_vector(path)$NCCID, as.numeric(nccid))
 })
 
 test_that("create_wtw_planning_units() writes the WTW project files", {
@@ -79,7 +79,7 @@ test_that("create_wtw_planning_units() writes the WTW project files", {
   )
 
   # aoi.shp: the input feature with its attributes, in the template's CRS
-  a <- sf::read_sf(file.path(project, "aoi", "aoi.shp"))
+  a <- read_vector(file.path(project, "aoi", "aoi.shp"))
   expect_identical(a$name, "inside")
   expect_true(sf::st_crs(a) == sf::st_crs(fixture_template()))
   expect_equal(
@@ -91,7 +91,7 @@ test_that("create_wtw_planning_units() writes the WTW project files", {
   )
 
   # pu_1km.shp: the planning units, sorted by NCCID
-  p <- sf::read_sf(file.path(project, "aoi", "pu_1km.shp"))
+  p <- read_vector(file.path(project, "aoi", "pu_1km.shp"))
   expect_named(p, c("NCCID", "PUID", "geometry"))
   expect_equal(p$NCCID, c(44, 45, 46, 54, 55, 56, 64, 65, 66))
   expect_equal(p$PUID, 1:9)
@@ -186,12 +186,12 @@ test_that("create_wtw_planning_units() matches wtw-data-prep2's step 02", {
     sf::write_sf(expected$aoi, input)
     create_wtw_planning_units(input, natdata, project)
 
-    a <- sf::read_sf(file.path(project, "aoi", "aoi.shp"))
+    a <- read_vector(file.path(project, "aoi", "aoi.shp"))
     expect_identical(a$name, expected$name, label = case)
     expect_true(sf::st_crs(a) == sf::st_crs(fixture_crs()), label = case)
     expect_equal(polygon_coords(a), expected$aoi_coords, label = case)
 
-    p <- sf::read_sf(file.path(project, "aoi", "pu_1km.shp"))
+    p <- read_vector(file.path(project, "aoi", "pu_1km.shp"))
     expect_named(p, c("NCCID", "PUID", "geometry"))
     expect_equal(p$NCCID, expected$nccid, label = case)
     expect_equal(p$PUID, seq_along(expected$nccid), label = case)
@@ -281,7 +281,7 @@ test_that("aoi_union chooses the AOI written, not the AOI returned", {
   # FALSE (the default): both features and their name
   project <- tempfile("project")
   kept <- create_wtw_planning_units(aoi, natdata, project)
-  a <- sf::read_sf(file.path(project, "aoi", "aoi.shp"))
+  a <- read_vector(file.path(project, "aoi", "aoi.shp"))
   expect_identical(a$name, c("a", "b"))
   expect_identical(nrow(a), 2L)
 
@@ -291,7 +291,7 @@ test_that("aoi_union chooses the AOI written, not the AOI returned", {
     aoi, natdata, project,
     aoi_union = TRUE
   )
-  a <- sf::read_sf(file.path(project, "aoi", "aoi.shp"))
+  a <- read_vector(file.path(project, "aoi", "aoi.shp"))
   expect_identical(nrow(a), 1L)
   expect_false("name" %in% names(a))
   expect_equal(
@@ -311,7 +311,7 @@ test_that("the AOI is reprojected to the template's CRS with its attributes", {
   lonlat <- sf::st_transform(fixture_aoi("inside"), 4326)
   project <- tempfile("project")
   pu <- create_wtw_planning_units(lonlat, natdata, project)
-  a <- sf::read_sf(file.path(project, "aoi", "aoi.shp"))
+  a <- read_vector(file.path(project, "aoi", "aoi.shp"))
   expect_identical(a$name, "inside")
   expect_true(sf::st_crs(a) == sf::st_crs(fixture_template()))
   expect_equal(
@@ -338,11 +338,11 @@ test_that("file names, formats and data type are arguments", {
     c("boundary/aoi.gpkg", "units/pu.gpkg", "units/rasters/pu.tif")
   )
   expect_identical(
-    sf::read_sf(file.path(project, "boundary", "aoi.gpkg"))$name,
+    read_vector(file.path(project, "boundary", "aoi.gpkg"))$name,
     "inside"
   )
   expect_equal(
-    sf::read_sf(file.path(project, "units", "pu.gpkg"))$PUID,
+    read_vector(file.path(project, "units", "pu.gpkg"))$PUID,
     1:9
   )
   r <- terra::rast(file.path(project, "units", "rasters", "pu.tif"))
@@ -369,10 +369,10 @@ test_that("overwrite replaces files, and the AOI can be the file replaced", {
 
   # TRUE (the default) replaces the files
   create_wtw_planning_units(fixture_aoi("inside"), natdata, project)
-  p <- sf::read_sf(file.path(project, "aoi", "pu_1km.shp"))
+  p <- read_vector(file.path(project, "aoi", "pu_1km.shp"))
   expect_equal(p$NCCID, c(44, 45, 46, 54, 55, 56, 64, 65, 66))
   expect_identical(
-    sf::read_sf(file.path(project, "aoi", "aoi.shp"))$name,
+    read_vector(file.path(project, "aoi", "aoi.shp"))$name,
     "inside"
   )
   expect_identical(
@@ -384,7 +384,7 @@ test_that("overwrite replaces files, and the AOI can be the file replaced", {
   aoi_shp <- file.path(project, "aoi", "aoi.shp")
   sf::write_sf(fixture_aoi_two(), aoi_shp)
   pu <- create_wtw_planning_units(aoi_shp, natdata, project)
-  expect_identical(sf::read_sf(aoi_shp)$name, c("a", "b"))
+  expect_identical(read_vector(aoi_shp)$name, c("a", "b"))
   expect_equal(pu$polygons$NCCID, c(71, 72))
 
   # FALSE with an existing file: an error, and nothing is written
@@ -433,7 +433,7 @@ test_that("create_1km_grid()'s arguments are passed on", {
       terra::values(pu$aoi_raster, mat = FALSE),
       terra::values(terra::trim(grid$aoi_raster), mat = FALSE)
     )
-    p <- sf::read_sf(file.path(project, "aoi", "pu_1km.shp"))
+    p <- read_vector(file.path(project, "aoi", "pu_1km.shp"))
     expect_equal(
       sf::st_drop_geometry(p),
       sf::st_drop_geometry(grid$polygons),
@@ -468,12 +468,12 @@ test_that("an AOI without planning units warns and is not trimmed", {
     extent_of(pu$aoi_raster), c(1000000, 1002000, 608000, 610000)
   )
   expect_identical(
-    nrow(sf::read_sf(file.path(project, "aoi", "pu_1km.shp"))),
+    nrow(read_vector(file.path(project, "aoi", "pu_1km.shp"))),
     0L
   )
   path <- file.path(project, "aoi", "pu_1km.tif")
   expect_true(all(is.na(file_values(path))))
-  a <- sf::read_sf(file.path(project, "aoi", "aoi.shp"))
+  a <- read_vector(file.path(project, "aoi", "aoi.shp"))
   expect_identical(nrow(a), 1L)
 })
 
