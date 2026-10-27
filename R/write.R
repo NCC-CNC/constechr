@@ -302,14 +302,15 @@ write_raster_file <- function(x, filename, datatype, round_int = TRUE,
   )
 }
 
-#' Check the `datatype` argument
+#' Check a data type argument, such as `datatype`
 #'
 #' @param datatype The value given.
 #' @param call The environment that errors name.
+#' @param arg The argument's name, for errors.
 #' @return `datatype`, invisibly; an error if it is not one of terra's data
 #'   types.
 #' @noRd
-check_datatype <- function(datatype, call) {
+check_datatype <- function(datatype, call, arg = "datatype") {
   types <- c(
     "INT1U", "INT2U", "INT2S", "INT4U", "INT4S", "INT8U", "INT8S",
     "FLT4S", "FLT8S"
@@ -317,7 +318,7 @@ check_datatype <- function(datatype, call) {
   if (!assertthat::is.string(datatype) || !(datatype %in% types)) {
     cli::cli_abort(
       c(
-        "{.arg datatype} must be one of terra's data types, not
+        "{.arg {arg}} must be one of terra's data types, not
         {.obj_type_friendly {datatype}}.",
         "i" = "Use one of {.or {.str {types}}}."
       ),
@@ -325,6 +326,50 @@ check_datatype <- function(datatype, call) {
     )
   }
   invisible(datatype)
+}
+
+#' Check that a number can be written as a data type
+#'
+#' A value outside a data type's range, or equal to its NoData value (terra's
+#' NoData values: the largest value of an unsigned integer type, the smallest
+#' of a signed one), is written as NoData. Integer types are checked after
+#' rounding halves away from zero, as `write_raster_file()` rounds.
+#'
+#' @param x A single finite number.
+#' @param datatype One of terra's data types.
+#' @param arg,datatype_arg The arguments' names, for errors.
+#' @param call The environment that errors name.
+#' @return `x`, invisibly; an error if it would be written as NoData.
+#' @noRd
+check_value_fits_datatype <- function(x, datatype, arg, datatype_arg, call) {
+  limits <- switch(datatype,
+    INT1U = c(0, 2^8 - 2),
+    INT2U = c(0, 2^16 - 2),
+    INT2S = c(-2^15 + 1, 2^15 - 1),
+    INT4U = c(0, 2^32 - 2),
+    INT4S = c(-2^31 + 1, 2^31 - 1),
+    INT8U = c(0, 2^64 - 2),
+    INT8S = c(-2^63 + 1, 2^63 - 1),
+    FLT4S = c(-3.4028234663852886e38, 3.4028234663852886e38),
+    FLT8S = c(-Inf, Inf)
+  )
+  stored <- if (startsWith(datatype, "INT")) {
+    sign(x) * floor(abs(x) + 0.5)
+  } else {
+    x
+  }
+  if (stored < limits[1] || stored > limits[2]) {
+    cli::cli_abort(
+      c(
+        "{.arg {arg}} ({x}) cannot be written as {.arg {datatype_arg}}
+        {.str {datatype}}; it would be written as NoData.",
+        "i" = "Use a value from {limits[1]} to {limits[2]}, or another data
+        type."
+      ),
+      call = call
+    )
+  }
+  invisible(x)
 }
 
 #' Check the `filename` argument

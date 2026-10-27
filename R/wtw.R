@@ -242,6 +242,15 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
 #'   `project_dir`. wtw-data-prep2's step 03 wrote
 #'   `"aoi/pu_1km_align.tif"`; no WTW step reads it, so it is not written
 #'   unless asked for.
+#' @param align_value A single finite number, the value of the planning units
+#'   in `align_file`. The default, `1`, is wtw-data-prep2's. Ignored without
+#'   `align_file`.
+#' @param align_datatype The data type of `align_file`, one of terra's data
+#'   types (see [terra::writeRaster()]). The default, `"INT1U"`, is
+#'   wtw-data-prep2's. `align_value` must be a value it stores: for an
+#'   integer type, a whole number after rounding (halves away from zero)
+#'   within the type's range and not its NoData value (for example 0 to 254
+#'   for `"INT1U"`). Ignored without `align_file`.
 #' @inheritParams extract_layers
 #' @param multiband A single logical: `FALSE` (the default) writes one file
 #'   per feature, as wtw-data-prep2 does; `TRUE` writes one multi-band file
@@ -278,10 +287,11 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
 #'    are not written, and layers left with none are skipped, each named in a
 #'    message.
 #' 4. **Aligned planning units** (only with `align_file`), after the layers:
-#'    a raster of 1 in the planning units and `NA` elsewhere, one layer named
-#'    `layer`, put on the template's full grid with [align_raster()] (nearest
-#'    neighbour) and written as `INT1U` (NoData 255), as wtw-data-prep2's
-#'    `pu_1km_align.tif`.
+#'    a raster of `align_value` in the planning units and `NA` elsewhere, one
+#'    layer named `layer`, put on the template's full grid with
+#'    [align_raster()] (nearest neighbour) and written in `align_datatype`,
+#'    `NA` as terra's NoData value for it. The defaults, 1 as `INT1U`
+#'    (NoData 255), are wtw-data-prep2's `pu_1km_align.tif`.
 #'
 #' Arguments, `aoi_raster`, the template and the output files that can be
 #' named in advance are checked before any layer is read (see
@@ -336,6 +346,14 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
 #'     align_file = "aoi/pu_1km_align.tif", progress = NULL
 #'   )
 #'   terra::rast(file.path(project_dir, "aoi", "pu_1km_align.tif"))
+#'
+#'   # The same file with the planning units as 0s, in a signed data type
+#'   paths <- extract_wtw_natdata(
+#'     natdata_dir, project_dir,
+#'     align_file = "aoi/pu_1km_align.tif", align_value = 0,
+#'     align_datatype = "INT2S", progress = NULL
+#'   )
+#'   terra::rast(file.path(project_dir, "aoi", "pu_1km_align.tif"))
 #' }
 extract_wtw_natdata <- function(natdata_dir, project_dir,
                                 aoi_raster = file.path(
@@ -343,6 +361,7 @@ extract_wtw_natdata <- function(natdata_dir, project_dir,
                                 ),
                                 layers = read_natdata_metadata(natdata_dir),
                                 tifs_dir = "tifs", align_file = NULL,
+                                align_value = 1, align_datatype = "INT1U",
                                 round_int = TRUE, multiband = FALSE,
                                 drop_empty = TRUE, overwrite = TRUE,
                                 progress = function(i, n, layer) {
@@ -355,6 +374,11 @@ extract_wtw_natdata <- function(natdata_dir, project_dir,
   check_project_dir(project_dir, call, null_ok = FALSE)
   check_project_file(tifs_dir, "tifs_dir", call, folder = TRUE)
   check_project_file(align_file, "align_file", call)
+  check_number(align_value, "align_value", call)
+  check_datatype(align_datatype, call, "align_datatype")
+  check_value_fits_datatype(
+    align_value, align_datatype, "align_value", "align_datatype", call
+  )
   check_flag(round_int, "round_int", call)
   check_flag(multiband, "multiband", call)
   check_flag(drop_empty, "drop_empty", call)
@@ -413,12 +437,12 @@ extract_wtw_natdata <- function(natdata_dir, project_dir,
         call = call
       )
     }
-    ones <- terra::ifel(is.na(aoi_raster), NA, 1L)
-    names(ones) <- "layer"
+    pu <- terra::ifel(is.na(aoi_raster), NA, align_value)
+    names(pu) <- "layer"
     create_dir(dirname(align_path))
     align_raster(
-      ones, template,
-      filename = align_path, datatype = "INT1U", overwrite = overwrite
+      pu, template,
+      filename = align_path, datatype = align_datatype, overwrite = overwrite
     )
   }
   invisible(paths)

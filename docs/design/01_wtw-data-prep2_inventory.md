@@ -607,7 +607,8 @@ raster_file = "aoi/pu_1km.tif", datatype = "INT1U", overwrite = TRUE)`
 `extract_wtw_natdata(natdata_dir, project_dir,
 aoi_raster = file.path(project_dir, "aoi", "pu_1km.tif"),
 layers = read_natdata_metadata(natdata_dir), tifs_dir = "tifs",
-align_file = NULL, round_int = TRUE, multiband = FALSE, drop_empty = TRUE,
+align_file = NULL, align_value = 1, align_datatype = "INT1U",
+round_int = TRUE, multiband = FALSE, drop_empty = TRUE,
 overwrite = TRUE, progress = <a message per layer>)`
 
 - wtw-data-prep2's step 03 in one call: `extract_layers()` with the
@@ -621,6 +622,8 @@ overwrite = TRUE, progress = <a message per layer>)`
   is written only when `align_file` names it (default `NULL`), with
   `align_raster()` from a raster of 1s as `INT1U`, as today; nothing
   downstream reads it, so not writing it by default is an intended change.
+  Since #76, its value and data type are the arguments `align_value`
+  (default 1) and `align_datatype` (default `"INT1U"`).
   `progress` prints a short message per layer by default. On
   NAT_DATA_20261009 and the mb_prairie project, it writes the same 1,256
   files as the project's `tifs/` (names, folders, data types, NoData values,

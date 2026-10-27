@@ -310,6 +310,28 @@ check_flag <- function(x, arg, call) {
   invisible(x)
 }
 
+#' Check a single finite number argument
+#'
+#' @param x The value given.
+#' @param arg The argument's name.
+#' @param call The environment that errors name.
+#' @return `x`, invisibly; an error if it is not a single finite number.
+#' @noRd
+check_number <- function(x, arg, call) {
+  if (!assertthat::is.number(x) || !is.finite(x)) {
+    given <- if (assertthat::is.number(x)) {
+      "{.val {x}}"
+    } else {
+      "{.obj_type_friendly {x}}"
+    }
+    cli::cli_abort(
+      paste0("{.arg {arg}} must be a single finite number, not ", given, "."),
+      call = call
+    )
+  }
+  invisible(x)
+}
+
 #' Check the `resolution` argument
 #'
 #' @param resolution The value given.
