@@ -1016,3 +1016,233 @@ test_that("extract_wtw_natdata() gives clear errors", {
     )
   })
 })
+
+# The folders wtw_project_folders() always gives, whatever `layers` is.
+wtw_fixed_folders <- c(
+  "aoi", "dataprep", "dataprep/national", "dataprep/regional",
+  "dataprep/tmp", "tifs", "tifs/excludes", "tifs/includes", "tifs/themes",
+  "tifs/weights", "wtw", "wtw/metadata", "wtw/runs"
+)
+
+test_that("wtw_project_folders() is wtw-data-prep2's step 01 layout", {
+  folders <- wtw_project_folders()
+  expect_identical(folders, wtw_step01_folders())
+  expect_length(folders, 32)
+  expect_true(all(wtw_fixed_folders %in% folders))
+})
+
+test_that("wtw_project_folders(layers) follows a NAT_DATA catalogue", {
+  # The fixture catalogue's active layers are in themes/species and
+  # themes/habitat; the inactive include layer is not read
+  layers <- read_natdata_metadata(
+    system.file("extdata", "natdata", package = "constechr")
+  )
+  expect_identical(
+    wtw_project_folders(layers),
+    sort(
+      c(wtw_fixed_folders, "tifs/themes/habitat", "tifs/themes/species"),
+      method = "radix"
+    )
+  )
+
+  # Every folder of a catalogue, with the folders above it; repeats once
+  layers <- data.frame(
+    file = c("a.tif", "b.tif", "c.tif", "d.tif", "e.tif"),
+    subdir = c(
+      "themes/species/eccc_ch", "weights/tenure", "themes/species/eccc_ch",
+      "regional/climate/rcp45", "includes"
+    )
+  )
+  expect_identical(
+    wtw_project_folders(layers),
+    sort(
+      c(
+        wtw_fixed_folders, "tifs/themes/species",
+        "tifs/themes/species/eccc_ch", "tifs/weights/tenure",
+        "tifs/regional", "tifs/regional/climate",
+        "tifs/regional/climate/rcp45"
+      ),
+      method = "radix"
+    )
+  )
+})
+
+test_that("wtw_project_folders() cleans and skips subdir values", {
+  # Backslashes, repeated, leading ./ and trailing separators; NA and ""
+  # add no folder; factors are read as strings
+  layers <- data.frame(
+    subdir = factor(c(
+      "themes\\habitat", "weights//carbon/", "./themes/species", NA, "",
+      "."
+    ))
+  )
+  expect_identical(
+    wtw_project_folders(layers),
+    sort(
+      c(
+        wtw_fixed_folders, "tifs/themes/habitat", "tifs/themes/species",
+        "tifs/weights/carbon"
+      ),
+      method = "radix"
+    )
+  )
+
+  # No layers, or no subfolders: only the fixed folders
+  expect_identical(
+    wtw_project_folders(data.frame(subdir = character(0))),
+    wtw_fixed_folders
+  )
+  expect_identical(
+    wtw_project_folders(data.frame(subdir = c(NA, NA))),
+    wtw_fixed_folders
+  )
+})
+
+test_that("create_wtw_project_folder() creates wtw-data-prep2's folders", {
+  project <- tempfile("project")
+  expect_invisible(paths <- create_wtw_project_folder(project))
+  expect_identical(folders_below(project), wtw_step01_folders())
+  expect_identical(paths, file.path(project, wtw_project_folders()))
+  expect_true(all(dir.exists(paths)))
+
+  # Folders only: no file is written
+  expect_length(list.files(project, recursive = TRUE), 0)
+})
+
+test_that("create_wtw_project_folder() keeps an existing project", {
+  project <- tempfile("project")
+  dir.create(file.path(project, "aoi"), recursive = TRUE)
+  writeLines("kept", file.path(project, "aoi", "notes.txt"))
+  dir.create(file.path(project, "extra"))
+
+  paths <- create_wtw_project_folder(project)
+  expect_identical(
+    folders_below(project),
+    sort(c(wtw_step01_folders(), "extra"), method = "radix")
+  )
+  expect_identical(
+    readLines(file.path(project, "aoi", "notes.txt")), "kept"
+  )
+
+  # Again, on the folders it made: the same, without errors
+  expect_identical(create_wtw_project_folder(project), paths)
+  expect_identical(
+    folders_below(project),
+    sort(c(wtw_step01_folders(), "extra"), method = "radix")
+  )
+})
+
+test_that("create_wtw_project_folder() takes any folder list", {
+  # Folders above each folder are created; repeats once; a backslash is a
+  # separator on every system
+  project <- file.path(tempfile("parent"), "project")
+  paths <- create_wtw_project_folder(
+    project,
+    c("rasters/themes", "aoi", "rasters\\weights", "aoi", "rasters/weights")
+  )
+  expect_identical(
+    paths, file.path(project, c("rasters/themes", "aoi", "rasters/weights"))
+  )
+  expect_identical(
+    folders_below(project),
+    c("aoi", "rasters", "rasters/themes", "rasters/weights")
+  )
+
+  # A catalogue's layout
+  layers <- data.frame(subdir = c("themes/species/eccc_ch", "weights/carbon"))
+  project <- tempfile("project")
+  create_wtw_project_folder(project, wtw_project_folders(layers))
+  expect_identical(folders_below(project), wtw_project_folders(layers))
+
+  # NULL or no folders: only project_dir
+  project <- tempfile("project")
+  expect_identical(create_wtw_project_folder(project, NULL), character(0))
+  expect_true(dir.exists(project))
+  expect_length(folders_below(project), 0)
+  project <- tempfile("project")
+  expect_identical(
+    create_wtw_project_folder(project, character(0)), character(0)
+  )
+  expect_true(dir.exists(project))
+})
+
+test_that("the WTW functions write into wtw_project_folders()", {
+  # The default files of create_wtw_planning_units() and the default
+  # tifs_dir of extract_wtw_natdata() are in the default layout
+  defaults <- c(
+    formals(create_wtw_planning_units)[
+      c("aoi_file", "polygons_file", "raster_file")
+    ],
+    formals(extract_wtw_natdata)["tifs_dir"]
+  )
+  folders <- vapply(defaults, function(x) {
+    if (grepl(".", basename(x), fixed = TRUE)) dirname(x) else x
+  }, character(1))
+  expect_true(all(folders %in% wtw_project_folders()))
+
+  # extract_wtw_natdata() writes the layers into wtw_project_folders(layers)
+  skip_if_not_installed("sf")
+  skip_if_not_installed("prioritizr")
+  natdata <- fixture_natdata_dir()
+  project <- fixture_project("inside")
+  create_wtw_project_folder(
+    project, wtw_project_folders(read_natdata_metadata(natdata))
+  )
+  before <- folders_below(project)
+  suppressMessages(extract_wtw_natdata(natdata, project))
+  expect_identical(folders_below(project), before)
+})
+
+test_that("the WTW folder functions give clear errors", {
+  dir <- tempfile("wtw_folders_errors")
+  dir.create(dir)
+  old <- setwd(dir)
+  on.exit(setwd(old), add = TRUE)
+  file.create("a_file")
+  dir.create("project")
+  file.create(file.path("project", "aoi"))
+
+  expect_snapshot(error = TRUE, {
+    wtw_project_folders(c("themes/species", "weights"))
+  })
+  expect_snapshot(error = TRUE, {
+    wtw_project_folders(data.frame(path = "themes/species"))
+  })
+  expect_snapshot(error = TRUE, {
+    wtw_project_folders(data.frame(subdir = 1))
+  })
+  expect_snapshot(error = TRUE, {
+    wtw_project_folders(
+      data.frame(subdir = c("C:/themes", "/weights", "../themes", "a/../b"))
+    )
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_project_folder(NULL)
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_project_folder(c("a", "b"))
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_project_folder("a_file")
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_project_folder("new_project", folders = 1)
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_project_folder("new_project", folders = c("aoi", NA))
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_project_folder("new_project", folders = c("aoi", ""))
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_project_folder(
+      "new_project",
+      folders = c("aoi", "C:/tifs", "/wtw", "\\dataprep")
+    )
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_project_folder("project")
+  })
+  expect_false(dir.exists("new_project"))
+  expect_identical(list.files("project"), "aoi")
+})

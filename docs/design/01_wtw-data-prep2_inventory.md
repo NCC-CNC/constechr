@@ -630,17 +630,30 @@ overwrite = TRUE, progress = <a message per layer>)`
   in the 57 `ncc_sar_aoh` files, made before wtw-data-prep2 rounded before
   integer types, and are identical with `round_int = FALSE`.
 
-`create_wtw_project_folder(path, folders = wtw_project_folders())`
+`create_wtw_project_folder(project_dir, folders = wtw_project_folders())`
 
 - From `create_project_folder()`, folders only; creates them recursively and
   returns the paths. Layouts differ between tools, so the folder list is an
   argument.
+- As built (#26, ADR 0021): the first argument is `project_dir`, as in the
+  other WTW functions. Existing folders and their files are kept, as today,
+  so it can run on an existing project; a folder path naming a file is an
+  error before anything is created. It returns
+  `file.path(project_dir, folders)` invisibly. With the defaults it creates
+  the same 32 folders as `create_project_folder()`.
 
 `wtw_project_folders(layers = NULL)`
 
 - The default WTW folder list. With `layers` (a NAT_DATA metadata table),
   the theme and weight subfolders come from its path column instead of the
   11 hard-coded species sources.
+- As built (#26, ADR 0021): relative paths, parents included, sorted by
+  byte. With `layers`, `tifs/<subdir>` for each layer's `subdir` (the copy
+  of `path` that `read_natdata_metadata()` adds, and the folder
+  `extract_wtw_natdata()` writes to) replaces all of today's theme and
+  weight subfolders; `aoi`, `tifs` with `themes`, `weights`, `includes` and
+  `excludes`, `wtw` and `dataprep` and their subfolders are always there.
+  NAT_DATA_20261009's catalogue gives today's 32 folders.
 
 `create_dataprep_template(path, columns = dataprep_columns())`
 
