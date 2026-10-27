@@ -86,13 +86,15 @@ jobs:
       matrix:
         config:
           # container: a pinned rocker/geospatial tag; bump it on purpose.
-          # cran: current P3M binaries for the image's Ubuntu release, so
-          # the codename must match the image. extras: this job also runs
-          # styler, lintr and coverage, so they need no R setup of their
-          # own. Only this job sets it.
+          # rspm: current P3M binaries for the image's Ubuntu release, so
+          # the codename must match the image. cran: CRAN itself, set so it
+          # replaces the image's own (dated) repository. extras: this job
+          # also runs styler, lintr and coverage, so they need no R setup of
+          # their own. Only this job sets it.
           - {os: ubuntu-latest, deps: 'all', extras: true,
              container: 'rocker/geospatial:4.6.1',
-             cran: 'https://p3m.dev/cran/__linux__/noble/latest'}
+             rspm: 'https://p3m.dev/cran/__linux__/noble/latest',
+             cran: 'https://cran.rstudio.com'}
           - {os: windows-latest, deps: 'all', extras: false}
           # Without Suggests: optional packages must be checked for, not
           # assumed. testthat is still installed to run the tests; lintr,
@@ -118,11 +120,16 @@ jobs:
 
       # In the container R is already installed, so setup-r installs
       # nothing (and runs no apt): it only writes the repository settings,
-      # with cran replacing the image's own repository setting. On Windows
-      # the repository is CRAN, not P3M: P3M's Windows index lists the
-      # recommended packages (Matrix, lattice and others) under a path it
-      # does not serve, so pak cannot download them from there (ADR 0022).
+      # P3M (named RSPM, from the RSPM variable) then CRAN, replacing the
+      # image's own. pak treats a repository named CRAN more strictly: it
+      # reinstalls a binary whose Built field differs from the index, which
+      # would make the package cache useless. On Windows the repository is
+      # CRAN only, not P3M: P3M's Windows index lists the recommended
+      # packages (Matrix, lattice and others) under a path it does not
+      # serve, so pak cannot download them from there (ADR 0022).
       - uses: r-lib/actions/setup-r@v2
+        env:
+          RSPM: ${{ matrix.config.rspm }}
         with:
           install-r: ${{ !matrix.config.container }}
           use-public-rspm: false
