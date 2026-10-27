@@ -43,11 +43,15 @@ In the container:
   the current version. pak installs into the image's site library, which is
   first on the library path, and replaces any package the image has at
   another version.
-- `upgrade: 'TRUE'` in every job. Without it pak keeps the recommended
-  packages R ships with (Matrix, MASS, lattice and others) at R's own
-  version, even when CRAN has a newer one; the first run of this layout
-  checked against Matrix 1.7-5 while CRAN had 1.7-6. With it, a newer
-  version goes into the first library on the path, ahead of R's own.
+- `upgrade: 'TRUE'` in the container. Without it pak keeps the
+  recommended packages R ships with (Matrix, lattice and others) at R's
+  own version, even when CRAN has a newer one; the first run of this
+  layout checked against Matrix 1.7-5 while CRAN had 1.7-6. With it, a
+  newer version goes into the site library, ahead of R's own. P3M serves
+  these as source packages, so Matrix is compiled (about 2.5 minutes).
+  On Windows `upgrade` stays off: pak could not download the recommended
+  packages from P3M there (it failed on Matrix, lattice, class and
+  KernSmooth), so Windows checks against the versions R ships with.
 - The package cache is off there: it holds `R_LIBS_USER`, which the
   container does not use. P3M binary downloads are fast.
 - pak does not install system requirements (`PKG_SYSREQS: false`). It
@@ -67,8 +71,9 @@ set to `all` or `hard`). Before, the "hard" job restored the "all" job's
 cache through the shared restore key, so Suggests such as prioritizr were
 in its library and the tests that need them ran instead of skipping.
 
-The image tag is pinned and bumped on purpose, together with the Ubuntu
-codename in the P3M URL. If pulling the image becomes the slow step, the
+The image tag is pinned and bumped on purpose, in its own PR, together
+with the Ubuntu codename in the P3M URL: when a new R minor version is
+released, and checked before every release (ADR 0004). Never `latest`. If pulling the image becomes the slow step, the
 next step is the opportunity-screening-toolkit pattern: an image cached in
 ghcr.io, keyed by a hash (`.github/actions/ci-images` there).
 
@@ -84,8 +89,8 @@ restated here.
 - No Ubuntu run installs system libraries from the Ubuntu mirror, so the
   slow mirror no longer cancels jobs. Linux is still checked against current
   CRAN packages.
-- Each run sets up R on Ubuntu once. Pulling the image (about 1.7 GB) adds
-  time to that job.
+- Each run sets up R on Ubuntu once. Pulling the image (about 1.7 GB, under
+  a minute) and compiling a newer Matrix add time to that job.
 - The system libraries on Linux are those in the image, not the newest on
   the runner, until the tag is bumped. A new dependency with a system
   library the image lacks fails the Linux job until the tag is bumped.

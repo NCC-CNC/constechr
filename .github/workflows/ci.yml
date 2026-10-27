@@ -121,20 +121,22 @@ jobs:
           use-public-rspm: ${{ !matrix.config.container }}
           cran: ${{ matrix.config.cran }}
 
-      # Every dependency is the current version from the repositories:
-      # pak resolves against an empty library, and upgrade also replaces
-      # the recommended packages R ships with, such as Matrix. In the
-      # container pak installs into the image's site library (first on the
-      # library path), replacing any package the image has at another
-      # version. The package cache holds R_LIBS_USER, which the container
-      # does not use, so it is off there. cache-version keeps the "hard"
-      # job from restoring the "all" job's library, Suggests included.
+      # Every dependency is the current version from the repositories: pak
+      # resolves against an empty library. In the container pak installs
+      # into the image's site library (first on the library path),
+      # replacing any package the image has at another version, and
+      # upgrade also replaces the recommended packages R ships with, such
+      # as Matrix (built from source: P3M serves them so). On Windows pak
+      # cannot download those from P3M, so they stay at R's version there.
+      # The package cache holds R_LIBS_USER, which the container does not
+      # use, so it is off there. cache-version keeps the "hard" job from
+      # restoring the "all" job's library, Suggests included.
       - uses: r-lib/actions/setup-r-dependencies@v2
         id: deps
         with:
           cache: ${{ matrix.config.container && 'false' || 'true' }}
           cache-version: ${{ matrix.config.deps }}
-          upgrade: 'TRUE'
+          upgrade: ${{ matrix.config.container && 'TRUE' || 'FALSE' }}
           dependencies: ${{ matrix.config.deps == 'hard' && '"hard"' || '"all"' }}
           extra-packages: any::rcmdcheck, any::testthat${{ matrix.config.extras && ', any::lintr, any::styler, any::covr, local::.' || '' }}
           needs: check
