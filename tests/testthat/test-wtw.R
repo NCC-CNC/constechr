@@ -1,0 +1,514 @@
+# create_wtw_planning_units() runs on fixture_natdata_idx_dir(), as
+# create_1km_grid() does in test-natdata.R: idx.tif is the 10 x 10 template
+# numbered row by row from the bottom-left cell, so terra cell c, in row r
+# and column k, holds (10 - r) * 10 + k. The inside AOI's cells
+# 34 35 36 / 44 45 46 / 54 55 56 hold 64 65 66 / 54 55 56 / 44 45 46.
+
+# fixture_aoi_two() (two features over columns 1 and 2, rows 1 to 3) gets
+# only cells 21 and 22 (NCCID 71 and 72): its box covers rows 1 to 3, its
+# planning units only row 3.
+
+# The extent of a raster as c(xmin, xmax, ymin, ymax), unnamed.
+extent_of <- function(x) {
+  unname(as.vector(terra::ext(x)))
+}
+
+# Each polygon's corner coordinates, as a list of two-column matrices.
+polygon_coords <- function(x) {
+  lapply(sf::st_geometry(x), function(g) unname(sf::st_coordinates(g)[, 1:2]))
+}
+
+# The NoData value of a raster file's first band, as GDAL reports it.
+file_nodata <- function(path) {
+  line <- grep("NoData Value=", terra::describe(path), value = TRUE)[1]
+  as.numeric(sub(".*NoData Value=", "", line))
+}
+
+test_that("create_wtw_planning_units() writes the WTW project files", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  project <- tempfile("project")
+  pu <- create_wtw_planning_units(fixture_aoi("inside"), natdata, project)
+
+  expect_setequal(
+    list.files(project, recursive = TRUE),
+    c(
+      paste0("aoi/aoi.", c("dbf", "prj", "shp", "shx")),
+      paste0("aoi/pu_1km.", c("dbf", "prj", "shp", "shx")),
+      "aoi/pu_1km.tif"
+    )
+  )
+
+  # aoi.shp: the input feature with its attributes, in the template's CRS
+  a <- sf::read_sf(file.path(project, "aoi", "aoi.shp"))
+  expect_identical(a$name, "inside")
+  expect_true(sf::st_crs(a) == sf::st_crs(fixture_template()))
+  expect_equal(
+    polygon_coords(a),
+    list(cbind(
+      c(1003600, 1005800, 1005800, 1003600, 1003600),
+      c(606600, 606600, 604300, 604300, 606600)
+    ))
+  )
+
+  # pu_1km.shp: the planning units, sorted by NCCID
+  p <- sf::read_sf(file.path(project, "aoi", "pu_1km.shp"))
+  expect_named(p, c("NCCID", "PUID", "geometry"))
+  expect_equal(p$NCCID, c(44, 45, 46, 54, 55, 56, 64, 65, 66))
+  expect_equal(p$PUID, 1:9)
+  expect_true(sf::st_crs(p) == sf::st_crs(fixture_template()))
+
+  # pu_1km.tif: 1 in the 3 x 3 planning units, INT1U, NoData 255
+  path <- file.path(project, "aoi", "pu_1km.tif")
+  r <- terra::rast(path)
+  expect_identical(terra::datatype(r), "INT1U")
+  expect_identical(file_nodata(path), 255)
+  expect_identical(names(r), "layer")
+  expect_identical(extent_of(r), c(1003000, 1006000, 604000, 607000))
+  expect_identical(terra::res(r), c(1000, 1000))
+  expect_equal(file_values(path), rep(1, 9))
+
+  # The returned list is create_1km_grid()'s
+  grid <- create_1km_grid(fixture_aoi("inside"), natdata)
+  expect_named(pu, c("aoi", "aoi_raster", "polygons"))
+  expect_identical(pu$aoi, grid$aoi)
+  expect_identical(pu$polygons, grid$polygons)
+  expect_identical(extent_of(pu$aoi_raster), extent_of(grid$aoi_raster))
+  expect_identical(
+    terra::values(pu$aoi_raster),
+    terra::values(grid$aoi_raster)
+  )
+  expect_identical(names(pu$aoi_raster), "NCCID")
+})
+
+test_that("create_wtw_planning_units() matches wtw-data-prep2's step 02", {
+  # The files wtw-data-prep2's aoi_to_grid() (at 4e8333a) wrote, run once
+  # with terra 1.9.34 and sf 1.1.2 on these AOIs, each written as a
+  # shapefile in <project>/aoi, with fixture_template_bottom_left() written
+  # as idx.tif: aoi.shp's `name` and polygon corners, pu_1km.shp's NCCID,
+  # PUID and polygons' lower-left corners, and pu_1km.tif's extent and
+  # values (INT1U, NoData 255, one layer named "layer"). Every pu_1km.shp
+  # polygon was a 1000 m square; its columns were NCCID, PUID, geometry.
+  skip_if_not_installed("sf")
+  corners <- function(xmin, xmax, ymin, ymax) {
+    cbind(c(xmin, xmax, xmax, xmin, xmin), c(ymax, ymax, ymin, ymin, ymax))
+  }
+  original <- list(
+    inside = list(
+      aoi = fixture_aoi("inside"),
+      name = "inside",
+      aoi_coords = list(corners(1003600, 1005800, 604300, 606600)),
+      nccid = c(44, 45, 46, 54, 55, 56, 64, 65, 66),
+      xmin = rep(c(1003000, 1004000, 1005000), 3),
+      ymin = rep(c(604000, 605000, 606000), each = 3),
+      extent = c(1003000, 1006000, 604000, 607000),
+      values = rep(1, 9)
+    ),
+    straddle = list(
+      aoi = fixture_aoi("straddle"),
+      name = "straddle",
+      aoi_coords = list(corners(999400, 1002600, 607600, 610500)),
+      nccid = c(71, 72, 73, 83, 93),
+      xmin = c(1000000, 1001000, 1002000, 1002000, 1002000),
+      ymin = c(607000, 607000, 607000, 608000, 609000),
+      extent = c(1000000, 1003000, 607000, 610000),
+      values = c(NA, NA, 1, NA, NA, 1, 1, 1, 1)
+    ),
+    edge = list(
+      aoi = fixture_aoi("edge"),
+      name = "edge",
+      aoi_coords = list(corners(1007400, 1010000, 601300, 602400)),
+      nccid = c(18, 19, 20, 28, 29, 30),
+      xmin = rep(c(1007000, 1008000, 1009000), 2),
+      ymin = rep(c(601000, 602000), each = 3),
+      extent = c(1007000, 1010000, 601000, 603000),
+      values = rep(1, 6)
+    ),
+    two = list(
+      aoi = fixture_aoi_two(),
+      name = c("a", "b"),
+      aoi_coords = list(
+        corners(1000300, 1001700, 607300, 608700),
+        corners(1000200, 1001800, 608800, 609800)
+      ),
+      nccid = c(71, 72),
+      xmin = c(1000000, 1001000),
+      ymin = c(607000, 607000),
+      extent = c(1000000, 1002000, 607000, 608000),
+      values = c(1, 1)
+    )
+  )
+  natdata <- fixture_natdata_idx_dir()
+  for (case in names(original)) {
+    expected <- original[[case]]
+    project <- tempfile("project")
+    dir.create(file.path(project, "aoi"), recursive = TRUE)
+    input <- file.path(project, "aoi", "input.shp")
+    sf::write_sf(expected$aoi, input)
+    create_wtw_planning_units(input, natdata, project)
+
+    a <- sf::read_sf(file.path(project, "aoi", "aoi.shp"))
+    expect_identical(a$name, expected$name, label = case)
+    expect_true(sf::st_crs(a) == sf::st_crs(fixture_crs()), label = case)
+    expect_equal(polygon_coords(a), expected$aoi_coords, label = case)
+
+    p <- sf::read_sf(file.path(project, "aoi", "pu_1km.shp"))
+    expect_named(p, c("NCCID", "PUID", "geometry"))
+    expect_equal(p$NCCID, expected$nccid, label = case)
+    expect_equal(p$PUID, seq_along(expected$nccid), label = case)
+    expect_equal(
+      lower_left(p), cbind(expected$xmin, expected$ymin),
+      label = case
+    )
+    expect_equal(as.numeric(sf::st_area(p)), rep(1e6, nrow(p)), label = case)
+
+    path <- file.path(project, "aoi", "pu_1km.tif")
+    r <- terra::rast(path)
+    expect_identical(extent_of(r), expected$extent, label = case)
+    expect_equal(file_values(path), expected$values, label = case)
+    expect_identical(terra::datatype(r), "INT1U", label = case)
+    expect_identical(file_nodata(path), 255, label = case)
+    expect_identical(names(r), "layer", label = case)
+  }
+})
+
+test_that("trim chooses the raster's extent, written and returned", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  aoi <- fixture_aoi_two()
+  grid <- create_1km_grid(aoi, natdata)
+
+  # TRUE (the default): trimmed to the planning units, row 3
+  project <- tempfile("project")
+  pu <- create_wtw_planning_units(aoi, natdata, project)
+  expect_identical(
+    extent_of(pu$aoi_raster), c(1000000, 1002000, 607000, 608000)
+  )
+  expect_equal(terra::values(pu$aoi_raster, mat = FALSE), c(71, 72))
+  path <- file.path(project, "aoi", "pu_1km.tif")
+  expect_identical(
+    extent_of(terra::rast(path)), c(1000000, 1002000, 607000, 608000)
+  )
+  expect_equal(file_values(path), c(1, 1))
+
+  # FALSE: the AOI's box, rows 1 to 3, as create_1km_grid() returns it
+  project <- tempfile("project")
+  pu <- create_wtw_planning_units(aoi, natdata, project, trim = FALSE)
+  expect_identical(
+    extent_of(pu$aoi_raster), c(1000000, 1002000, 607000, 610000)
+  )
+  expect_identical(
+    terra::values(pu$aoi_raster),
+    terra::values(grid$aoi_raster)
+  )
+  expect_identical(extent_of(pu$aoi_raster), extent_of(grid$aoi_raster))
+  path <- file.path(project, "aoi", "pu_1km.tif")
+  expect_identical(
+    extent_of(terra::rast(path)), c(1000000, 1002000, 607000, 610000)
+  )
+  expect_equal(file_values(path), c(NA, NA, NA, NA, 1, 1))
+
+  # Either way, the AOI and polygons are create_1km_grid()'s
+  expect_identical(pu$aoi, grid$aoi)
+  expect_identical(pu$polygons, grid$polygons)
+
+  # Without writing, trim still applies to the returned raster
+  pu <- create_wtw_planning_units(aoi, natdata)
+  expect_identical(
+    extent_of(pu$aoi_raster), c(1000000, 1002000, 607000, 608000)
+  )
+})
+
+test_that("project_dir = NULL writes nothing", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  dir <- tempfile("nothing")
+  dir.create(dir)
+  old <- setwd(dir)
+  on.exit(setwd(old), add = TRUE)
+  pu <- create_wtw_planning_units(fixture_aoi("inside"), natdata)
+  expect_identical(
+    list.files(dir, recursive = TRUE, all.files = TRUE),
+    character(0)
+  )
+  expect_equal(pu$polygons$NCCID, c(44, 45, 46, 54, 55, 56, 64, 65, 66))
+})
+
+test_that("aoi_union chooses the AOI written, not the AOI returned", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  aoi <- fixture_aoi_two()
+
+  # FALSE (the default): both features and their name
+  project <- tempfile("project")
+  kept <- create_wtw_planning_units(aoi, natdata, project)
+  a <- sf::read_sf(file.path(project, "aoi", "aoi.shp"))
+  expect_identical(a$name, c("a", "b"))
+  expect_identical(nrow(a), 2L)
+
+  # TRUE: one dissolved polygon, without the name column
+  project <- tempfile("project")
+  dissolved <- create_wtw_planning_units(
+    aoi, natdata, project,
+    aoi_union = TRUE
+  )
+  a <- sf::read_sf(file.path(project, "aoi", "aoi.shp"))
+  expect_identical(nrow(a), 1L)
+  expect_false("name" %in% names(a))
+  expect_equal(
+    sf::st_area(sf::st_geometry(a)),
+    sf::st_area(sf::st_union(aoi))
+  )
+
+  # The returned AOI is dissolved either way
+  expect_identical(kept$aoi, dissolved$aoi)
+  expect_identical(nrow(kept$aoi), 1L)
+  expect_named(kept$aoi, "geometry")
+})
+
+test_that("the AOI is reprojected to the template's CRS with its attributes", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  lonlat <- sf::st_transform(fixture_aoi("inside"), 4326)
+  project <- tempfile("project")
+  pu <- create_wtw_planning_units(lonlat, natdata, project)
+  a <- sf::read_sf(file.path(project, "aoi", "aoi.shp"))
+  expect_identical(a$name, "inside")
+  expect_true(sf::st_crs(a) == sf::st_crs(fixture_template()))
+  expect_equal(
+    polygon_coords(a)[[1]],
+    polygon_coords(sf::st_transform(lonlat, fixture_crs()))[[1]],
+    tolerance = 1e-6
+  )
+  expect_equal(pu$polygons$NCCID, c(44, 45, 46, 54, 55, 56, 64, 65, 66))
+})
+
+test_that("file names, formats and data type are arguments", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  project <- file.path(tempfile("parent"), "project")
+  create_wtw_planning_units(
+    fixture_aoi("inside"), natdata, project,
+    aoi_file = "boundary/aoi.gpkg",
+    polygons_file = "units/pu.gpkg",
+    raster_file = "units/rasters/pu.tif",
+    datatype = "INT2U"
+  )
+  expect_setequal(
+    list.files(project, recursive = TRUE),
+    c("boundary/aoi.gpkg", "units/pu.gpkg", "units/rasters/pu.tif")
+  )
+  expect_identical(
+    sf::read_sf(file.path(project, "boundary", "aoi.gpkg"))$name,
+    "inside"
+  )
+  expect_equal(
+    sf::read_sf(file.path(project, "units", "pu.gpkg"))$PUID,
+    1:9
+  )
+  r <- terra::rast(file.path(project, "units", "rasters", "pu.tif"))
+  expect_identical(terra::datatype(r), "INT2U")
+  expect_equal(terra::values(r, mat = FALSE), rep(1, 9))
+
+  # NULL writes no such file
+  project <- tempfile("project")
+  create_wtw_planning_units(
+    fixture_aoi("inside"), natdata, project,
+    aoi_file = NULL, raster_file = NULL
+  )
+  expect_setequal(
+    list.files(project, recursive = TRUE),
+    paste0("aoi/pu_1km.", c("dbf", "prj", "shp", "shx"))
+  )
+})
+
+test_that("overwrite replaces files, and the AOI can be the file replaced", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  project <- tempfile("project")
+  create_wtw_planning_units(fixture_aoi("edge"), natdata, project)
+
+  # TRUE (the default) replaces the files
+  create_wtw_planning_units(fixture_aoi("inside"), natdata, project)
+  p <- sf::read_sf(file.path(project, "aoi", "pu_1km.shp"))
+  expect_equal(p$NCCID, c(44, 45, 46, 54, 55, 56, 64, 65, 66))
+  expect_identical(
+    sf::read_sf(file.path(project, "aoi", "aoi.shp"))$name,
+    "inside"
+  )
+  expect_identical(
+    extent_of(terra::rast(file.path(project, "aoi", "pu_1km.tif"))),
+    c(1003000, 1006000, 604000, 607000)
+  )
+
+  # The input AOI can be the aoi.shp being replaced: it is read first
+  aoi_shp <- file.path(project, "aoi", "aoi.shp")
+  sf::write_sf(fixture_aoi_two(), aoi_shp)
+  pu <- create_wtw_planning_units(aoi_shp, natdata, project)
+  expect_identical(sf::read_sf(aoi_shp)$name, c("a", "b"))
+  expect_equal(pu$polygons$NCCID, c(71, 72))
+
+  # FALSE with an existing file: an error, and nothing is written
+  project <- tempfile("project")
+  dir.create(file.path(project, "aoi"), recursive = TRUE)
+  file.create(file.path(project, "aoi", "pu_1km.tif"))
+  expect_error(
+    create_wtw_planning_units(
+      fixture_aoi("inside"), natdata, project,
+      overwrite = FALSE
+    ),
+    "already exist"
+  )
+  expect_identical(list.files(project, recursive = TRUE), "aoi/pu_1km.tif")
+
+  # FALSE without existing files writes them
+  project <- tempfile("project")
+  create_wtw_planning_units(
+    fixture_aoi("inside"), natdata, project,
+    overwrite = FALSE
+  )
+  expect_true(file.exists(file.path(project, "aoi", "pu_1km.tif")))
+})
+
+test_that("create_1km_grid()'s arguments are passed on", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  aoi <- fixture_aoi("inside")
+  args <- list(
+    list(cells = "centre"),
+    list(value = "ID", id = "PU"),
+    list(id = NULL),
+    list(index = "cell"),
+    list(order = "cell")
+  )
+  for (a in args) {
+    project <- tempfile("project")
+    pu <- do.call(
+      create_wtw_planning_units,
+      c(list(aoi, natdata, project), a)
+    )
+    grid <- do.call(create_1km_grid, c(list(aoi, natdata), a))
+    expect_identical(pu$polygons, grid$polygons)
+    expect_identical(pu$aoi, grid$aoi)
+    expect_identical(
+      terra::values(pu$aoi_raster, mat = FALSE),
+      terra::values(terra::trim(grid$aoi_raster), mat = FALSE)
+    )
+    p <- sf::read_sf(file.path(project, "aoi", "pu_1km.shp"))
+    expect_equal(
+      sf::st_drop_geometry(p),
+      sf::st_drop_geometry(grid$polygons),
+      ignore_attr = TRUE
+    )
+  }
+
+  # Centre cells: columns 5 and 6 of rows 4 to 6, so a 2 x 3 raster
+  pu <- create_wtw_planning_units(aoi, natdata, cells = "centre")
+  expect_identical(
+    extent_of(pu$aoi_raster), c(1004000, 1006000, 604000, 607000)
+  )
+  expect_equal(pu$polygons$NCCID, c(45, 46, 55, 56, 65, 66))
+})
+
+test_that("an AOI without planning units warns and is not trimmed", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+
+  # Over cells 1 2 11 12 only, which are NA in idx.tif
+  aoi <- sf::st_bbox(
+    c(xmin = 1000200, ymin = 608200, xmax = 1001800, ymax = 609800),
+    crs = sf::st_crs(fixture_crs())
+  )
+  project <- tempfile("project")
+  expect_warning(
+    pu <- create_wtw_planning_units(aoi, natdata, project),
+    "no cells"
+  )
+  expect_identical(nrow(pu$polygons), 0L)
+  expect_identical(
+    extent_of(pu$aoi_raster), c(1000000, 1002000, 608000, 610000)
+  )
+  expect_identical(
+    nrow(sf::read_sf(file.path(project, "aoi", "pu_1km.shp"))),
+    0L
+  )
+  path <- file.path(project, "aoi", "pu_1km.tif")
+  expect_true(all(is.na(file_values(path))))
+  a <- sf::read_sf(file.path(project, "aoi", "aoi.shp"))
+  expect_identical(nrow(a), 1L)
+})
+
+test_that("the example NAT_DATA folder and AOI file work", {
+  skip_if_not_installed("sf")
+  project <- tempfile("project")
+  pu <- create_wtw_planning_units(
+    system.file("extdata", "aoi.gpkg", package = "constechr"),
+    system.file("extdata", "natdata", package = "constechr"),
+    project
+  )
+  expect_equal(pu$polygons$NCCID, c(34, 35, 36, 44, 45, 46, 54, 55, 56))
+  expect_equal(
+    file_values(file.path(project, "aoi", "pu_1km.tif")),
+    rep(1, 9)
+  )
+})
+
+test_that("create_wtw_planning_units() gives clear errors", {
+  skip_if_not_installed("sf")
+  dir <- tempfile("wtw_errors")
+  dir.create(dir)
+  old <- setwd(dir)
+  on.exit(setwd(old), add = TRUE)
+  natdata <- "natdata"
+  dir.create(file.path(natdata, "_1km"), recursive = TRUE)
+  terra::writeRaster(
+    fixture_template_bottom_left(), file.path(natdata, "_1km", "idx.tif")
+  )
+  file.create("a_file")
+  dir.create(file.path("project", "aoi"), recursive = TRUE)
+  file.create(file.path("project", "aoi", c("aoi.shp", "pu_1km.tif")))
+  aoi <- fixture_aoi("inside")
+
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, project_dir = 1)
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, project_dir = "a_file")
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, trim = NA)
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, aoi_union = "yes")
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, aoi_file = "")
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, raster_file = "/data/pu.tif")
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, polygons_file = "C:/pu.shp")
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(
+      aoi, natdata,
+      aoi_file = "aoi/PU.shp", polygons_file = "./aoi//pu.shp"
+    )
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, datatype = "INT9")
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, overwrite = NA)
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, "project", overwrite = FALSE)
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, cells = "all")
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, "no_such_folder")
+  })
+})

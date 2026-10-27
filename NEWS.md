@@ -1,4 +1,22 @@
-# constechr 0.0.0.9011
+# constechr 0.0.0.9012
+
+- New `create_wtw_planning_units()` is wtw-data-prep2's step 02 in one call
+  (#24): `create_1km_grid()`, then, with `project_dir`, the WTW project's
+  `aoi/aoi.shp`, `aoi/pu_1km.shp` and `aoi/pu_1km.tif` (1 in every
+  planning unit, `INT1U`, through `write_rasters()`). `project_dir = NULL`
+  (the default) writes nothing. The file names (relative to `project_dir`,
+  `NULL` to skip one), `datatype` and `overwrite` are arguments, and
+  `create_1km_grid()`'s arguments pass through. `aoi_union = FALSE` (the
+  default) writes the input AOI's features and attributes in the
+  template's CRS, as today; `TRUE` writes the dissolved AOI. `trim = TRUE`
+  (the default) trims both the returned raster and `pu_1km.tif` to the
+  planning units, today's extent; `FALSE` keeps the AOI's box. The
+  returned list is `create_1km_grid()`'s, except the raster's extent.
+  Decisions in ADR 0018. With the defaults it writes the same files as
+  wtw-data-prep2's `aoi_to_grid()`, on the test fixtures and on a real
+  AOI. Differences in storage only: `pu_1km.shp`'s `NCCID` field is a real
+  number, not an integer (same values), and each square's vertices start at
+  another corner.
 
 - New `create_1km_grid()` makes an AOI's NAT_DATA 1 km planning units
   (#23): `read_aoi()` in the national template's CRS, `rasterize_aoi()` on

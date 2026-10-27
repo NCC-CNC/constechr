@@ -571,7 +571,10 @@ id = "PUID", index = "template", order = "value")`
 WTW projects (wtw-data-prep2, and other tools that build WTW projects):
 
 `create_wtw_planning_units(aoi, natdata_dir, project_dir = NULL,
-cells = "touches")`
+cells = "touches", value = "NCCID", id = "PUID", index = "template",
+order = "value", trim = TRUE, aoi_union = FALSE,
+aoi_file = "aoi/aoi.shp", polygons_file = "aoi/pu_1km.shp",
+raster_file = "aoi/pu_1km.tif", datatype = "INT1U", overwrite = TRUE)`
 
 - wtw-data-prep2's step 02 in one call: `create_1km_grid()`, then the WTW
   files.
@@ -579,6 +582,16 @@ cells = "touches")`
   `aoi/pu_1km.tif` (`INT1U`, value 1 in every AOI cell), as today; file
   names and data type are arguments with these defaults. Returns what
   `create_1km_grid()` returns.
+- As built (#24, ADR 0018): `aoi_union = FALSE` writes today's `aoi.shp`,
+  the input's features and attributes in the template's CRS; `TRUE` writes
+  the dissolved AOI. `trim = TRUE` trims both the returned `aoi_raster` and
+  `pu_1km.tif` to the planning-unit cells (today's extent, which #25 then
+  crops to); `FALSE` keeps the AOI's box. The returned list differs from
+  `create_1km_grid()`'s only in the raster's extent. `project_dir = NULL`
+  writes nothing; a `NULL` file argument skips that file; the
+  `create_1km_grid()` arguments pass through. On NAT_DATA_20261009 and the
+  mb_prairie AOI, the files match wtw-data-prep2's (the same `aoi.shp`,
+  planning units and `pu_1km.tif`), in about 6 seconds.
 
 `extract_wtw_natdata(natdata_dir, project_dir, aoi_raster,
 layers = read_natdata_metadata(natdata_dir))`

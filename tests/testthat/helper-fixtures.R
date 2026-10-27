@@ -168,6 +168,32 @@ fixture_aoi <- function(name = "inside") {
   )
 }
 
+# An AOI of two features with a `name` column ("a" and "b"), as an sf data
+# frame in the template's CRS, over columns 1 and 2 of the template: "a" over
+# rows 2 and 3 (x offsets 300 to 1700, y offsets 1300 to 2700) and "b" over
+# rows 1 and 2 (x 200 to 1800, y 200 to 1200). Together they touch cells 1 2
+# 11 12 21 22; the template is NA in 1 2 11 12, so only cells 21 and 22
+# (row 3) have data, and the AOI's box (rows 1 to 3) is larger than the box
+# of its cells with data (row 3). Needs sf.
+fixture_aoi_two <- function() {
+  e <- fixture_extent()
+  rect <- function(o) {
+    x <- e[["xmin"]] + o[1:2]
+    y <- e[["ymax"]] - o[3:4]
+    sf::st_polygon(list(matrix(
+      c(x[1], y[1], x[2], y[1], x[2], y[2], x[1], y[2], x[1], y[1]),
+      ncol = 2, byrow = TRUE
+    )))
+  }
+  sf::st_sf(
+    name = c("a", "b"),
+    geometry = sf::st_sfc(
+      rect(c(300, 1700, 1300, 2700)), rect(c(200, 1800, 200, 1200)),
+      crs = fixture_crs()
+    )
+  )
+}
+
 # A planning-unit raster for an AOI, as wtw-data-prep2's `pu_1km.tif`: 1 in
 # the cells `fixture_aoi(name)` gets under `cells` ("touches" or "centre"),
 # NA elsewhere, on the template's grid cropped to the AOI (snapped out to
@@ -438,4 +464,10 @@ fixture_natdata_idx_dir <- function(template = fixture_template_bottom_left()) {
     datatype = "INT4S"
   )
   dir
+}
+
+# Each polygon's lower-left corner, as a two-column matrix. Needs sf.
+lower_left <- function(x) {
+  b <- t(sapply(sf::st_geometry(x), sf::st_bbox))
+  unname(b[, c("xmin", "ymin"), drop = FALSE])
 }
