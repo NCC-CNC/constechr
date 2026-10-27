@@ -545,3 +545,33 @@ wtw_step01_folders <- function() {
     "tifs/weights/pressures", "wtw", "wtw/metadata", "wtw/runs"
   )
 }
+
+# The lines of the dataprep/dataprep.csv template wtw-data-prep2's step 01
+# (`create_project_folder()`) writes, captured once from that function. On
+# Windows the file is these lines, each ending in CRLF (437 bytes);
+# write.csv() ends them in LF elsewhere.
+wtw_step01_dataprep_lines <- function() {
+  c(
+    paste0(
+      "\"conversion_ready_input\",\"short_name\",\"tif_output\",\"unit\",",
+      "\"stat\",\"cell_value\",\"datatype\",\"provenance\""
+    ),
+    paste0(
+      "\"full filepath to input data\",",
+      "\"10 characters or less name for variable\",",
+      "\"full filepath with extension to output tif\",",
+      "\"supported units: m2, ha, km2, m, km and count\",",
+      "\"supported stats: mean, max, min, sum, stdev, mode and area \",",
+      "\"if stat is area, provide cell value to extract\",",
+      "\"supported types: raster, vector\",",
+      "\"national or regional\""
+    )
+  )
+}
+
+# The bytes of a text file with `lines`, each ending in the system's line
+# ending, as write.csv() writes them.
+text_bytes <- function(lines) {
+  eol <- if (.Platform$OS.type == "windows") "\r\n" else "\n"
+  charToRaw(enc2utf8(paste0(lines, eol, collapse = "")))
+}

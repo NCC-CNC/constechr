@@ -1167,12 +1167,14 @@ test_that("create_wtw_project_folder() takes any folder list", {
 })
 
 test_that("the WTW functions write into wtw_project_folders()", {
-  # The default files of create_wtw_planning_units() and the default
-  # tifs_dir of extract_wtw_natdata() are in the default layout
+  # The default files of create_wtw_planning_units() and
+  # create_dataprep_template() and the default tifs_dir of
+  # extract_wtw_natdata() are in the default layout
   defaults <- c(
     formals(create_wtw_planning_units)[
       c("aoi_file", "polygons_file", "raster_file")
     ],
+    formals(create_dataprep_template)["file"],
     formals(extract_wtw_natdata)["tifs_dir"]
   )
   folders <- vapply(defaults, function(x) {

@@ -659,6 +659,15 @@ overwrite = TRUE, progress = <a message per layer>)`
 
 - From `create_project_folder()`: writes the `dataprep.csv` template.
   `dataprep_columns()` returns today's columns and descriptions.
+- As built (#27, ADR 0023): `create_dataprep_template(project_dir, file =
+  "dataprep/dataprep.csv", columns = dataprep_columns(), overwrite =
+  TRUE)`, the first argument `project_dir` as in the other WTW functions.
+  `dataprep_columns()` is a named character vector (columns and their
+  descriptions); `columns` also takes column names only, or a data frame
+  written as it is. Written with `write.csv()` as UTF-8, `NA` as empty
+  fields; an existing file is replaced by default, as today. With the
+  defaults the file is the same as `create_project_folder()`'s, byte for
+  byte.
 
 ### Later candidates (not v0.1.0)
 

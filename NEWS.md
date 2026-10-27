@@ -1,4 +1,16 @@
-# constechr 0.0.0.9015
+# constechr 0.0.0.9016
+
+- New `create_dataprep_template()` and `dataprep_columns()` write the
+  `dataprep/dataprep.csv` template of wtw-data-prep2's step 01 (#27):
+  `create_dataprep_template(project_dir)` writes a CSV of the columns in
+  `columns` with a row of their descriptions, and returns its path.
+  `dataprep_columns()` is the default, wtw-data-prep2's eight columns and
+  descriptions. `file` (relative to `project_dir`, default
+  `"dataprep/dataprep.csv"`) and `overwrite` (default `TRUE`, as today) are
+  arguments; `columns` also takes column names only, or a data frame
+  written as it is. Written with `write.csv()` as UTF-8, `NA` as empty
+  fields. Decisions in ADR 0023. With the defaults it writes the same file
+  as wtw-data-prep2's `create_project_folder()`, byte for byte.
 
 - New `create_wtw_project_folder()` and `wtw_project_folders()` are
   wtw-data-prep2's step 01 folders (#26): `create_wtw_project_folder()`
