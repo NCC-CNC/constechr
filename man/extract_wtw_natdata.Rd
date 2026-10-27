@@ -178,6 +178,8 @@ if (requireNamespace("prioritizr", quietly = TRUE)) {
 which it calls.
 
 Other wtw:
-\code{\link[=create_wtw_planning_units]{create_wtw_planning_units()}}
+\code{\link[=create_wtw_planning_units]{create_wtw_planning_units()}},
+\code{\link[=create_wtw_project_folder]{create_wtw_project_folder()}},
+\code{\link[=wtw_project_folders]{wtw_project_folders()}}
 }
 \concept{wtw}

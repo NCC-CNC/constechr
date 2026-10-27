@@ -238,3 +238,106 @@
       Caused by error in `natdata_template()`:
       ! `file` must be an existing file; 'no_template/_1km/idx.tif' does not exist.
 
+# the WTW folder functions give clear errors
+
+    Code
+      wtw_project_folders(c("themes/species", "weights"))
+    Condition
+      Error in `wtw_project_folders()`:
+      ! `layers` must be `NULL` or a data frame with a subdir column.
+      i `read_natdata_metadata()` returns a NAT_DATA catalogue with one.
+
+---
+
+    Code
+      wtw_project_folders(data.frame(path = "themes/species"))
+    Condition
+      Error in `wtw_project_folders()`:
+      ! `layers` must be `NULL` or a data frame with a subdir column.
+      i `read_natdata_metadata()` returns a NAT_DATA catalogue with one.
+
+---
+
+    Code
+      wtw_project_folders(data.frame(subdir = 1))
+    Condition
+      Error in `wtw_project_folders()`:
+      ! The subdir column of `layers` must hold strings, not a number.
+
+---
+
+    Code
+      wtw_project_folders(data.frame(subdir = c("C:/themes", "/weights", "../themes",
+        "a/../b")))
+    Condition
+      Error in `wtw_project_folders()`:
+      ! The subdir column of `layers` must hold folders inside 'tifs'.
+      x Not allowed: "C:/themes", "/weights", "../themes", and "a/../b".
+
+---
+
+    Code
+      create_wtw_project_folder(NULL)
+    Condition
+      Error in `create_wtw_project_folder()`:
+      ! `project_dir` must be a single folder path, not NULL.
+
+---
+
+    Code
+      create_wtw_project_folder(c("a", "b"))
+    Condition
+      Error in `create_wtw_project_folder()`:
+      ! `project_dir` must be a single folder path, not a character vector.
+
+---
+
+    Code
+      create_wtw_project_folder("a_file")
+    Condition
+      Error in `create_wtw_project_folder()`:
+      ! `project_dir` must be a folder; 'a_file' is a file.
+
+---
+
+    Code
+      create_wtw_project_folder("new_project", folders = 1)
+    Condition
+      Error in `create_wtw_project_folder()`:
+      ! `folders` must be `NULL` or a character vector of folder paths, not a number.
+
+---
+
+    Code
+      create_wtw_project_folder("new_project", folders = c("aoi", NA))
+    Condition
+      Error in `create_wtw_project_folder()`:
+      ! `folders` must not hold `NA` or empty paths.
+
+---
+
+    Code
+      create_wtw_project_folder("new_project", folders = c("aoi", ""))
+    Condition
+      Error in `create_wtw_project_folder()`:
+      ! `folders` must not hold `NA` or empty paths.
+
+---
+
+    Code
+      create_wtw_project_folder("new_project", folders = c("aoi", "C:/tifs", "/wtw",
+        "\\dataprep"))
+    Condition
+      Error in `create_wtw_project_folder()`:
+      ! `folders` must be paths relative to `project_dir`.
+      x Not relative: 'C:/tifs', '/wtw', and '\dataprep'.
+
+---
+
+    Code
+      create_wtw_project_folder("project")
+    Condition
+      Error in `create_wtw_project_folder()`:
+      ! `folders` must not name existing files.
+      x A file: 'project/aoi'.
+
