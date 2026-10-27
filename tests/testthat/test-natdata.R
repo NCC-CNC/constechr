@@ -315,12 +315,6 @@ test_that("the catalogue and template extract as natdata() did", {
 # k = (c - 1) %% 10 + 1, holds (10 - r) * 10 + k. So the inside AOI's cells
 # 34 35 36 / 44 45 46 / 54 55 56 hold 64 65 66 / 54 55 56 / 44 45 46.
 
-# Each polygon's lower-left corner, as a two-column matrix.
-lower_left <- function(x) {
-  b <- t(sapply(sf::st_geometry(x), sf::st_bbox))
-  unname(b[, c("xmin", "ymin"), drop = FALSE])
-}
-
 test_that("create_1km_grid() gives the AOI, raster and polygons", {
   skip_if_not_installed("sf")
   natdata <- fixture_natdata_idx_dir()
