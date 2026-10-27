@@ -29,12 +29,16 @@ concurrency:
 # - repo-hygiene: stack-neutral checks, always runs.
 # - r-cmd-check: R CMD check (build, tests, examples, docs) on Windows with
 #   all dependencies and without Suggests, and on Ubuntu with all
-#   dependencies. Skipped on docs-only PRs. The Ubuntu job runs in a pinned
-#   rocker/geospatial container, which already has R and the system
-#   libraries (GDAL, GEOS, PROJ), so nothing is installed with apt from the
-#   Ubuntu mirror; R packages still come from current P3M binaries. It also
-#   runs styler, lintr and test coverage, so each run sets up R on Ubuntu
-#   once. Coverage is reported in that job's log and is not a gate.
+#   dependencies. Skipped on docs-only PRs. Every job checks against current
+#   CRAN versions of all dependencies, including the recommended packages R
+#   ships with, such as Matrix. Windows jobs install CRAN's Windows binaries.
+#   The Ubuntu job runs in a pinned rocker/geospatial container, which
+#   already has R and the system libraries (GDAL, GEOS, PROJ), so nothing is
+#   installed with apt from the Ubuntu mirror; R packages come from current
+#   P3M binaries. It also runs styler, lintr and test coverage, so each run
+#   sets up R on Ubuntu once. Coverage is reported in that job's log and is
+#   not a gate. Every job caches its R package library, keyed by the
+#   versions pak resolves, so a new CRAN release is still installed.
 # - checks: the one required status check. It passes when every job it needs
 #   passed or was skipped. Branch protection names only this job, so adding or
 #   renaming a job never means touching the protection rules.
@@ -114,29 +118,43 @@ jobs:
 
       # In the container R is already installed, so setup-r installs
       # nothing (and runs no apt): it only writes the repository settings,
-      # with cran replacing the image's own repository setting.
+      # with cran replacing the image's own repository setting. On Windows
+      # the repository is CRAN, not P3M: P3M's Windows index lists the
+      # recommended packages (Matrix, lattice and others) under a path it
+      # does not serve, so pak cannot download them from there (ADR 0022).
       - uses: r-lib/actions/setup-r@v2
         with:
           install-r: ${{ !matrix.config.container }}
-          use-public-rspm: ${{ !matrix.config.container }}
+          use-public-rspm: false
           cran: ${{ matrix.config.cran }}
 
+      # In the container, put the cached library (R_LIBS_USER, set by
+      # setup-r) first on the library path, ahead of the image's site
+      # library, so pak installs into it and the package cache holds it.
+      # The image's R_LIBS setting keeps an R_LIBS already set.
+      - name: Library path for the package cache (container)
+        if: matrix.config.container
+        run: |
+          mkdir -p "$R_LIBS_USER"
+          echo "R_LIBS=$R_LIBS_USER" >> "$GITHUB_ENV"
+
       # Every dependency is the current version from the repositories: pak
-      # resolves against an empty library. In the container pak installs
-      # into the image's site library (first on the library path),
-      # replacing any package the image has at another version, and
-      # upgrade also replaces the recommended packages R ships with, such
-      # as Matrix (built from source: P3M serves them so). On Windows pak
-      # cannot download those from P3M, so they stay at R's version there.
-      # The package cache holds R_LIBS_USER, which the container does not
-      # use, so it is off there. cache-version keeps the "hard" job from
-      # restoring the "all" job's library, Suggests included.
+      # resolves against an empty library, and upgrade also replaces the
+      # recommended packages R ships with, such as Matrix, when CRAN has a
+      # newer version (P3M serves those as source on Linux, so they are
+      # compiled there). pak installs into R_LIBS_USER, ahead of R's own
+      # library and, in the container, the image's site library. The
+      # package cache holds R_LIBS_USER. Its key is a hash of the lockfile
+      # pak resolves, so a new CRAN version changes the key and is
+      # installed; an exact hit installs nothing. cache-version keeps the
+      # "hard" job from restoring the "all" job's library, Suggests
+      # included.
       - uses: r-lib/actions/setup-r-dependencies@v2
         id: deps
         with:
-          cache: ${{ matrix.config.container && 'false' || 'true' }}
+          cache: true
           cache-version: ${{ matrix.config.deps }}
-          upgrade: ${{ matrix.config.container && 'TRUE' || 'FALSE' }}
+          upgrade: 'TRUE'
           dependencies: ${{ matrix.config.deps == 'hard' && '"hard"' || '"all"' }}
           extra-packages: any::rcmdcheck, any::testthat${{ matrix.config.extras && ', any::lintr, any::styler, any::covr, local::.' || '' }}
           needs: check
