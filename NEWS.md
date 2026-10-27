@@ -1,4 +1,19 @@
-# constechr 0.0.0.9013
+# constechr 0.0.0.9014
+
+- New `extract_wtw_natdata()` is wtw-data-prep2's step 03 in one call
+  (#25): `natdata_template()` and `extract_layers()` with the NAT_DATA
+  catalogue (`read_natdata_metadata()`, `path_column = "file"`), writing
+  each layer to `<project_dir>/tifs/<subdir>/<prefix><feature>.tif` with
+  its catalogue prefix and data type. `aoi_raster` defaults to the
+  project's `aoi/pu_1km.tif` and also takes the raster
+  `create_wtw_planning_units()` returns; `layers`, `tifs_dir`, `round_int`,
+  `multiband`, `drop_empty`, `overwrite` and `progress` (a short message
+  per layer by default) are arguments. Decisions in ADR 0020. With the
+  defaults it writes the same `tifs/` files as wtw-data-prep2's
+  `natdata()`, on the test fixtures and on a real project. Intended
+  change: `aoi/pu_1km_align.tif` is no longer written by default, since
+  nothing reads it; `align_file = "aoi/pu_1km_align.tif"` writes it as
+  before (1s on the national template's grid, `INT1U`).
 
 - Raster values keep their stored type (#67, ADR 0019), a change to
   results in type, not value. `rasterize_aoi()` returns cell numbers as

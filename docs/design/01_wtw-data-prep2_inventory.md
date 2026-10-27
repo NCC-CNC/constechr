@@ -172,6 +172,7 @@ its own values):
 | `rij_to_raster()` | Rounding unless the type matches `^FLT` or `^DOUBLE` | `write_rasters(round_int = TRUE)`: rounds before integer types only; `FALSE` keeps terra's truncation (ADR 0014). |
 | `rij_to_raster()` | Output file name `<prefix><name>.tif` | Optional output folder and prefix; default returns rasters. |
 | `aoi_to_grid()` | Output data type `INT1U`; file names `aoi.shp`, `pu_1km.shp`, `pu_1km.tif` | Defaults of the use-case function `create_wtw_planning_units()` (arguments, overridable); the building blocks return objects. |
+| `natdata()` | Input `<project>/aoi/pu_1km.tif`; output folder `<project>/tifs/<path>`; `<project>/aoi/pu_1km_align.tif` always written | Defaults of the use-case function `extract_wtw_natdata()`: `aoi_raster`, `tifs_dir = "tifs"`, and `align_file = NULL` (not written unless named; ADR 0020). |
 
 Building-block names follow the same rule: no fixed values baked into names
 (the generic part of `create_1km_grid()` becomes `rasterize_aoi()`). The
@@ -603,13 +604,31 @@ raster_file = "aoi/pu_1km.tif", datatype = "INT1U", overwrite = TRUE)`
   `pu_1km.shp`'s `NCCID` field is an integer, `N(9,0)`, as wtw-data-prep2
   writes it; the `.dbf` is the same size.
 
-`extract_wtw_natdata(natdata_dir, project_dir, aoi_raster,
-layers = read_natdata_metadata(natdata_dir))`
+`extract_wtw_natdata(natdata_dir, project_dir,
+aoi_raster = file.path(project_dir, "aoi", "pu_1km.tif"),
+layers = read_natdata_metadata(natdata_dir), tifs_dir = "tifs",
+align_file = NULL, round_int = TRUE, multiband = FALSE, drop_empty = TRUE,
+overwrite = TRUE, progress = <a message per layer>)`
 
 - wtw-data-prep2's step 03 in one call: `extract_layers()` with the
   NAT_DATA catalogue and `path_column = "file"`, writing to
   `<project_dir>/tifs/<subdir>/` with each layer's prefix and data type, as
   today.
+- As built (#25, ADR 0020): `natdata_template()` and `extract_layers()`;
+  `aoi_raster` is the project's `pu_1km.tif` by default, or any raster
+  `extract_layers()` accepts, such as the `aoi_raster`
+  `create_wtw_planning_units()` returns (same files). `aoi/pu_1km_align.tif`
+  is written only when `align_file` names it (default `NULL`), with
+  `align_raster()` from a raster of 1s as `INT1U`, as today; nothing
+  downstream reads it, so not writing it by default is an intended change.
+  `progress` prints a short message per layer by default. On
+  NAT_DATA_20261009 and the mb_prairie project, it writes the same 1,256
+  files as the project's `tifs/` (names, folders, data types, NoData values,
+  extents), in about 2 minutes, and, when asked, a `pu_1km_align.tif` with
+  the same values, data type and NoData value, on the template's exact
+  extent (`gdalwarp`'s was off by about 2e-9 m, ADR 0007); values differ only
+  in the 57 `ncc_sar_aoh` files, made before wtw-data-prep2 rounded before
+  integer types, and are identical with `round_int = FALSE`.
 
 `create_wtw_project_folder(path, folders = wtw_project_folders())`
 
