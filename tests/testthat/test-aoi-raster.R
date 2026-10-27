@@ -147,6 +147,60 @@ test_that("a number as value fills the AOI's cells with that constant", {
   expect_equal(cell_values(x), rep(2.5, 5))
 })
 
+test_that("the raster keeps the type of what it holds (ADR 0019)", {
+  inside <- fixture_aoi("inside")
+  cells <- as.integer(expected_cells$touches$inside)
+  # (10 - row) * 10 + col in cells 34 35 36, 44 45 46, 54 55 56
+  idx <- c(64L, 65L, 66L, 54L, 55L, 56L, 44L, 45L, 46L)
+
+  # Cell numbers are integers, whatever the template stores, cropped or on
+  # the full grid, on the template's cells or coarser ones, and without a
+  # template
+  float <- fixture_file(fixture_template_bottom_left(), datatype = "FLT4S")
+  for (template in list(fixture_template_bottom_left(), float)) {
+    x <- rasterize_aoi(inside, template, cells = "touches")
+    expect_true(terra::is.int(x))
+    expect_identical(cell_values(x), cells)
+    x <- rasterize_aoi(inside, template, cells = "touches", crop = FALSE)
+    expect_true(terra::is.int(x))
+    expect_identical(cell_values(x), cells)
+  }
+  x <- rasterize_aoi(
+    inside, fixture_template(),
+    resolution = 2000, cells = "touches"
+  )
+  expect_true(terra::is.int(x))
+  expect_identical(cell_values(x), c(7L, 8L, 12L, 13L))
+  x <- rasterize_aoi(inside, resolution = 1000, cells = "touches")
+  expect_type(cell_values(x), "integer")
+
+  # The template's values: integers from an integer template (INT4S on
+  # file, as NAT_DATA's idx.tif), doubles from a float one (FLT4S)
+  int <- fixture_file(fixture_template_bottom_left(), datatype = "INT4S")
+  for (crop in c(TRUE, FALSE)) {
+    x <- rasterize_aoi(
+      inside, int,
+      cells = "touches", value = "template", crop = crop
+    )
+    expect_true(terra::is.int(x))
+    expect_identical(cell_values(x), idx)
+    x <- rasterize_aoi(
+      inside, float,
+      cells = "touches", value = "template", crop = crop
+    )
+    expect_false(terra::is.int(x))
+    expect_identical(cell_values(x), as.numeric(idx))
+  }
+
+  # A constant keeps its own type
+  x <- rasterize_aoi(inside, int, cells = "touches", value = 1L, crop = FALSE)
+  expect_true(terra::is.int(x))
+  expect_identical(cell_values(x), rep(1L, 9))
+  x <- rasterize_aoi(inside, int, cells = "touches", value = 1)
+  expect_false(terra::is.int(x))
+  expect_identical(cell_values(x), rep(1, 9))
+})
+
 test_that("coarser cells are numbered in the coarse grid (2000 m)", {
   template <- fixture_template()
   expected <- list(

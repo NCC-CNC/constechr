@@ -114,8 +114,14 @@ computed.
 \item \strong{No-data cells} (\code{drop_na = TRUE}, with a template): AOI cells where
 the template is \code{NA} are set to \code{NA}; at a coarser resolution, only
 coarse cells whose template cells are all \code{NA}.
-\item \strong{Values}: whole cell numbers or the given constant, stored as
-doubles in memory; nothing is rounded.
+\item \strong{Values}: nothing is rounded, and the raster keeps the type of what
+it holds (ADR 0019): cell numbers are integers; the template's values
+are integers if the template stores integers (\code{\link[terra:is.int]{terra::is.int()}}, such
+as an \verb{INT*} data type) and doubles if it stores floats; a constant
+keeps its own type (\code{1L} an integer, \code{1} a double). Integers outside
+R's integer range (possible only with \code{INT4U} or larger types) stay
+doubles. \code{\link[=polygonize_raster]{polygonize_raster()}} and \code{\link[terra:values]{terra::values()}} then return the
+same type.
 \item \strong{Full grid} (\code{crop = FALSE}): the result is extended to the full grid
 with \code{\link[terra:extend]{terra::extend()}}, \code{NA} outside the AOI.
 }

@@ -436,6 +436,36 @@ test_that("index = \"cell\" gives terra cell numbers", {
   )
 })
 
+test_that("NCCID keeps the template's type (ADR 0019)", {
+  skip_if_not_installed("sf")
+  inside <- fixture_aoi("inside")
+  nccid <- c(44L, 45L, 46L, 54L, 55L, 56L, 64L, 65L, 66L)
+  cells <- c(34L, 35L, 36L, 44L, 45L, 46L, 54L, 55L, 56L)
+
+  # An integer template (INT4S, as NAT_DATA's idx.tif): integers in the
+  # polygons and the raster
+  grid <- create_1km_grid(inside, fixture_natdata_idx_dir())
+  expect_identical(grid$polygons$NCCID, nccid)
+  expect_true(terra::is.int(grid$aoi_raster))
+  expect_identical(
+    terra::values(grid$aoi_raster, mat = FALSE),
+    c(64L, 65L, 66L, 54L, 55L, 56L, 44L, 45L, 46L)
+  )
+
+  # A float template (FLT4S): the same values as doubles
+  float <- fixture_natdata_idx_dir(datatype = "FLT4S")
+  grid <- create_1km_grid(inside, float)
+  expect_identical(grid$polygons$NCCID, as.numeric(nccid))
+  expect_false(terra::is.int(grid$aoi_raster))
+
+  # Terra cell numbers are integers, whatever the template stores
+  for (natdata in list(fixture_natdata_idx_dir(), float)) {
+    grid <- create_1km_grid(inside, natdata, index = "cell")
+    expect_identical(grid$polygons$NCCID, cells)
+    expect_true(terra::is.int(grid$aoi_raster))
+  }
+})
+
 test_that("order = \"cell\" keeps terra's cell order", {
   skip_if_not_installed("sf")
   natdata <- fixture_natdata_idx_dir()

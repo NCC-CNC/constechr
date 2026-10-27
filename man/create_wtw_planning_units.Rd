@@ -171,7 +171,9 @@ replaced) and \code{\link[=write_rasters]{write_rasters()}} for the raster:
 \itemize{
 \item \code{aoi_file}: the AOI from step 3, or the dissolved AOI;
 \item \code{polygons_file}: the polygons, with the columns \code{value}, \code{id} and
-their geometry;
+their geometry. \code{value} keeps the type it has in the polygons, so
+with NAT_DATA's \code{idx.tif} (an \verb{INT*} data type) \code{NCCID} is an
+integer field (ADR 0019);
 \item \code{raster_file}: the raster of step 2 with 1 in every planning unit and
 \code{NA} elsewhere, one layer named \code{layer}, in \code{datatype}
 (\code{INT1U} by default, whose NoData value terra writes as 255).
@@ -181,8 +183,9 @@ their geometry;
 No areas are computed and no values are rounded. With the defaults, the
 files are those of wtw-data-prep2's step 02 (\code{aoi_to_grid()}): the same
 AOI features and attributes, the same planning units (\code{NCCID}, \code{PUID} and
-polygons), and the same \code{pu_1km.tif} extent, values and data type.
-Decisions are recorded in ADR 0017 and ADR 0018.
+polygons, with \code{NCCID} and \code{PUID} as integer fields), and the same
+\code{pu_1km.tif} extent, values and data type. Decisions are recorded in
+ADR 0017, ADR 0018 and ADR 0019.
 
 Arguments are checked before the AOI is read; the AOI is read before
 anything is written. If writing fails partway, the files already written

@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Accepted; the type of `NCCID` (an integer for an integer template such
+as `idx.tif` and for `index = "cell"`) is set by
+0019-raster-values-keep-their-type.md
 
 ## Context
 

@@ -243,6 +243,10 @@ read_natdata_metadata <- function(natdata_dir,
 #'    AOI's cells and `NA` elsewhere.
 #' 4. **Polygons**: [polygonize_raster()], one square polygon per AOI cell
 #'    (cells are not merged), holding the same national ID as the raster.
+#'    The national ID keeps the template's type (ADR 0019): an integer if
+#'    the template stores integers (an `INT*` data type, as NAT_DATA's
+#'    `idx.tif` does) and a double if it stores floats. Terra cell numbers
+#'    (`index = "cell"`) are always integers.
 #' 5. **Order**: with `order = "value"`, the polygons are sorted by national
 #'    ID, then `id` numbers them 1 to n.
 #'
@@ -251,7 +255,7 @@ read_natdata_metadata <- function(natdata_dir,
 #' `create_1km_grid()`, which reached the "touches" rule through a 1000 m
 #' buffer and a mask. Unlike it, the raster holds the national IDs, not 1s,
 #' on the AOI's extent, and the polygons' columns are `value`, `id` and then
-#' `geometry`. Decisions are recorded in ADR 0008 and ADR 0017.
+#' `geometry`. Decisions are recorded in ADR 0008, ADR 0017 and ADR 0019.
 #'
 #' If the AOI's bounding box does not overlap the template, the function
 #' stops with an error. If it overlaps but gets no cells, it warns, and the
@@ -267,8 +271,9 @@ read_natdata_metadata <- function(natdata_dir,
 #'     cells are not `NA`;
 #'   - `polygons`: an `sf` data frame with one `POLYGON` row per AOI cell, in
 #'     the template's CRS, with the columns `value` (the national ID, as in
-#'     the raster), `id` (an integer, 1 to n) unless `id = NULL`, and
-#'     `geometry`.
+#'     the raster: an integer for NAT_DATA's `idx.tif` and for
+#'     `index = "cell"`, a double for a template that stores floats), `id`
+#'     (an integer, 1 to n) unless `id = NULL`, and `geometry`.
 #'
 #' @family natdata
 #' @seealso [rasterize_aoi()] and [polygonize_raster()], the building blocks

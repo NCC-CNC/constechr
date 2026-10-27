@@ -77,8 +77,14 @@
 #' - **No-data cells** (`drop_na = TRUE`, with a template): AOI cells where
 #'   the template is `NA` are set to `NA`; at a coarser resolution, only
 #'   coarse cells whose template cells are all `NA`.
-#' - **Values**: whole cell numbers or the given constant, stored as
-#'   doubles in memory; nothing is rounded.
+#' - **Values**: nothing is rounded, and the raster keeps the type of what
+#'   it holds (ADR 0019): cell numbers are integers; the template's values
+#'   are integers if the template stores integers ([terra::is.int()], such
+#'   as an `INT*` data type) and doubles if it stores floats; a constant
+#'   keeps its own type (`1L` an integer, `1` a double). Integers outside
+#'   R's integer range (possible only with `INT4U` or larger types) stay
+#'   doubles. [polygonize_raster()] and [terra::values()] then return the
+#'   same type.
 #' - **Full grid** (`crop = FALSE`): the result is extended to the full grid
 #'   with [terra::extend()], `NA` outside the AOI.
 #'
@@ -214,10 +220,10 @@ rasterize_aoi <- function(aoi, template = NULL, resolution = NULL, crs = NULL,
   }
 
   if (identical(value, "index")) {
-    v <- terra::cellFromXY(grid, centres)
+    v <- stored_type(terra::cellFromXY(grid, centres), TRUE)
     name <- "index"
   } else if (identical(value, "template")) {
-    v <- data$values
+    v <- stored_type(data$values, terra::is.int(template))
     name <- names(template)
   } else {
     v <- rep(value, n)
@@ -237,7 +243,11 @@ rasterize_aoi <- function(aoi, template = NULL, resolution = NULL, crs = NULL,
     )
   }
   if (!is.null(template) && !crop) {
+    # terra::extend() drops the integer flag, so it is set again
     out <- terra::extend(out, grid)
+    if (is.integer(v)) {
+      out <- terra::as.int(out)
+    }
   }
   out
 }
@@ -494,4 +504,22 @@ template_data <- function(template, local) {
   has_data <- logical(terra::ncell(local))
   has_data[unique(to[inside & !is.na(v)])] <- TRUE
   list(has_data = has_data, values = values)
+}
+
+#' Cell values in the type the raster stores them in
+#'
+#' @param v A numeric vector of cell values.
+#' @param int A single logical: `TRUE` if the raster stores integers
+#'   ([terra::is.int()]: an `INT*` data type on file, or integer values in
+#'   memory), as terra cell numbers always are.
+#' @return `v` as an integer vector when `int` is `TRUE` and every value
+#'   that is not `NA` is a whole number within R's integer range; otherwise
+#'   `v` unchanged (a double vector).
+#' @noRd
+stored_type <- function(v, int) {
+  if (!isTRUE(int) || is.integer(v)) {
+    return(v)
+  }
+  fits <- is.na(v) | (abs(v) <= .Machine$integer.max & v == trunc(v))
+  if (all(fits)) as.integer(v) else v
 }

@@ -24,6 +24,56 @@ file_nodata <- function(path) {
   as.numeric(sub(".*NoData Value=", "", line))
 }
 
+# The fields of a .dbf file, read from its header: a data frame with each
+# field's name, type ("N" for numbers), length and decimal count. A number
+# field with no decimals is an integer field, as in N(9,0).
+dbf_fields <- function(path) {
+  con <- file(path, "rb")
+  on.exit(close(con))
+  header <- readBin(con, "raw", 32)
+  size <- sum(as.integer(header[9:10]) * c(1, 256))
+  bytes <- readBin(con, "raw", size - 32)
+  n <- (size - 33) %/% 32
+  fields <- lapply(seq_len(n) - 1, function(i) bytes[i * 32 + 1:32])
+  data.frame(
+    name = vapply(fields, function(f) rawToChar(f[1:11][f[1:11] != 0]), ""),
+    type = vapply(fields, function(f) rawToChar(f[12]), ""),
+    length = vapply(fields, function(f) as.integer(f[17]), 1L),
+    decimals = vapply(fields, function(f) as.integer(f[18]), 1L)
+  )
+}
+
+test_that("pu_1km.shp's NCCID field keeps the template's type (ADR 0019)", {
+  skip_if_not_installed("sf")
+  aoi <- fixture_aoi("inside")
+  nccid <- c(44L, 45L, 46L, 54L, 55L, 56L, 64L, 65L, 66L)
+
+  # An integer template (INT4S, as NAT_DATA's idx.tif): integer fields, as
+  # wtw-data-prep2 writes them
+  project <- tempfile("project")
+  create_wtw_planning_units(aoi, fixture_natdata_idx_dir(), project)
+  path <- file.path(project, "aoi", "pu_1km.shp")
+  fields <- dbf_fields(sub("shp$", "dbf", path))
+  expect_identical(fields$name, c("NCCID", "PUID"))
+  expect_identical(fields$type, c("N", "N"))
+  expect_identical(fields$decimals, c(0L, 0L))
+  p <- sf::read_sf(path)
+  expect_identical(p$NCCID, nccid)
+  expect_identical(p$PUID, 1:9)
+
+  # A float template (FLT4S): NCCID is a real field with the same values
+  project <- tempfile("project")
+  create_wtw_planning_units(
+    aoi, fixture_natdata_idx_dir(datatype = "FLT4S"), project
+  )
+  path <- file.path(project, "aoi", "pu_1km.shp")
+  fields <- dbf_fields(sub("shp$", "dbf", path))
+  expect_identical(fields$name, c("NCCID", "PUID"))
+  expect_gt(fields$decimals[1], 0L)
+  expect_identical(fields$decimals[2], 0L)
+  expect_identical(sf::read_sf(path)$NCCID, as.numeric(nccid))
+})
+
 test_that("create_wtw_planning_units() writes the WTW project files", {
   skip_if_not_installed("sf")
   natdata <- fixture_natdata_idx_dir()

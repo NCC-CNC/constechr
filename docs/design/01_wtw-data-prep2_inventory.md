@@ -330,6 +330,10 @@ cells, value = "index", drop_na = TRUE, crop = TRUE)`
 - `id`: optional name of a column numbering the polygons 1..n; `NULL` (the
   default) adds none. wtw-data-prep2 passes `id = "PUID"`.
 - Returns an `sf` polygon layer.
+- Values keep the raster's stored type (#67, ADR 0019): an integer column
+  for a raster that stores integers (an `INT*` data type, or integer values
+  in memory, such as `rasterize_aoi()`'s cell numbers), a double column for
+  floats.
 
 `summarize_aoi_raster(aoi_raster, template = NULL)` (candidate)
 
@@ -567,6 +571,10 @@ id = "PUID", index = "template", order = "value")`
   the mb_prairie AOI, the defaults give the same 70,630 planning units as
   wtw-data-prep2's `pu_1km.shp` (`NCCID`, `PUID` and geometry), in about
   6 seconds.
+- `NCCID` keeps the template's type (#67, ADR 0019): an integer for
+  NAT_DATA's `idx.tif` (`INT*`) and for `index = "cell"`, a double for a
+  template that stores floats, in the returned raster and polygons and in
+  every file written from them.
 
 WTW projects (wtw-data-prep2, and other tools that build WTW projects):
 
@@ -591,7 +599,9 @@ raster_file = "aoi/pu_1km.tif", datatype = "INT1U", overwrite = TRUE)`
   writes nothing; a `NULL` file argument skips that file; the
   `create_1km_grid()` arguments pass through. On NAT_DATA_20261009 and the
   mb_prairie AOI, the files match wtw-data-prep2's (the same `aoi.shp`,
-  planning units and `pu_1km.tif`), in about 6 seconds.
+  planning units and `pu_1km.tif`), in about 6 seconds. Since #67,
+  `pu_1km.shp`'s `NCCID` field is an integer, `N(9,0)`, as wtw-data-prep2
+  writes it; the `.dbf` is the same size.
 
 `extract_wtw_natdata(natdata_dir, project_dir, aoi_raster,
 layers = read_natdata_metadata(natdata_dir))`

@@ -1,4 +1,17 @@
-# constechr 0.0.0.9012
+# constechr 0.0.0.9013
+
+- Raster values keep their stored type (#67, ADR 0019), a change to
+  results in type, not value. `rasterize_aoi()` returns cell numbers as
+  integers, the template's values as integers when the template stores
+  integers (an `INT*` data type, as NAT_DATA's `idx.tif`) and doubles when
+  it stores floats, and a constant in its own type (`1L` or `1`).
+  `polygonize_raster()` returns an integer `value` column when the raster
+  stores integers (`terra::is.int()`) and a double column otherwise. So
+  `create_1km_grid()`'s `NCCID` is an integer for `idx.tif` and for
+  `index = "cell"`, and `create_wtw_planning_units()` writes `pu_1km.shp`'s
+  `NCCID` as an integer field, `N(9,0)`, as wtw-data-prep2 does (it was a
+  real field). Integers beyond R's integer range (`INT4U` and larger) stay
+  doubles.
 
 - New `create_wtw_planning_units()` is wtw-data-prep2's step 02 in one call
   (#24): `create_1km_grid()`, then, with `project_dir`, the WTW project's
@@ -15,8 +28,8 @@
   Decisions in ADR 0018. With the defaults it writes the same files as
   wtw-data-prep2's `aoi_to_grid()`, on the test fixtures and on a real
   AOI. Differences in storage only: `pu_1km.shp`'s `NCCID` field is a real
-  number, not an integer (same values), and each square's vertices start at
-  another corner.
+  number, not an integer (same values; an integer since #67), and each
+  square's vertices start at another corner.
 
 - New `create_1km_grid()` makes an AOI's NAT_DATA 1 km planning units
   (#23): `read_aoi()` in the national template's CRS, `rasterize_aoi()` on
