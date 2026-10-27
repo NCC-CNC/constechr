@@ -100,6 +100,11 @@ jobs:
       _R_CHECK_FORCE_SUGGESTS_: false
       # The --as-cran time check needs an outside time server; skip it.
       _R_CHECK_SYSTEM_CLOCK_: false
+      # pak does not install system requirements (Linux only; Windows has
+      # none). It would run apt for every one listed, even those the image
+      # already has. A dependency needing a library the image lacks fails
+      # the job instead (ADR 0022).
+      PKG_SYSREQS: false
     steps:
       # Keep LF line endings on Windows, so the check sees the same files.
       - if: runner.os == 'Windows'
@@ -116,17 +121,20 @@ jobs:
           use-public-rspm: ${{ !matrix.config.container }}
           cran: ${{ matrix.config.cran }}
 
-      # pak resolves every dependency against an empty library, so each is
-      # the current version from the repositories, whatever the image has.
-      # In the container it installs into the image's site library (first
-      # on the library path), replacing any package at another version.
-      # pak installs a missing system library with apt only if a dependency
-      # needs one the image lacks (ADR 0022). The package cache holds
-      # R_LIBS_USER, which the container does not use, so it is off there.
+      # Every dependency is the current version from the repositories:
+      # pak resolves against an empty library, and upgrade also replaces
+      # the recommended packages R ships with, such as Matrix. In the
+      # container pak installs into the image's site library (first on the
+      # library path), replacing any package the image has at another
+      # version. The package cache holds R_LIBS_USER, which the container
+      # does not use, so it is off there. cache-version keeps the "hard"
+      # job from restoring the "all" job's library, Suggests included.
       - uses: r-lib/actions/setup-r-dependencies@v2
         id: deps
         with:
           cache: ${{ matrix.config.container && 'false' || 'true' }}
+          cache-version: ${{ matrix.config.deps }}
+          upgrade: 'TRUE'
           dependencies: ${{ matrix.config.deps == 'hard' && '"hard"' || '"all"' }}
           extra-packages: any::rcmdcheck, any::testthat${{ matrix.config.extras && ', any::lintr, any::styler, any::covr, local::.' || '' }}
           needs: check

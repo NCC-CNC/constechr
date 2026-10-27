@@ -42,15 +42,30 @@ In the container:
   every dependency against an empty library (its default), so each one is
   the current version. pak installs into the image's site library, which is
   first on the library path, and replaces any package the image has at
-  another version. Recommended packages such as Matrix are covered too: a
-  newer version goes into the site library, ahead of R's own library.
+  another version.
+- `upgrade: 'TRUE'` in every job. Without it pak keeps the recommended
+  packages R ships with (Matrix, MASS, lattice and others) at R's own
+  version, even when CRAN has a newer one; the first run of this layout
+  checked against Matrix 1.7-5 while CRAN had 1.7-6. With it, a newer
+  version goes into the first library on the path, ahead of R's own.
 - The package cache is off there: it holds `R_LIBS_USER`, which the
   container does not use. P3M binary downloads are fast.
-- If a future dependency needs a system library the image lacks, pak
-  installs that one library with apt (pak installs only system packages that
-  are missing), and the job goes on. The log shows it under the pak
-  install step. That is the sign to bump the image tag to one that has it,
-  so runs go back to no apt.
+- pak does not install system requirements (`PKG_SYSREQS: false`). It
+  would otherwise run `apt-get update` and `apt-get install` for every
+  system package its database lists for the dependencies, including those
+  the image already has and build-only ones that binary packages do not
+  need (the first run of this layout installed `cmake` and `libabsl-dev`
+  this way). If a future dependency needs a system library the image
+  lacks, the job fails, usually when R CMD check loads the package, with
+  an error naming the missing shared library. The fix is to bump the image
+  to a tag that has it, or, until one does, to install that one library
+  in its own step. There is no automatic apt fallback, so a run never
+  quietly goes back to the Ubuntu mirror.
+
+Each job's package cache is keyed by its dependency set (`cache-version`
+set to `all` or `hard`). Before, the "hard" job restored the "all" job's
+cache through the shared restore key, so Suggests such as prioritizr were
+in its library and the tests that need them ran instead of skipping.
 
 The image tag is pinned and bumped on purpose, together with the Ubuntu
 codename in the P3M URL. If pulling the image becomes the slow step, the
@@ -72,7 +87,10 @@ restated here.
 - Each run sets up R on Ubuntu once. Pulling the image (about 1.7 GB) adds
   time to that job.
 - The system libraries on Linux are those in the image, not the newest on
-  the runner, until the tag is bumped.
+  the runner, until the tag is bumped. A new dependency with a system
+  library the image lacks fails the Linux job until the tag is bumped.
+- The "hard" job now runs without Suggests in its library, so tests that
+  need a Suggests package skip there, as intended.
 - Linux is not checked without Suggests. The hard-dependencies check does
   not depend on the operating system.
 - A stuck job takes up to 60 minutes to fail.
