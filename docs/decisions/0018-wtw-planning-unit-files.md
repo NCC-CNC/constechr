@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted; the `NCCID` field type noted under Consequences is now an
+integer, as wtw-data-prep2 writes it (0019-raster-values-keep-their-type.md)
 
 ## Context
 

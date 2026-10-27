@@ -21,9 +21,10 @@ string, different from \code{value}. wtw-data-prep2 uses \code{"PUID"}.}
 }
 \value{
 An \code{sf} data frame with one \code{POLYGON} row per cell that has a
-value, in the raster's CRS, with the columns \code{value} (the cell's value),
-then \code{id} (an integer, 1 to n) if given, then \code{geometry}. A raster with
-no values gives zero rows. Nothing is written.
+value, in the raster's CRS, with the columns \code{value} (the cell's value,
+an integer or a double as the raster stores it), then \code{id} (an integer,
+1 to n) if given, then \code{geometry}. A raster with no values gives zero
+rows. Nothing is written.
 }
 \description{
 Turns each cell of a one-layer raster that has a value into a square
@@ -42,8 +43,15 @@ values are not merged. Cells that are \code{NA} get no polygon.
 \item \strong{Order}: terra's cell order, row by row from the top-left cell, so
 \code{id} 1 is the first cell with a value in the top row that has one.
 The order does not depend on the values.
-\item \strong{Values}: each cell's value as terra reads it, not rounded or
-converted.
+\item \strong{Values}: each cell's value, not rounded, in the type the raster
+stores (ADR 0019): an integer column if the raster stores integers
+(\code{\link[terra:is.int]{terra::is.int()}}: an \verb{INT*} data type on file, such as NAT_DATA's
+\code{idx.tif}, or integer values in memory, such as the cell numbers of
+\code{\link[=rasterize_aoi]{rasterize_aoi()}}), and a double column if it stores floats, even when
+the values are whole numbers. Integers outside R's integer range
+(possible only with \code{INT4U} or larger types) stay doubles. Files
+written from the result keep the type, so a shapefile gets an integer
+field.
 \item \strong{CRS}: the raster's; nothing is reprojected and no areas are
 computed.
 }

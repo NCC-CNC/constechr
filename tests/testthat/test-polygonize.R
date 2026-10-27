@@ -178,6 +178,54 @@ test_that("values are kept as they are, not rounded", {
   expect_equal(sum(p$cover), 0.4 + 1.6 + 2.2 + 7.25)
 })
 
+test_that("the value column keeps the raster's stored type (ADR 0019)", {
+  cells <- setdiff(1:100, fixture_na_cells())
+
+  # Integers in memory: fixture_template() holds integer cell numbers
+  p <- polygonize_raster(fixture_template())
+  expect_identical(p$index, cells)
+
+  # The cell numbers rasterize_aoi() gives are integers
+  x <- rasterize_aoi(fixture_aoi("edge"), fixture_template(), cells = "touches")
+  expect_identical(polygonize_raster(x)$index, c(78L, 79L, 80L, 88L, 89L, 90L))
+
+  # Integer data types on file (INT4S, as NAT_DATA's idx.tif, and INT2U)
+  for (datatype in c("INT4S", "INT2U")) {
+    path <- fixture_file(fixture_template(), datatype = datatype)
+    expect_identical(polygonize_raster(path)$index, cells, label = datatype)
+  }
+
+  # Floats stay doubles, even with whole values: FLT4S on file, and doubles
+  # in memory
+  path <- fixture_file(fixture_template(), datatype = "FLT4S")
+  expect_identical(polygonize_raster(path)$index, as.numeric(cells))
+  bottom_left <- fixture_template_bottom_left()
+  expect_type(polygonize_raster(bottom_left)$idx, "double")
+
+  # A constant keeps its own type
+  inside <- fixture_aoi("inside")
+  template <- fixture_template()
+  one <- rasterize_aoi(inside, template, cells = "touches", value = 1)
+  expect_identical(polygonize_raster(one)$aoi, rep(1, 9))
+  one <- rasterize_aoi(inside, template, cells = "touches", value = 1L)
+  expect_identical(polygonize_raster(one)$aoi, rep(1L, 9))
+
+  # No values: a zero-length column of the stored type
+  empty <- terra::rast(fixture_template())
+  terra::values(empty) <- rep(NA_integer_, 100)
+  expect_identical(polygonize_raster(empty, value = "v")$v, integer(0))
+  terra::values(empty) <- rep(NA_real_, 100)
+  expect_identical(polygonize_raster(empty, value = "v")$v, numeric(0))
+
+  # Integers beyond R's integer range (INT4U) stay doubles
+  big <- fixture_template()
+  terra::values(big) <- c(3e9, rep(5, 99))
+  path <- fixture_file(big, name = "big", datatype = "INT4U")
+  v <- polygonize_raster(path, value = "v")$v
+  expect_type(v, "double")
+  expect_identical(v[1:2], c(3e9, 5))
+})
+
 test_that("x can be a file path, and a raster without a CRS works", {
   path <- system.file("extdata", "template.tif", package = "constechr")
   p <- polygonize_raster(path)

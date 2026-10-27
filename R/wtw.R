@@ -76,7 +76,9 @@
 #'    replaced) and [write_rasters()] for the raster:
 #'    - `aoi_file`: the AOI from step 3, or the dissolved AOI;
 #'    - `polygons_file`: the polygons, with the columns `value`, `id` and
-#'      their geometry;
+#'      their geometry. `value` keeps the type it has in the polygons, so
+#'      with NAT_DATA's `idx.tif` (an `INT*` data type) `NCCID` is an
+#'      integer field (ADR 0019);
 #'    - `raster_file`: the raster of step 2 with 1 in every planning unit and
 #'      `NA` elsewhere, one layer named `layer`, in `datatype`
 #'      (`INT1U` by default, whose NoData value terra writes as 255).
@@ -84,8 +86,9 @@
 #' No areas are computed and no values are rounded. With the defaults, the
 #' files are those of wtw-data-prep2's step 02 (`aoi_to_grid()`): the same
 #' AOI features and attributes, the same planning units (`NCCID`, `PUID` and
-#' polygons), and the same `pu_1km.tif` extent, values and data type.
-#' Decisions are recorded in ADR 0017 and ADR 0018.
+#' polygons, with `NCCID` and `PUID` as integer fields), and the same
+#' `pu_1km.tif` extent, values and data type. Decisions are recorded in
+#' ADR 0017, ADR 0018 and ADR 0019.
 #'
 #' Arguments are checked before the AOI is read; the AOI is read before
 #' anything is written. If writing fails partway, the files already written

@@ -3,7 +3,9 @@
 ## Status
 
 Accepted; the `NCCID` left open in decision 1 is settled by
-0017-natdata-1km-grid-ids-and-order.md
+0017-natdata-1km-grid-ids-and-order.md, and the type of the values
+(integers for cell numbers and integer templates) by
+0019-raster-values-keep-their-type.md
 
 ## Context
 

@@ -70,8 +70,9 @@ cells and \code{NA} elsewhere. It can be passed as the \code{aoi_raster} of
 cells are not \code{NA};
 \item \code{polygons}: an \code{sf} data frame with one \code{POLYGON} row per AOI cell, in
 the template's CRS, with the columns \code{value} (the national ID, as in
-the raster), \code{id} (an integer, 1 to n) unless \code{id = NULL}, and
-\code{geometry}.
+the raster: an integer for NAT_DATA's \code{idx.tif} and for
+\code{index = "cell"}, a double for a template that stores floats), \code{id}
+(an integer, 1 to n) unless \code{id = NULL}, and \code{geometry}.
 }
 }
 \description{
@@ -100,6 +101,10 @@ snapped out to whole cells, and holds the national ID (\code{index}) in the
 AOI's cells and \code{NA} elsewhere.
 \item \strong{Polygons}: \code{\link[=polygonize_raster]{polygonize_raster()}}, one square polygon per AOI cell
 (cells are not merged), holding the same national ID as the raster.
+The national ID keeps the template's type (ADR 0019): an integer if
+the template stores integers (an \verb{INT*} data type, as NAT_DATA's
+\code{idx.tif} does) and a double if it stores floats. Terra cell numbers
+(\code{index = "cell"}) are always integers.
 \item \strong{Order}: with \code{order = "value"}, the polygons are sorted by national
 ID, then \code{id} numbers them 1 to n.
 }
@@ -109,7 +114,7 @@ cells, \code{NCCID}, \code{PUID} and polygons are those of wtw-data-prep2's
 \code{create_1km_grid()}, which reached the "touches" rule through a 1000 m
 buffer and a mask. Unlike it, the raster holds the national IDs, not 1s,
 on the AOI's extent, and the polygons' columns are \code{value}, \code{id} and then
-\code{geometry}. Decisions are recorded in ADR 0008 and ADR 0017.
+\code{geometry}. Decisions are recorded in ADR 0008, ADR 0017 and ADR 0019.
 
 If the AOI's bounding box does not overlap the template, the function
 stops with an error. If it overlaps but gets no cells, it warns, and the

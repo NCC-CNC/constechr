@@ -24,8 +24,15 @@
 #' - **Order**: terra's cell order, row by row from the top-left cell, so
 #'   `id` 1 is the first cell with a value in the top row that has one.
 #'   The order does not depend on the values.
-#' - **Values**: each cell's value as terra reads it, not rounded or
-#'   converted.
+#' - **Values**: each cell's value, not rounded, in the type the raster
+#'   stores (ADR 0019): an integer column if the raster stores integers
+#'   ([terra::is.int()]: an `INT*` data type on file, such as NAT_DATA's
+#'   `idx.tif`, or integer values in memory, such as the cell numbers of
+#'   [rasterize_aoi()]), and a double column if it stores floats, even when
+#'   the values are whole numbers. Integers outside R's integer range
+#'   (possible only with `INT4U` or larger types) stay doubles. Files
+#'   written from the result keep the type, so a shapefile gets an integer
+#'   field.
 #' - **CRS**: the raster's; nothing is reprojected and no areas are
 #'   computed.
 #'
@@ -34,9 +41,10 @@
 #' raster to the area first, as [rasterize_aoi()] does by default.
 #'
 #' @return An `sf` data frame with one `POLYGON` row per cell that has a
-#'   value, in the raster's CRS, with the columns `value` (the cell's value),
-#'   then `id` (an integer, 1 to n) if given, then `geometry`. A raster with
-#'   no values gives zero rows. Nothing is written.
+#'   value, in the raster's CRS, with the columns `value` (the cell's value,
+#'   an integer or a double as the raster stores it), then `id` (an integer,
+#'   1 to n) if given, then `geometry`. A raster with no values gives zero
+#'   rows. Nothing is written.
 #'
 #' @family raster
 #' @seealso [rasterize_aoi()] makes the AOI rasters this function is used on.
@@ -71,12 +79,14 @@ polygonize_raster <- function(x, value = names(x), id = NULL) {
     }
   }
 
+  int <- terra::is.int(x)
   polygons <- terra::as.polygons(x, dissolve = FALSE, na.rm = TRUE)
   if (nrow(polygons) == 0) {
-    values <- numeric(0)
+    values <- if (int) integer(0) else numeric(0)
     geometry <- sf::st_sfc(crs = sf::st_crs(x))
   } else {
-    values <- terra::values(polygons, dataframe = TRUE)[[1]]
+    # terra::as.polygons() returns doubles; keep the raster's stored type
+    values <- stored_type(terra::values(polygons, dataframe = TRUE)[[1]], int)
     geometry <- sf::st_geometry(sf::st_as_sf(polygons))
   }
 
