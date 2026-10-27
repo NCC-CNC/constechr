@@ -716,6 +716,90 @@ test_that("align_file writes the planning units on the template's grid", {
   expect_identical(terra::datatype(terra::rast(aligned_path)), "INT1U")
 })
 
+test_that("align_value and align_datatype set the aligned file's values", {
+  skip_if_not_installed("sf")
+  skip_if_not_installed("prioritizr")
+  natdata <- fixture_natdata_dir()
+  pu_cells <- c(34, 35, 36, 44, 45, 46, 54, 55, 56)
+
+  # The defaults are 1 as INT1U, the file the arguments' absence wrote
+  project <- fixture_project("inside")
+  suppressMessages(extract_wtw_natdata(
+    natdata, project,
+    align_file = "default.tif", progress = NULL
+  ))
+  suppressMessages(extract_wtw_natdata(
+    natdata, project,
+    align_file = "explicit.tif", align_value = 1, align_datatype = "INT1U",
+    progress = NULL
+  ))
+  expect_identical(
+    file_values(file.path(project, "default.tif")),
+    file_values(file.path(project, "explicit.tif"))
+  )
+  expect_identical(
+    terra::datatype(terra::rast(file.path(project, "default.tif"))),
+    "INT1U"
+  )
+
+  # A negative value as INT2S: NoData -32768, the layers unchanged
+  layers_before <- folder_rasters(file.path(project, "tifs"))
+  suppressMessages(extract_wtw_natdata(
+    natdata, project,
+    align_file = "aoi/pu_1km_align.tif", align_value = -7,
+    align_datatype = "INT2S", progress = NULL
+  ))
+  path <- file.path(project, "aoi", "pu_1km_align.tif")
+  r <- terra::rast(path)
+  expect_true(on_template_grid(r))
+  expect_identical(terra::datatype(r), "INT2S")
+  expect_identical(file_nodata(path), -32768)
+  expect_identical(names(r), "layer")
+  expected <- rep(NA_real_, 100)
+  expected[pu_cells] <- -7
+  expect_equal(file_values(path), expected)
+  expect_identical(folder_rasters(file.path(project, "tifs")), layers_before)
+
+  # A decimal value as FLT4S is kept; as an integer type it is rounded
+  # halves away from zero
+  suppressMessages(extract_wtw_natdata(
+    natdata, project,
+    align_file = "aoi/pu_1km_align.tif", align_value = 2.5,
+    align_datatype = "FLT4S", progress = NULL
+  ))
+  expect_identical(terra::datatype(terra::rast(path)), "FLT4S")
+  expected[pu_cells] <- 2.5
+  expect_equal(file_values(path), expected)
+  suppressMessages(extract_wtw_natdata(
+    natdata, project,
+    align_file = "aoi/pu_1km_align.tif", align_value = 2.5,
+    align_datatype = "INT2U", progress = NULL
+  ))
+  expect_identical(terra::datatype(terra::rast(path)), "INT2U")
+  expected[pu_cells] <- 3
+  expect_equal(file_values(path), expected)
+
+  # The largest value INT1U stores, and 0
+  for (value in c(254, 0)) {
+    suppressMessages(extract_wtw_natdata(
+      natdata, project,
+      align_file = "aoi/pu_1km_align.tif", align_value = value,
+      progress = NULL
+    ))
+    expected[pu_cells] <- value
+    expect_equal(file_values(path), expected)
+  }
+
+  # Ignored without align_file
+  project <- fixture_project("inside")
+  paths <- suppressMessages(extract_wtw_natdata(
+    natdata, project,
+    align_value = 5, align_datatype = "FLT8S", progress = NULL
+  ))
+  expect_length(paths, 4)
+  expect_false(file.exists(file.path(project, "aoi", "pu_1km_align.tif")))
+})
+
 test_that("layers, tifs_dir and extract_layers()'s arguments are passed on", {
   skip_if_not_installed("sf")
   skip_if_not_installed("prioritizr")
@@ -1013,6 +1097,36 @@ test_that("extract_wtw_natdata() gives clear errors", {
     extract_wtw_natdata(
       "no_template", "project",
       layers = file.path(natdata, "themes", "habitat", "cover.tif")
+    )
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", align_value = NA)
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", align_value = c(1, 2))
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", align_value = Inf)
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", align_datatype = "int1u")
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", align_value = 255)
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", align_value = 254.5)
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(
+      natdata, "project",
+      align_value = -1, align_datatype = "INT2U"
+    )
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(
+      natdata, "project",
+      align_value = -32768, align_datatype = "INT2S"
     )
   })
 })

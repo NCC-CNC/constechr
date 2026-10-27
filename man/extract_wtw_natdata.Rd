@@ -11,6 +11,8 @@ extract_wtw_natdata(
   layers = read_natdata_metadata(natdata_dir),
   tifs_dir = "tifs",
   align_file = NULL,
+  align_value = 1,
+  align_datatype = "INT1U",
   round_int = TRUE,
   multiband = FALSE,
   drop_empty = TRUE,
@@ -55,6 +57,17 @@ units to on the template's full grid, as a path relative to
 \code{project_dir}. wtw-data-prep2's step 03 wrote
 \code{"aoi/pu_1km_align.tif"}; no WTW step reads it, so it is not written
 unless asked for.}
+
+\item{align_value}{A single finite number, the value of the planning units
+in \code{align_file}. The default, \code{1}, is wtw-data-prep2's. Ignored without
+\code{align_file}.}
+
+\item{align_datatype}{The data type of \code{align_file}, one of terra's data
+types (see \code{\link[terra:writeRaster]{terra::writeRaster()}}). The default, \code{"INT1U"}, is
+wtw-data-prep2's. \code{align_value} must be a value it stores: for an
+integer type, a whole number after rounding (halves away from zero)
+within the type's range and not its NoData value (for example 0 to 254
+for \code{"INT1U"}). Ignored without \code{align_file}.}
 
 \item{round_int}{A single logical, passed to \code{\link[=write_rasters]{write_rasters()}}: \code{TRUE}
 (the default) rounds values to whole numbers, halves away from zero,
@@ -121,10 +134,11 @@ With \code{drop_empty = TRUE}, features with no values in the planning units
 are not written, and layers left with none are skipped, each named in a
 message.
 \item \strong{Aligned planning units} (only with \code{align_file}), after the layers:
-a raster of 1 in the planning units and \code{NA} elsewhere, one layer named
-\code{layer}, put on the template's full grid with \code{\link[=align_raster]{align_raster()}} (nearest
-neighbour) and written as \code{INT1U} (NoData 255), as wtw-data-prep2's
-\code{pu_1km_align.tif}.
+a raster of \code{align_value} in the planning units and \code{NA} elsewhere, one
+layer named \code{layer}, put on the template's full grid with
+\code{\link[=align_raster]{align_raster()}} (nearest neighbour) and written in \code{align_datatype},
+\code{NA} as terra's NoData value for it. The defaults, 1 as \code{INT1U}
+(NoData 255), are wtw-data-prep2's \code{pu_1km_align.tif}.
 }
 
 Arguments, \code{aoi_raster}, the template and the output files that can be
@@ -168,6 +182,14 @@ if (requireNamespace("prioritizr", quietly = TRUE)) {
   paths <- extract_wtw_natdata(
     natdata_dir, project_dir,
     align_file = "aoi/pu_1km_align.tif", progress = NULL
+  )
+  terra::rast(file.path(project_dir, "aoi", "pu_1km_align.tif"))
+
+  # The same file with the planning units as 0s, in a signed data type
+  paths <- extract_wtw_natdata(
+    natdata_dir, project_dir,
+    align_file = "aoi/pu_1km_align.tif", align_value = 0,
+    align_datatype = "INT2S", progress = NULL
   )
   terra::rast(file.path(project_dir, "aoi", "pu_1km_align.tif"))
 }

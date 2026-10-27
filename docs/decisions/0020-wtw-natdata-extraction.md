@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted; the aligned file's value and data type made arguments by #76
+(the paragraph after the list in "Decision")
 
 ## Context
 
@@ -69,9 +70,21 @@ Settled while building it, within the decisions above:
   layer is read, as are the layer files `extract_layers()` can name in
   advance.
 - The value `1` and `INT1U` of the aligned file are not arguments: the
-  file holds planning units as 1s, as `pu_1km.tif` does.
+  file holds planning units as 1s, as `pu_1km.tif` does. (Changed by #76,
+  below.)
 - It returns the layer files' paths, invisibly, as `extract_layers()`
   does; `align_file` is not among them.
+
+Changed by #76 (2026-10-27): the aligned file's value and data type are
+arguments, `align_value = 1` and `align_datatype = "INT1U"`, after
+`align_file` in the signature of decision 1, under CLAUDE.md's rule of no
+hard-coded values in package functions. The defaults are the values above,
+so the files are unchanged. `align_value` is a single finite number and
+`align_datatype` one of terra's data types; a value the data type cannot
+store (outside its range, or its NoData value, after rounding halves away
+from zero for an integer type, for example 255 or 254.5 as `INT1U`) is an
+error before any layer is read, since the file would hold only NoData.
+Both are ignored without `align_file`.
 
 ## Consequences
 

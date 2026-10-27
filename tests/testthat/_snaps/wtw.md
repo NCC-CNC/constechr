@@ -238,6 +238,75 @@
       Caused by error in `natdata_template()`:
       ! `file` must be an existing file; 'no_template/_1km/idx.tif' does not exist.
 
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_value = NA)
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `align_value` must be a single finite number, not `NA`.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_value = c(1, 2))
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `align_value` must be a single finite number, not a double vector.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_value = Inf)
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `align_value` must be a single finite number, not Inf.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_datatype = "int1u")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `align_datatype` must be one of terra's data types, not a string.
+      i Use one of "INT1U", "INT2U", "INT2S", "INT4U", "INT4S", "INT8U", "INT8S", "FLT4S", or "FLT8S".
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_value = 255)
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `align_value` (255) cannot be written as `align_datatype` "INT1U"; it would be written as NoData.
+      i Use a value from 0 to 254, or another data type.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_value = 254.5)
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `align_value` (254.5) cannot be written as `align_datatype` "INT1U"; it would be written as NoData.
+      i Use a value from 0 to 254, or another data type.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_value = -1, align_datatype = "INT2U")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `align_value` (-1) cannot be written as `align_datatype` "INT2U"; it would be written as NoData.
+      i Use a value from 0 to 65534, or another data type.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_value = -32768, align_datatype = "INT2S")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `align_value` (-32768) cannot be written as `align_datatype` "INT2S"; it would be written as NoData.
+      i Use a value from -32767 to 32767, or another data type.
+
 # the WTW folder functions give clear errors
 
     Code

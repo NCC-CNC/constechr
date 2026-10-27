@@ -1,4 +1,14 @@
-# constechr 0.0.0.9016
+# constechr 0.0.0.9017
+
+- `extract_wtw_natdata()` has two new arguments for the optional aligned
+  planning-unit file (#76): `align_value` (default `1`) and
+  `align_datatype` (default `"INT1U"`), the value of the planning units in
+  `align_file` and its data type, which were fixed in the code. The
+  defaults are the old values, so results are unchanged. A value the data
+  type cannot store (outside its range or its NoData value, such as 255 as
+  `INT1U`) is an error before any layer is read. The two follow
+  `align_file`, before `round_int`, so calls passing `round_int` or later
+  arguments by position must name them. Decision in ADR 0020.
 
 - New `create_dataprep_template()` and `dataprep_columns()` write the
   `dataprep/dataprep.csv` template of wtw-data-prep2's step 01 (#27):

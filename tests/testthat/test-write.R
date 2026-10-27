@@ -375,3 +375,44 @@ test_that("invalid arguments give clear errors", {
     write_rasters(x, dir, datatype = "INT1U")
   })
 })
+
+test_that("check_value_fits_datatype() matches what terra writes", {
+  call <- environment()
+  fits <- function(x, datatype) {
+    tryCatch(
+      {
+        check_value_fits_datatype(x, datatype, "x", "datatype", call)
+        TRUE
+      },
+      error = function(e) FALSE
+    )
+  }
+  # The values just inside and just outside each type's stored range
+  limits <- list(
+    INT1U = c(0, 254), INT2U = c(0, 65534), INT2S = c(-32767, 32767),
+    INT4U = c(0, 4294967294), INT4S = c(-2147483647, 2147483647)
+  )
+  r <- terra::rast(nrows = 1, ncols = 4)
+  for (datatype in names(limits)) {
+    inside <- limits[[datatype]]
+    outside <- inside + c(-1, 1)
+    expect_true(all(vapply(inside, fits, logical(1), datatype)))
+    expect_false(any(vapply(outside, fits, logical(1), datatype)))
+    # terra writes the values inside and turns those outside into NoData
+    terra::values(r) <- c(inside, outside)
+    path <- tempfile(fileext = ".tif")
+    suppressWarnings(terra::writeRaster(r, path, datatype = datatype))
+    expect_equal(file_values(path), c(inside, NA, NA), label = datatype)
+  }
+  # Integer types are checked after rounding halves away from zero
+  expect_true(fits(254.4, "INT1U"))
+  expect_false(fits(254.5, "INT1U"))
+  expect_true(fits(-0.4, "INT1U"))
+  expect_false(fits(-0.5, "INT1U"))
+  # Float types take any finite value in their range
+  expect_true(fits(-1e38, "FLT4S"))
+  expect_false(fits(1e39, "FLT4S"))
+  expect_true(fits(1e300, "FLT8S"))
+  expect_true(fits(-1, "INT8S"))
+  expect_false(fits(-1, "INT8U"))
+})
