@@ -3,7 +3,7 @@
 ## Status
 
 Accepted; the aligned file's value and data type made arguments by #76
-(see the end of "Decision")
+(the paragraph after the list in "Decision")
 
 ## Context
 
@@ -72,6 +72,8 @@ Settled while building it, within the decisions above:
 - The value `1` and `INT1U` of the aligned file are not arguments: the
   file holds planning units as 1s, as `pu_1km.tif` does. (Changed by #76,
   below.)
+- It returns the layer files' paths, invisibly, as `extract_layers()`
+  does; `align_file` is not among them.
 
 Changed by #76 (2026-10-27): the aligned file's value and data type are
 arguments, `align_value = 1` and `align_datatype = "INT1U"`, after
@@ -83,8 +85,6 @@ store (outside its range, or its NoData value, after rounding halves away
 from zero for an integer type, for example 255 or 254.5 as `INT1U`) is an
 error before any layer is read, since the file would hold only NoData.
 Both are ignored without `align_file`.
-- It returns the layer files' paths, invisibly, as `extract_layers()`
-  does; `align_file` is not among them.
 
 ## Consequences
 
