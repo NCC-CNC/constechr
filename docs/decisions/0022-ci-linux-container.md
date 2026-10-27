@@ -1,0 +1,78 @@
+# CI: Linux check in a rocker container, Imports-only check on Windows
+
+## Status
+
+Accepted
+
+## Context
+
+ADR 0009 cut the Ubuntu jobs that set up R to two (all dependencies, and
+hard dependencies only) and gave them 30 minutes. Both still install system
+packages with apt: `r-lib/actions/setup-r` installs `devscripts`, `qpdf` and
+others, and pak installs GDAL, GEOS and PROJ for sf and terra. The
+`azure.archive.ubuntu.com` mirror stayed slow, and it cancelled Ubuntu jobs
+at the 30-minute limit on most recent PRs (PR #71: twice in one job).
+Windows jobs install binaries and took 2 to 5 minutes on every run.
+
+Windows is the main target system; Linux must still be supported. The
+"hard" job tests dependency handling, not the operating system (issue #72).
+
+## Decision
+
+The `r-cmd-check` matrix is:
+
+- `windows-latest`, all dependencies.
+- `windows-latest`, hard dependencies only (Imports, plus testthat and
+  rcmdcheck to run the check). No Suggests, and no lintr, styler or covr.
+- `ubuntu-latest`, all dependencies, in a pinned `rocker/geospatial`
+  container (`rocker/geospatial:4.6.1`, Ubuntu 24.04 "noble"). This job
+  also runs styler, lintr and coverage, as ADR 0009 set out: styler and
+  lintr before the check, each later step running even when an earlier one
+  failed, coverage report-only.
+
+In the container:
+
+- R, GDAL, GEOS, PROJ and pandoc come from the image. `setup-r` runs with
+  `install-r: false`, so it installs nothing and runs no apt; it only writes
+  the repository settings.
+- R packages are current CRAN versions, not the image's. The repository is
+  P3M's `latest` Linux binaries for the image's Ubuntu release, set
+  explicitly (`cran` in the matrix), so it does not depend on what the image
+  set. `setup-r-dependencies` reads `DESCRIPTION` on every run and resolves
+  every dependency against an empty library (its default), so each one is
+  the current version. pak installs into the image's site library, which is
+  first on the library path, and replaces any package the image has at
+  another version. Recommended packages such as Matrix are covered too: a
+  newer version goes into the site library, ahead of R's own library.
+- The package cache is off there: it holds `R_LIBS_USER`, which the
+  container does not use. P3M binary downloads are fast.
+- If a future dependency needs a system library the image lacks, pak
+  installs that one library with apt (pak installs only system packages that
+  are missing), and the job goes on. The log shows it under the pak
+  install step. That is the sign to bump the image tag to one that has it,
+  so runs go back to no apt.
+
+The image tag is pinned and bumped on purpose, together with the Ubuntu
+codename in the P3M URL. If pulling the image becomes the slow step, the
+next step is the opportunity-screening-toolkit pattern: an image cached in
+ghcr.io, keyed by a hash (`.github/actions/ci-images` there).
+
+The `r-cmd-check` jobs time out after 60 minutes; `changes`,
+`repo-hygiene` and `checks` keep 10.
+
+This supersedes ADR 0009. Its other decisions (no separate style, lint or
+coverage jobs; `checks` as the one required status check) stand as
+restated here.
+
+## Consequences
+
+- No Ubuntu run installs system libraries from the Ubuntu mirror, so the
+  slow mirror no longer cancels jobs. Linux is still checked against current
+  CRAN packages.
+- Each run sets up R on Ubuntu once. Pulling the image (about 1.7 GB) adds
+  time to that job.
+- The system libraries on Linux are those in the image, not the newest on
+  the runner, until the tag is bumped.
+- Linux is not checked without Suggests. The hard-dependencies check does
+  not depend on the operating system.
+- A stuck job takes up to 60 minutes to fail.
