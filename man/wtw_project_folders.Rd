@@ -75,8 +75,10 @@ create_wtw_project_folder(
 \code{\link[=read_natdata_metadata]{read_natdata_metadata()}}, which reads a NAT_DATA catalogue.
 
 Other wtw:
+\code{\link[=create_dataprep_template]{create_dataprep_template()}},
 \code{\link[=create_wtw_planning_units]{create_wtw_planning_units()}},
 \code{\link[=create_wtw_project_folder]{create_wtw_project_folder()}},
+\code{\link[=dataprep_columns]{dataprep_columns()}},
 \code{\link[=extract_wtw_natdata]{extract_wtw_natdata()}}
 }
 \concept{wtw}

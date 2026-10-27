@@ -431,8 +431,8 @@ extract_wtw_natdata <- function(natdata_dir, project_dir,
 #' ([wtw_project_folders()]). Use it to start a WTW project before writing
 #' its files with [create_wtw_planning_units()] and [extract_wtw_natdata()],
 #' which also create the folders they write to. It creates folders only;
-#' the `dataprep/dataprep.csv` template that step 01 also writes is not
-#' written.
+#' [create_dataprep_template()] writes the `dataprep/dataprep.csv` template
+#' that step 01 also writes.
 #'
 #' @param project_dir The WTW project folder: a single folder path. It is
 #'   created if missing, as are any missing folders above it. Where the

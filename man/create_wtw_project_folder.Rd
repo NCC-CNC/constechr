@@ -36,8 +36,8 @@ by default the layout wtw-data-prep2's step 01 creates
 (\code{\link[=wtw_project_folders]{wtw_project_folders()}}). Use it to start a WTW project before writing
 its files with \code{\link[=create_wtw_planning_units]{create_wtw_planning_units()}} and \code{\link[=extract_wtw_natdata]{extract_wtw_natdata()}},
 which also create the folders they write to. It creates folders only;
-the \code{dataprep/dataprep.csv} template that step 01 also writes is not
-written.
+\code{\link[=create_dataprep_template]{create_dataprep_template()}} writes the \code{dataprep/dataprep.csv} template
+that step 01 also writes.
 }
 \section{Method}{
 
@@ -82,7 +82,9 @@ paths
 \code{\link[=wtw_project_folders]{wtw_project_folders()}}, the default folder list.
 
 Other wtw:
+\code{\link[=create_dataprep_template]{create_dataprep_template()}},
 \code{\link[=create_wtw_planning_units]{create_wtw_planning_units()}},
+\code{\link[=dataprep_columns]{dataprep_columns()}},
 \code{\link[=extract_wtw_natdata]{extract_wtw_natdata()}},
 \code{\link[=wtw_project_folders]{wtw_project_folders()}}
 }
