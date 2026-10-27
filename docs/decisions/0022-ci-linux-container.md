@@ -35,25 +35,27 @@ In the container:
 - R, GDAL, GEOS, PROJ and pandoc come from the image. `setup-r` runs with
   `install-r: false`, so it installs nothing and runs no apt; it only writes
   the repository settings.
-- R packages are current CRAN versions, not the image's. The repository is
-  P3M's `latest` Linux binaries for the image's Ubuntu release, set
-  explicitly (`cran` in the matrix), so it does not depend on what the image
-  set. `setup-r-dependencies` reads `DESCRIPTION` on every run and resolves
-  every dependency against an empty library (its default), so each one is
-  the current version. pak installs into the image's site library, which is
-  first on the library path, and replaces any package the image has at
-  another version.
-- `upgrade: 'TRUE'` in the container. Without it pak keeps the
-  recommended packages R ships with (Matrix, lattice and others) at R's
-  own version, even when CRAN has a newer one; the first run of this
-  layout checked against Matrix 1.7-5 while CRAN had 1.7-6. With it, a
-  newer version goes into the site library, ahead of R's own. P3M serves
-  these as source packages, so Matrix is compiled (about 2.5 minutes).
-  On Windows `upgrade` stays off: pak could not download the recommended
-  packages from P3M there (it failed on Matrix, lattice, class and
-  KernSmooth), so Windows checks against the versions R ships with.
-- The package cache is off there: it holds `R_LIBS_USER`, which the
-  container does not use. P3M binary downloads are fast.
+- R packages are current CRAN versions, not the image's. The repositories
+  are P3M's `latest` Linux binaries for the image's Ubuntu release, named
+  `RSPM` (`rspm` in the matrix, passed to `setup-r` as the `RSPM`
+  variable), then CRAN itself (`cran` in the matrix). Both are set
+  explicitly, so they replace the image's own (dated) repository. P3M is
+  not named `CRAN`: pak checks an installed binary from a repository named
+  `CRAN` against the `Built` field in the repository's index, and
+  reinstalls it when they differ, as they did for every package here, so
+  an exact cache hit still reinstalled all 77 packages and compiled Matrix
+  again. For another repository it checks the package and version and the
+  repository URL. pak installs into `R_LIBS_USER`: a step before
+  `setup-r-dependencies` sets `R_LIBS` to it, so it comes first on the
+  library path, ahead of the image's site library (the image's
+  `Renviron.site` keeps an `R_LIBS` already set). A package the image has
+  at the version pak resolves is not installed again; one at another
+  version is installed into `R_LIBS_USER`, ahead of the image's copy.
+- The package cache is on, as in the Windows jobs (see below). It holds
+  `R_LIBS_USER`, so it holds what pak installed over the image, including
+  a compiled Matrix. On a hit pak keeps those and builds only constechr
+  itself (`local::.`): the dependency step took 26 seconds, against 190
+  without the cache.
 - pak does not install system requirements (`PKG_SYSREQS: false`). It
   would otherwise run `apt-get update` and `apt-get install` for every
   system package its database lists for the dependencies, including those
@@ -65,6 +67,37 @@ In the container:
   to a tag that has it, or, until one does, to install that one library
   in its own step. There is no automatic apt fallback, so a run never
   quietly goes back to the Ubuntu mirror.
+
+In every job (amended by issue #75):
+
+- `setup-r-dependencies` reads `DESCRIPTION` on every run and resolves
+  every dependency against an empty library (its default), so each one is
+  the current version.
+- `upgrade: 'TRUE'`. Without it pak keeps the recommended packages R
+  ships with (Matrix, lattice and others) at R's own version, even when
+  CRAN has a newer one; the first run of this layout checked against
+  Matrix 1.7-5 while CRAN had 1.7-6. With it, a newer version goes into
+  `R_LIBS_USER`, ahead of R's own. Matrix is an Import, so a breaking
+  Matrix release shows up in CI before users hit it. On Linux P3M serves
+  these as source packages, so a newer Matrix is compiled (about 2.5
+  minutes) when it is not in the cache.
+- The Windows jobs use CRAN (`cran.rstudio.com`, `setup-r`'s default), not
+  P3M (`use-public-rspm: false`). P3M's Windows index lists each
+  recommended package more than once; for R 4.6 pak picks the entry with
+  `Path: 4.6.2/Recommended`, a path P3M does not serve, so the download
+  fails (it failed on Matrix, lattice, class and KernSmooth). CRAN's
+  Windows index has one entry each, in the usual place. CRAN's Windows
+  binaries took no longer to install than P3M's (dependency step 48 and
+  46 seconds, against 71 and 69 with P3M and no upgrade).
+- The package cache is on. It holds `R_LIBS_USER`. Its key is a hash of
+  the lockfile pak resolves on every run, so a new CRAN version of any
+  dependency changes the key and is installed. A miss restores the newest
+  cache for the same job, pak installs only what is missing or at another
+  version, and a new cache is saved. Caches saved by the weekly run on
+  `main` are readable by every PR. On Windows, where the one repository is
+  named `CRAN`, pak still reinstalls every binary on a hit (see the
+  container's repositories above), so the cache saves little there; the
+  downloads are fast and the step takes under a minute either way.
 
 Each job's package cache is keyed by its dependency set (`cache-version`
 set to `all` or `hard`). Before, the "hard" job restored the "all" job's
@@ -90,7 +123,13 @@ restated here.
   slow mirror no longer cancels jobs. Linux is still checked against current
   CRAN packages.
 - Each run sets up R on Ubuntu once. Pulling the image (about 1.7 GB, under
-  a minute) and compiling a newer Matrix add time to that job.
+  a minute) adds time to that job, and so does compiling a newer Matrix
+  when no cache restored for the job has it (after a new Matrix release,
+  or when there is no cache yet).
+- Every job checks against CRAN's current recommended packages, Matrix
+  included, so Windows, the main target, sees a new Matrix release first
+  in CI. Until CRAN has built the Windows binary of a new release, pak
+  may build that package from source on Windows, which is slower.
 - The system libraries on Linux are those in the image, not the newest on
   the runner, until the tag is bumped. A new dependency with a system
   library the image lacks fails the Linux job until the tag is bumped.
