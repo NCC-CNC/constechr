@@ -23,24 +23,26 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Layout (see ADR 0009):
+# Layout (see ADRs 0009 and 0022):
 # - changes: says whether the PR touches anything besides docs and Markdown
 #   (always "yes" outside a PR).
 # - repo-hygiene: stack-neutral checks, always runs.
-# - r-cmd-check: R CMD check (build, tests, examples, docs) on Ubuntu and
-#   Windows, plus a run without Suggests. Skipped on docs-only PRs. The
-#   Ubuntu "all" job also runs styler, lintr and test coverage, so each run
-#   sets up R on Ubuntu twice rather than four times. Coverage is reported
-#   in that job's log and is not a gate.
+# - r-cmd-check: R CMD check (build, tests, examples, docs) on Windows with
+#   all dependencies and without Suggests, and on Ubuntu with all
+#   dependencies. Skipped on docs-only PRs. The Ubuntu job runs in a pinned
+#   rocker/geospatial container, which already has R and the system
+#   libraries (GDAL, GEOS, PROJ), so nothing is installed with apt from the
+#   Ubuntu mirror; R packages still come from current P3M binaries. It also
+#   runs styler, lintr and test coverage, so each run sets up R on Ubuntu
+#   once. Coverage is reported in that job's log and is not a gate.
 # - checks: the one required status check. It passes when every job it needs
 #   passed or was skipped. Branch protection names only this job, so adding or
 #   renaming a job never means touching the protection rules.
 #
-# Jobs that install R time out after 30 minutes, the others after 10. Normal
-# runs take 2 to 3 minutes, but r-lib/actions/setup-r installs system
-# packages with apt, and on a slow Ubuntu mirror that step alone can pass 10
-# minutes. A stuck runner still fails; use "Re-run failed jobs" to get a
-# fresh one.
+# The r-cmd-check jobs time out after 60 minutes, the others after 10.
+# Normal runs take a few minutes; the long limit means a slow download makes
+# a slow run, not a cancelled one. A stuck runner still fails; use "Re-run
+# failed jobs" to get a fresh one.
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -71,20 +73,27 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ${{ matrix.config.os }}
-    timeout-minutes: 30
+    # Jobs without a container entry run directly on the runner.
+    container: ${{ matrix.config.container }}
+    timeout-minutes: 60
     name: r-cmd-check (${{ matrix.config.os }}, ${{ matrix.config.deps }})
     strategy:
       fail-fast: false
       matrix:
         config:
-          # extras: this job also runs styler, lintr and coverage, so they
-          # need no R setup of their own. Only this job sets it.
-          - {os: ubuntu-latest, deps: 'all', extras: true}
+          # container: a pinned rocker/geospatial tag; bump it on purpose.
+          # cran: current P3M binaries for the image's Ubuntu release, so
+          # the codename must match the image. extras: this job also runs
+          # styler, lintr and coverage, so they need no R setup of their
+          # own. Only this job sets it.
+          - {os: ubuntu-latest, deps: 'all', extras: true,
+             container: 'rocker/geospatial:4.6.1',
+             cran: 'https://p3m.dev/cran/__linux__/noble/latest'}
           - {os: windows-latest, deps: 'all', extras: false}
           # Without Suggests: optional packages must be checked for, not
           # assumed. testthat is still installed to run the tests; lintr,
           # styler and covr are not.
-          - {os: ubuntu-latest, deps: 'hard', extras: false}
+          - {os: windows-latest, deps: 'hard', extras: false}
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
@@ -93,17 +102,31 @@ jobs:
       _R_CHECK_SYSTEM_CLOCK_: false
     steps:
       # Keep LF line endings on Windows, so the check sees the same files.
-      - run: git config --global core.autocrlf false
+      - if: runner.os == 'Windows'
+        run: git config --global core.autocrlf false
 
       - uses: actions/checkout@v7
 
+      # In the container R is already installed, so setup-r installs
+      # nothing (and runs no apt): it only writes the repository settings,
+      # with cran replacing the image's own repository setting.
       - uses: r-lib/actions/setup-r@v2
         with:
-          use-public-rspm: true
+          install-r: ${{ !matrix.config.container }}
+          use-public-rspm: ${{ !matrix.config.container }}
+          cran: ${{ matrix.config.cran }}
 
+      # pak resolves every dependency against an empty library, so each is
+      # the current version from the repositories, whatever the image has.
+      # In the container it installs into the image's site library (first
+      # on the library path), replacing any package at another version.
+      # pak installs a missing system library with apt only if a dependency
+      # needs one the image lacks (ADR 0022). The package cache holds
+      # R_LIBS_USER, which the container does not use, so it is off there.
       - uses: r-lib/actions/setup-r-dependencies@v2
         id: deps
         with:
+          cache: ${{ matrix.config.container && 'false' || 'true' }}
           dependencies: ${{ matrix.config.deps == 'hard' && '"hard"' || '"all"' }}
           extra-packages: any::rcmdcheck, any::testthat${{ matrix.config.extras && ', any::lintr, any::styler, any::covr, local::.' || '' }}
           needs: check
