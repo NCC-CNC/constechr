@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted; the aligned file's value and data type made arguments by #76
-(the paragraph after the list in "Decision")
+Accepted; the aligned file's value and data type made arguments by #76,
+and its band name by #79 (the paragraphs after the list in "Decision")
 
 ## Context
 
@@ -85,6 +85,13 @@ store (outside its range, or its NoData value, after rounding halves away
 from zero for an integer type, for example 255 or 254.5 as `INT1U`) is an
 error before any layer is read, since the file would hold only NoData.
 Both are ignored without `align_file`.
+
+Changed by #79 (owner, comment of 2026-10-27): the aligned file's band
+name, `layer`, is an argument too, `align_name = "layer"`, after
+`align_datatype` in the signature, matching `raster_name` in
+`create_wtw_planning_units()` (ADR 0018). It is a single, non-empty
+string, written as the band's name; the default keeps the file unchanged.
+It is checked before any layer is read and ignored without `align_file`.
 
 ## Consequences
 

@@ -3,7 +3,9 @@
 ## Status
 
 Accepted; the `NCCID` field type noted under Consequences is now an
-integer, as wtw-data-prep2 writes it (0019-raster-values-keep-their-type.md)
+integer, as wtw-data-prep2 writes it (0019-raster-values-keep-their-type.md);
+`pu_1km.tif`'s value, data type and band name made arguments by #79 (the
+paragraph after the list in "Decision")
 
 ## Context
 
@@ -57,7 +59,7 @@ Settled while building it, within the decisions above:
   `project_dir` included, are created.
 - `pu_1km.tif` is written with `write_rasters()`: 1 in every planning unit,
   `NA` elsewhere, `datatype = "INT1U"` by default (terra writes NoData 255,
-  as today), one layer named `layer`, as today.
+  as today), one layer named `layer`, as today. (Changed by #79, below.)
 - `create_1km_grid()`'s `cells`, `value`, `id`, `index` and `order` are
   passed through with its defaults.
 - `overwrite = TRUE` (the default) replaces existing files, as today;
@@ -68,6 +70,24 @@ Settled while building it, within the decisions above:
   written.
 - An AOI that gets no planning units (`create_1km_grid()` warns) is not
   trimmed, since there is nothing to trim to; the files are still written.
+
+Changed by #79 (owner, comment of 2026-10-27), under CLAUDE.md's rule of
+no hard-coded values in package functions: `pu_1km.tif`'s value, data type
+and band name are arguments, `raster_value = 1`, `raster_datatype =
+"INT1U"` and `raster_name = "layer"`, after `raster_file` in the
+signature. `raster_datatype` is the former `datatype`, renamed to match
+`extract_wtw_natdata()`'s `align_value` and `align_datatype` (ADR 0020);
+there was no release, so the rename had no deprecation step. The defaults
+are the values above, so the files are unchanged. `raster_value` is a
+single finite number and `raster_datatype` one of terra's data types; a
+value the data type cannot store (outside its range, or its NoData value,
+after rounding halves away from zero for an integer type, for example 255
+or 254.5 as `INT1U`) is an error before the AOI is read, the check #76
+added for `align_value`. The band name is an argument rather than a fixed
+format detail: it is a value written to the file, and tools may want their
+own. `raster_name` is a single, non-empty string, written as the band's
+name (terra reads it back with `names()`). All three are checked, and
+ignored, without `raster_file` or `project_dir`.
 
 ## Consequences
 
