@@ -23,11 +23,13 @@ full brief.
 
 ## Project status
 
-Pre-build: the brief, ADRs, package skeleton, CI and auto-merge are in
-place, and `docs/design/01_wtw-data-prep2_inventory.md` lists the planned
-functions. The next milestone is v0.1.0: rasterizing and aligning AOIs, rij
-matrix helpers and national data extraction, with tests, used by
-wtw-data-prep2 in place of its own copies. Open GitHub issues are the live task tracker.
+Pre-release: every function planned for v0.1.0 is built, documented and
+tested on `main` (reading, rasterizing and aligning AOIs, rij matrix
+helpers, extracting and writing layers, and the NAT_DATA and WTW use-case
+functions), with design choices in ADRs.
+`docs/design/01_wtw-data-prep2_inventory.md` maps them to wtw-data-prep2.
+Next: release v0.1.0, then switch wtw-data-prep2 to it in place of its own
+copies. Open GitHub issues are the live task tracker.
 
 ## Scope
 
