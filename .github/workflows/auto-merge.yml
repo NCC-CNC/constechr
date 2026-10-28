@@ -13,8 +13,9 @@ name: Enable auto-merge
 # Both act through the NCC ConsTech Automation GitHub App (org-owned), not
 # the built-in GITHUB_TOKEN: GitHub starts no workflows for actions taken
 # with GITHUB_TOKEN, so "Closes #N" would not close issues and an updated
-# branch would never be re-checked. Settings: the AUTOMATION_APP_ID variable
-# and the AUTOMATION_APP_PRIVATE_KEY secret.
+# branch would never be re-checked. Settings: the AUTOMATION_APP_CLIENT_ID
+# variable (the app's Client ID, not its App ID) and the
+# AUTOMATION_APP_PRIVATE_KEY secret.
 
 on:
   pull_request:
@@ -36,7 +37,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ vars.AUTOMATION_APP_ID }}
+          client-id: ${{ vars.AUTOMATION_APP_CLIENT_ID }}
           private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
 
       - name: Enable auto-merge
