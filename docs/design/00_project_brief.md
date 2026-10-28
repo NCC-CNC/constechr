@@ -131,9 +131,9 @@ Each is tracked by an open issue:
 - Which later functions to add, and when: `summarize_aoi_raster()` (#31),
   and zonal sums, overlap areas, ecoregions and unit conversions (#35,
   after #30).
-- How tools find and trust the functions: a pkgdown reference site (#32), a
-  Claude Code plugin that maps tasks to functions (#33, design principle 7),
-  and a CI job that runs consumers' tests against `main` (#34).
+- How tools find and trust the functions: a Claude Code plugin that maps
+  tasks to functions (#33, design principle 7), and a CI job that runs
+  consumers' tests against `main` (#34).
 - Internal tidying: shared argument checks in one file (#53), with no change
   to behaviour.
 
@@ -149,3 +149,5 @@ Each is tracked by an open issue:
   matrices, raster values, NAT_DATA and WTW conventions): ADRs 0008, 0010
   to 0021 and 0023.
 - CI layout and the pinned Linux image: ADRs 0009 and 0022.
+- A browsable reference: a pkgdown site for releases, with no vignettes
+  (#32, ADR 0025).

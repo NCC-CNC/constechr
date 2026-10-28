@@ -35,10 +35,19 @@ Rscript -e "lintr::lint_package()"   # lint
 Rscript -e "devtools::document()"    # regenerate man/ and NAMESPACE; commit them
 Rscript -e "devtools::test()"        # run the tests
 Rscript -e "devtools::check()"       # full R CMD check (build, tests, examples)
+Rscript -e "pkgdown::check_pkgdown()" # site config lists every exported topic
 ```
 
+The pkgdown check needs the pkgdown package and pandoc (RStudio bundles
+one; set `RSTUDIO_PANDOC` to its folder if pandoc is not on the path).
+`Rscript -e "pkgdown::build_site()"` previews the reference site in
+`site/`, which is not committed. The published site,
+<https://ncc-cnc.github.io/constechr/>, is built from release tags only
+(ADR 0025): pushing a `vX.Y.Z` tag publishes it.
+
 CI runs the same checks on every pull request and weekly:
-`styler::style_pkg(dry = "fail")`, the lint, and R CMD check (which runs the
+`styler::style_pkg(dry = "fail")`, the lint, the pkgdown config check,
+and R CMD check (which runs the
 tests) on Windows with all dependencies and without Suggests, and on Ubuntu
 in a pinned `rocker/geospatial` container. Every job uses the current CRAN
 version of each dependency, including the recommended packages R ships

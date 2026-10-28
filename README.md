@@ -14,7 +14,9 @@ answers hold that method in place.
 
 The current release is v0.1.0: reading, rasterizing and aligning AOIs, rij
 matrix helpers, extracting and writing layers, and the NAT_DATA and Where
-To Work (WTW) functions for wtw-data-prep2's steps. See `NEWS.md` for
+To Work (WTW) functions for wtw-data-prep2's steps. The function reference
+for the latest release is at <https://ncc-cnc.github.io/constechr/>. See
+`NEWS.md` for
 what each release changed, `docs/design/00_project_brief.md` for the scope
 and
 `docs/design/01_wtw-data-prep2_inventory.md` for how the functions map to
