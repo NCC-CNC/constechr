@@ -112,6 +112,9 @@ jobs:
           name: site
           path: site
           if-no-files-found: error
+          # .nojekyll stops GitHub Pages running the site through Jekyll;
+          # the upload drops hidden files unless told not to.
+          include-hidden-files: true
 
   deploy:
     needs: build
