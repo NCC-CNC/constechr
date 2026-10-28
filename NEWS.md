@@ -1,5 +1,78 @@
 <!-- markdownlint-disable-file MD025 -->
 
+# constechr 0.1.0
+
+First release (#28). It has functions for what wtw-data-prep2 does to
+make a Where To Work project's planning units and extract NAT_DATA layers
+for them. Tools install it with `pak::pak("NCC-CNC/constechr@v0.1.0")`.
+Each function documents its method and has known-answer tests; the
+entries for the development versions below give the detail, and the ADRs
+in `docs/decisions/` the reasons.
+
+Building blocks, with no use-case conventions:
+
+- `read_aoi()` reads an area of interest from `sf` or `SpatVector`
+  polygons, a file or bounds, optionally reprojected and dissolved.
+- `rasterize_aoi()` rasterizes an AOI onto a template, onto coarser cells
+  that nest in it, or onto a new grid, with an explicit cell rule
+  (`"touches"` or `"centre"`).
+- `align_raster()` puts a one-layer raster onto a template's grid with
+  `terra::project()`.
+- `polygonize_raster()` turns each cell with a value into its own square
+  polygon.
+- `read_rij_matrix()` reads a raster or a prebuilt `.rds` file as an rij
+  matrix on a template.
+- `clip_rij_matrix()` keeps an rij matrix's columns in an AOI raster and
+  drops rows with no values there.
+- `rij_matrix_to_raster()` rebuilds rasters from an rij matrix on the AOI
+  raster's extent.
+- `write_rasters()` writes a raster's layers to GeoTIFFs, one per layer or
+  one multi-band file.
+- `extract_layers()` extracts many layers (GeoTIFFs or rij matrices) for an
+  AOI, in memory or to files.
+
+NAT_DATA use-case functions:
+
+- `natdata_template()` opens the national 1 km template raster,
+  `_1km/idx.tif`.
+- `read_natdata_metadata()` reads the layer catalogue,
+  `WTW_NAT_PREP_METADATA.csv`, ready for `extract_layers()`.
+- `create_1km_grid()` makes an AOI's 1 km planning units on the national
+  template.
+
+Where To Work (WTW) use-case functions, wtw-data-prep2's steps 01 to 03:
+
+- `create_wtw_project_folder()` and `wtw_project_folders()` create a WTW
+  project's folders.
+- `create_dataprep_template()` and `dataprep_columns()` write its
+  `dataprep/dataprep.csv` template.
+- `create_wtw_planning_units()` writes its `aoi/aoi.shp`,
+  `aoi/pu_1km.shp` and `aoi/pu_1km.tif`.
+- `extract_wtw_natdata()` extracts the NAT_DATA layers into its `tifs/`
+  folder.
+
+With their defaults, the WTW functions write the same files as
+wtw-data-prep2 on the test fixtures and on a real project. The main
+intended differences from wtw-data-prep2's code:
+
+- Rules that were implicit are arguments: the AOI cell rule (`cells`, not
+  a 1000 m buffer), the resampling method, data types, file names, band
+  names and planning-unit values, with the old values as defaults.
+- Inputs are checked before anything is read or written: rasters off the
+  template's grid, AOIs that do not overlap it, missing files, values a
+  data type cannot store and clashing outputs are errors that name the
+  input, and a failed write leaves no new files.
+- Dropped features and skipped layers are named in messages, and every
+  AOI cell that is not `NA` counts when clipping an rij matrix (not only
+  values above 0).
+- Rasters are aligned with terra, not `gdalwarp` (ADR 0007): the output
+  carries the template's CRS and exact grid, and a few edge cells can
+  differ when reprojecting.
+- Raster values keep their stored type (ADR 0019), so `NCCID` is an
+  integer.
+- `aoi/pu_1km_align.tif` is no longer written by default (`align_file`
+  writes it).
+
 # constechr 0.0.0.9018
 
 - `create_wtw_planning_units()`'s `datatype` argument is renamed
