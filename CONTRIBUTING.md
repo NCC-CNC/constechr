@@ -53,5 +53,12 @@ See `CLAUDE.md` for the package's stack, scope and working rules.
 - No em dashes in code, comments, docs, commit messages, or user-facing text.
 - A change that alters a function's results or arguments gets a `NEWS.md`
   entry and a version bump.
+- `NEWS.md` has one `# constechr x.y.z` heading per version, newest first,
+  as `usethis::use_version()`, pkgdown and `utils::news()` expect. A
+  version bump adds a new heading above the last one; entries go under the
+  heading of the version they come with. markdownlint's MD025 (one
+  top-level heading per file) is turned off for `NEWS.md` only, by the
+  `<!-- markdownlint-disable-file MD025 -->` comment at its top; keep that
+  line first.
 - See `CLAUDE.md` for the full working rules and `docs/` for design notes and
   decision records.
