@@ -1,0 +1,45 @@
+# pkgdown reference site, published for releases only (ADR 0025).
+url: https://ncc-cnc.github.io/constechr/
+
+# Built into site/, not pkgdown's default docs/, which holds design notes and
+# ADRs. CI deploys site/ to the gh-pages branch.
+destination: site
+
+# The site documents the release a tag names, never unreleased dev code.
+development:
+  mode: release
+
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left: [reference, news]
+    right: [search, github]
+
+# One section per @family. A function in an existing family is listed
+# without changes here; a new family needs a new section, or
+# pkgdown::check_pkgdown() (a CI gate) fails.
+reference:
+  - title: Areas of interest
+    desc: Read an AOI and rasterize it onto a template or a new grid.
+    contents:
+      - has_concept("aoi")
+  - title: Rasters
+    desc: Align, polygonize and write rasters.
+    contents:
+      - has_concept("raster")
+  - title: rij matrices and extraction
+    desc: >
+      Read layers as rij matrices, clip them to an AOI, rebuild rasters and
+      extract many layers at once.
+    contents:
+      - has_concept("rij")
+  - title: NAT_DATA
+    desc: The national template, layer catalogue and 1 km planning units.
+    contents:
+      - has_concept("natdata")
+  - title: Where To Work projects
+    desc: Project folders, planning units, NAT_DATA extraction and templates.
+    contents:
+      - has_concept("wtw")

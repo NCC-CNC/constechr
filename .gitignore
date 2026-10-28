@@ -33,3 +33,6 @@ tmp/
 # Claude Code local overrides (personal, not shared)
 .claude/settings.local.json
 .claude/worktrees/
+
+# pkgdown site, built locally or in CI (ADR 0025)
+/site/

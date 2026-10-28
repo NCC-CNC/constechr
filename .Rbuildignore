@@ -14,3 +14,5 @@
 ^\.Rproj\.user$
 ^data-raw$
 ^\.markdownlintignore$
+^_pkgdown\.yml$
+^site$
