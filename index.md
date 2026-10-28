@@ -1,0 +1,112 @@
+# constechr
+
+Conservation Technology R: a shared R package of the functions ConsTech
+apps and pipelines use to prepare and extract conservation data, such as
+rasterizing an area of interest onto the national 1 km template raster
+or extracting national data for it.
+
+Every ConsTech R tool calls the same function for the same task, so
+results are consistent and repeatable across tools. Each function
+documents the method it uses (CRS, area calculation, intersection
+rules), and tests with known answers hold that method in place.
+
+## Status
+
+The current release is v0.1.0: reading, rasterizing and aligning AOIs,
+rij matrix helpers, extracting and writing layers, and the NAT_DATA and
+Where To Work (WTW) functions for wtw-data-prep2’s steps. See `NEWS.md`
+for what each release changed, `docs/design/00_project_brief.md` for the
+scope and `docs/design/01_wtw-data-prep2_inventory.md` for how the
+functions map to wtw-data-prep2.
+
+## Installation
+
+constechr is installed from GitHub at a tagged version, so each tool
+pins the version it was built and tested with:
+
+\
+`# install.packages("pak")`\
+`pak``::`[`pak`](https://pak.r-lib.org/reference/pak.html)`(``"NCC-CNC/constechr@v0.1.0"``)`
+
+In a project that uses renv, run `renv::snapshot()` afterwards to record
+the version in `renv.lock`.
+
+## Usage
+
+Call functions with the package prefix, so it is clear where each one
+comes from:
+
+\
+`constechr``::``function_name``(``...``)`
+
+The example below uses the small files bundled with the package: an AOI
+and a NAT_DATA-like folder with a 10 x 10 template (`_1km/idx.tif`) and
+a catalogue of three layers. With real data, `natdata_dir` is the
+NAT_DATA folder and `aoi` your own AOI file.
+
+\
+`natdata_dir`` ``<-`` `[`system.file`](https://rdrr.io/r/base/system.file.html)`(``"extdata"``, ``"natdata"``, package ``=`` ``"constechr"``)`\
+`aoi`` ``<-`` `[`system.file`](https://rdrr.io/r/base/system.file.html)`(``"extdata"``, ``"aoi.gpkg"``, package ``=`` ``"constechr"``)`\
+\
+`# The AOI's 1 km planning units on the national template, in memory`\
+`grid`` ``<-`` ``constechr``::`[`create_1km_grid`](https://ncc-cnc.github.io/constechr/reference/create_1km_grid.md)`(``aoi``, ``natdata_dir``)`\
+`grid``$``polygons`\
+\
+`# A WTW project: its folders, then wtw-data-prep2's steps 02 and 03`\
+`# (extracting GeoTIFF layers needs prioritizr)`\
+`project_dir`` ``<-`` `[`file.path`](https://rdrr.io/r/base/file.path.html)`(`[`tempdir`](https://rdrr.io/r/base/tempfile.html)`(``)``, ``"wtw_project"``)`\
+`constechr``::`[`create_wtw_project_folder`](https://ncc-cnc.github.io/constechr/reference/create_wtw_project_folder.md)`(``project_dir``)`\
+`pu`` ``<-`` ``constechr``::`[`create_wtw_planning_units`](https://ncc-cnc.github.io/constechr/reference/create_wtw_planning_units.md)`(``aoi``, ``natdata_dir``, ``project_dir``)`\
+`paths`` ``<-`` ``constechr``::`[`extract_wtw_natdata`](https://ncc-cnc.github.io/constechr/reference/extract_wtw_natdata.md)`(``natdata_dir``, ``project_dir``)`\
+[`list.files`](https://rdrr.io/r/base/list.files.html)`(`[`file.path`](https://rdrr.io/r/base/file.path.html)`(``project_dir``, ``"tifs"``)``, recursive ``=`` ``TRUE``)`
+
+The building blocks work on any template, not only NAT_DATA’s:
+
+\
+`template`` ``<-`` ``terra``::`[`rast`](https://rspatial.github.io/terra/reference/rast.html)`(`\
+`  `[`system.file`](https://rdrr.io/r/base/system.file.html)`(``"extdata"``, ``"template.tif"``, package ``=`` ``"constechr"``)`\
+`)`\
+`aoi_raster`` ``<-`` ``constechr``::`[`rasterize_aoi`](https://ncc-cnc.github.io/constechr/reference/rasterize_aoi.md)`(``aoi``, ``template``, cells ``=`` ``"centre"``)`\
+`rij`` ``<-`` ``constechr``::`[`read_rij_matrix`](https://ncc-cnc.github.io/constechr/reference/read_rij_matrix.md)`(`\
+`  `[`system.file`](https://rdrr.io/r/base/system.file.html)`(``"extdata"``, ``"rij.rds"``, package ``=`` ``"constechr"``)``, ``template`\
+`)`\
+`rij_aoi`` ``<-`` ``constechr``::`[`clip_rij_matrix`](https://ncc-cnc.github.io/constechr/reference/clip_rij_matrix.md)`(``rij``, ``aoi_raster``, ``template``)`\
+`constechr``::`[`rij_matrix_to_raster`](https://ncc-cnc.github.io/constechr/reference/rij_matrix_to_raster.md)`(``rij_aoi``, ``template``, ``aoi_raster``)`
+
+The functions:
+
+- Building blocks:
+  [`read_aoi()`](https://ncc-cnc.github.io/constechr/reference/read_aoi.md),
+  [`rasterize_aoi()`](https://ncc-cnc.github.io/constechr/reference/rasterize_aoi.md),
+  [`align_raster()`](https://ncc-cnc.github.io/constechr/reference/align_raster.md),
+  [`polygonize_raster()`](https://ncc-cnc.github.io/constechr/reference/polygonize_raster.md),
+  [`read_rij_matrix()`](https://ncc-cnc.github.io/constechr/reference/read_rij_matrix.md),
+  [`clip_rij_matrix()`](https://ncc-cnc.github.io/constechr/reference/clip_rij_matrix.md),
+  [`rij_matrix_to_raster()`](https://ncc-cnc.github.io/constechr/reference/rij_matrix_to_raster.md),
+  [`write_rasters()`](https://ncc-cnc.github.io/constechr/reference/write_rasters.md),
+  [`extract_layers()`](https://ncc-cnc.github.io/constechr/reference/extract_layers.md).
+- NAT_DATA:
+  [`natdata_template()`](https://ncc-cnc.github.io/constechr/reference/natdata_template.md),
+  [`read_natdata_metadata()`](https://ncc-cnc.github.io/constechr/reference/read_natdata_metadata.md),
+  [`create_1km_grid()`](https://ncc-cnc.github.io/constechr/reference/create_1km_grid.md).
+- Where To Work:
+  [`create_wtw_project_folder()`](https://ncc-cnc.github.io/constechr/reference/create_wtw_project_folder.md),
+  [`wtw_project_folders()`](https://ncc-cnc.github.io/constechr/reference/wtw_project_folders.md),
+  [`create_dataprep_template()`](https://ncc-cnc.github.io/constechr/reference/create_dataprep_template.md),
+  [`dataprep_columns()`](https://ncc-cnc.github.io/constechr/reference/dataprep_columns.md),
+  [`create_wtw_planning_units()`](https://ncc-cnc.github.io/constechr/reference/create_wtw_planning_units.md),
+  [`extract_wtw_natdata()`](https://ncc-cnc.github.io/constechr/reference/extract_wtw_natdata.md).
+
+The reference for each function, including the method it uses, is in the
+package help:
+[`help(package = "constechr")`](https://rdrr.io/pkg/constechr/man).
+
+## Contributing
+
+See `CONTRIBUTING.md` for setup and the development workflow, and
+`CLAUDE.md` for the package’s scope and working rules. Design notes are
+in `docs/design/` and decision records in `docs/decisions/`.
+
+## License
+
+GNU General Public License v3.0.
