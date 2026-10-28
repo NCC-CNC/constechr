@@ -1,19 +1,21 @@
 name: CI
 
-# PRs only: with strict branch protection every PR is tested against current
-# main before it merges, so a run on push to main would test the same code
-# again. If you do not use strict protection, add this back under `on:` so a
-# fresh repo gets a first run:
+# PRs only: with strict branch protection every PR is tested against the
+# current tip of its base (dev, or main for a promotion; ADR 0024) before it
+# merges, so a run on push would test the same code again. If you do not use
+# strict protection, add this back under `on:` so a fresh repo gets a first
+# run:
 #   push:
-#     branches: [main]
+#     branches: [dev, main]
 #
 # Weekly: R dependencies are only pinned to minimum versions, so a new sf or
 # terra release can break the package with no commit here. The scheduled run
-# checks main against current CRAN, and also saves the R package cache on
-# main, which PRs can read. workflow_dispatch allows a manual run.
+# checks the default branch (dev) against current CRAN, and also saves the R
+# package cache on it, which PRs can read. workflow_dispatch allows a manual
+# run.
 on:
   pull_request:
-    branches: [main]
+    branches: [dev, main]
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:

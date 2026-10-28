@@ -106,10 +106,13 @@ job. `CONTRIBUTING.md` Setup should match.
 
 ## Working rules
 
-- Branch from `main`; one short-lived branch per change. Open a pull request
-  into `main`; CI must pass before merge. Non-draft PRs from branches in this
-  repo auto-merge (squash) when CI passes, so open a draft if a PR must not
-  merge yet.
+- Branch from `dev`; one short-lived branch per change. Open a pull request
+  into `dev`; CI must pass before merge. Non-draft PRs into `dev` from
+  branches in this repo auto-merge (squash) when CI passes, so open a draft
+  if a PR must not merge yet. These hold unless the owner says otherwise.
+- Never open a pull request into `main`, retarget one to `main`, or push to
+  `main`, unless the owner asks. `main` changes only by a promotion PR from
+  `dev` (merge commit), usually for a release (ADR 0024).
 - Conventional Commits (for example `feat: ...`, `fix: ...`, `chore: ...`,
   `docs: ...`).
 - No em dashes in code, comments, docs, commit messages, or user-facing text.
@@ -160,12 +163,13 @@ pushes, pull requests), as allowed by `.claude/settings.json`.
    open one in that list. Work one issue per session, unless the owner asks
    otherwise.
 2. One issue, one branch, one pull request:
-   - branch `<issue number>-<short-slug>` from an up-to-date `main`;
+   - branch `<issue number>-<short-slug>` from an up-to-date `dev`, and
+     open the PR into `dev` (`gh pr create --base dev`);
    - run the local checks in "Commands" before pushing;
    - PR title in Conventional Commits form, body with "Closes #N" and the
      PR template checklist filled in.
 3. Never merge by hand. The automation app arms auto-merge on every non-draft
-   PR and merges it when `checks` passes. If CI fails, fix it on the same
+   PR into `dev` and merges it when `checks` passes. If CI fails, fix it on the same
    branch.
 4. Anything found that is out of scope for the current issue becomes a new
    issue (what, why, done criteria), not an addition to the open PR.
@@ -217,7 +221,7 @@ merges.
 Decisions already recorded are not asked again (for example #10: terra if it
 gives the same output as `gdalwarp`; the owner is asked only if they differ).
 One issue at a time; the next agent starts only after the previous PR has
-merged, so each starts from an up-to-date `main`.
+merged, so each starts from an up-to-date `dev`.
 
 ## Where durable context lives
 

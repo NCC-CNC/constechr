@@ -34,6 +34,16 @@
       "PowerShell(Rscript -e \"covr::*)",
       "PowerShell(Rscript -e \"styler::*)"
     ],
+    "ask": [
+      "Bash(gh pr create*--base main*)",
+      "Bash(gh pr create*--base=main*)",
+      "Bash(gh pr create*-B main*)",
+      "Bash(gh pr edit*--base main*)",
+      "Bash(gh pr edit*--base=main*)",
+      "Bash(gh pr edit*-B main*)",
+      "Bash(gh pr merge*)",
+      "Bash(git push*main*)"
+    ],
     "deny": [
       "Bash(git push --force *)",
       "Bash(git push -f *)",
