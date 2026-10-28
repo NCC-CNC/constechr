@@ -55,5 +55,10 @@ runners, a slower check).
 - pkgdown is needed only in CI; it is not a package dependency.
 - GitHub Pages must be set, once, to serve the `gh-pages` branch (repository
   settings, by the owner).
-- The site also renders the repository's other root Markdown files, such as
-  `CLAUDE.md`, as unlinked pages. They are public in the repository already.
+- pkgdown renders every root Markdown file as a page and has no setting to
+  skip one. `CLAUDE.md` (working rules for Claude Code, not package docs)
+  is kept off the site by deleting it from the build's checkout, and the
+  build fails if a `CLAUDE.html` page appears. A local
+  `pkgdown::build_site()` preview still renders it; previews are not
+  published. `CONTRIBUTING.md`, `SECURITY.md` and `LICENSE.md` stay as
+  pages.

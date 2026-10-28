@@ -72,6 +72,12 @@ jobs:
           fi
           rm -rf workflow-ref
 
+      # pkgdown renders every Markdown file in the root as a page and has no
+      # setting to skip one. CLAUDE.md is working rules for Claude Code, not
+      # package docs, so it is removed from this checkout before the build.
+      - name: Leave CLAUDE.md off the site
+        run: rm -f CLAUDE.md
+
       - uses: r-lib/actions/setup-r@v2
         with:
           install-r: false
@@ -93,6 +99,13 @@ jobs:
       - name: Build site
         run: pkgdown::build_site_github_pages(dest_dir = "site", new_process = FALSE, install = FALSE)
         shell: Rscript {0}
+
+      - name: Check CLAUDE.md is not a page
+        run: |
+          if [ -e site/CLAUDE.html ]; then
+            echo "site/CLAUDE.html was built; CLAUDE.md must not be a page." >&2
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v7
         with:
