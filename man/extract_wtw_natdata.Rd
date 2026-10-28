@@ -13,6 +13,7 @@ extract_wtw_natdata(
   align_file = NULL,
   align_value = 1,
   align_datatype = "INT1U",
+  align_name = "layer",
   round_int = TRUE,
   multiband = FALSE,
   drop_empty = TRUE,
@@ -68,6 +69,10 @@ wtw-data-prep2's. \code{align_value} must be a value it stores: for an
 integer type, a whole number after rounding (halves away from zero)
 within the type's range and not its NoData value (for example 0 to 254
 for \code{"INT1U"}). Ignored without \code{align_file}.}
+
+\item{align_name}{A single, non-empty string, the name of the one band
+(layer) of \code{align_file}, as terra reads it back with \code{\link[=names]{names()}}. The
+default, \code{"layer"}, is wtw-data-prep2's. Ignored without \code{align_file}.}
 
 \item{round_int}{A single logical, passed to \code{\link[=write_rasters]{write_rasters()}}: \code{TRUE}
 (the default) rounds values to whole numbers, halves away from zero,
@@ -135,10 +140,11 @@ are not written, and layers left with none are skipped, each named in a
 message.
 \item \strong{Aligned planning units} (only with \code{align_file}), after the layers:
 a raster of \code{align_value} in the planning units and \code{NA} elsewhere, one
-layer named \code{layer}, put on the template's full grid with
+layer named \code{align_name}, put on the template's full grid with
 \code{\link[=align_raster]{align_raster()}} (nearest neighbour) and written in \code{align_datatype},
 \code{NA} as terra's NoData value for it. The defaults, 1 as \code{INT1U}
-(NoData 255), are wtw-data-prep2's \code{pu_1km_align.tif}.
+(NoData 255) in a layer named \code{layer}, are wtw-data-prep2's
+\code{pu_1km_align.tif}.
 }
 
 Arguments, \code{aoi_raster}, the template and the output files that can be
@@ -185,11 +191,12 @@ if (requireNamespace("prioritizr", quietly = TRUE)) {
   )
   terra::rast(file.path(project_dir, "aoi", "pu_1km_align.tif"))
 
-  # The same file with the planning units as 0s, in a signed data type
+  # The same file with the planning units as 0s, in a signed data type,
+  # in a band named "pu"
   paths <- extract_wtw_natdata(
     natdata_dir, project_dir,
     align_file = "aoi/pu_1km_align.tif", align_value = 0,
-    align_datatype = "INT2S", progress = NULL
+    align_datatype = "INT2S", align_name = "pu", progress = NULL
   )
   terra::rast(file.path(project_dir, "aoi", "pu_1km_align.tif"))
 }

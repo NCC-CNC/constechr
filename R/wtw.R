@@ -42,16 +42,25 @@
 #'   - `aoi_file`: the AOI (see `aoi_union`). Default `"aoi/aoi.shp"`.
 #'   - `polygons_file`: the planning-unit polygons. Default
 #'     `"aoi/pu_1km.shp"`.
-#'   - `raster_file`: the planning-unit raster, 1 in every planning unit.
-#'     Default `"aoi/pu_1km.tif"`.
+#'   - `raster_file`: the planning-unit raster, `raster_value` in every
+#'     planning unit. Default `"aoi/pu_1km.tif"`.
 #'
 #'   The defaults are the WTW project layout wtw-data-prep2 writes. The
 #'   vector files' format follows their extension (any format GDAL writes,
 #'   such as `.shp` or `.gpkg`); `raster_file` is written by
 #'   [write_rasters()]. The three must be different files.
-#' @param datatype The data type of `raster_file`, one of terra's data types
-#'   (see [terra::writeRaster()]). The default, `"INT1U"`, is
-#'   wtw-data-prep2's.
+#' @param raster_value A single finite number, the value of the planning
+#'   units in `raster_file`. The default, `1`, is wtw-data-prep2's. Ignored
+#'   without `raster_file`.
+#' @param raster_datatype The data type of `raster_file`, one of terra's data
+#'   types (see [terra::writeRaster()]). The default, `"INT1U"`, is
+#'   wtw-data-prep2's. `raster_value` must be a value it stores: for an
+#'   integer type, a whole number after rounding (halves away from zero)
+#'   within the type's range and not its NoData value (for example 0 to 254
+#'   for `"INT1U"`). Ignored without `raster_file`.
+#' @param raster_name A single, non-empty string, the name of the one band
+#'   (layer) of `raster_file`, as terra reads it back with [names()]. The
+#'   default, `"layer"`, is wtw-data-prep2's. Ignored without `raster_file`.
 #' @param overwrite A single logical. `TRUE` (the default) replaces existing
 #'   files, as wtw-data-prep2 does; `FALSE` is an error if any of the files
 #'   exists, checked before any file is written.
@@ -79,9 +88,12 @@
 #'      their geometry. `value` keeps the type it has in the polygons, so
 #'      with NAT_DATA's `idx.tif` (an `INT*` data type) `NCCID` is an
 #'      integer field (ADR 0019);
-#'    - `raster_file`: the raster of step 2 with 1 in every planning unit and
-#'      `NA` elsewhere, one layer named `layer`, in `datatype`
-#'      (`INT1U` by default, whose NoData value terra writes as 255).
+#'    - `raster_file`: the raster of step 2 with `raster_value` in every
+#'      planning unit and `NA` elsewhere, one layer named `raster_name`, in
+#'      `raster_datatype`, `NA` as terra's NoData value for it (rounded
+#'      halves away from zero before an integer type). The defaults, 1 as
+#'      `INT1U` (NoData 255) in a layer named `layer`, are wtw-data-prep2's
+#'      `pu_1km.tif`.
 #'
 #' No areas are computed and no values are rounded. With the defaults, the
 #' files are those of wtw-data-prep2's step 02 (`aoi_to_grid()`): the same
@@ -134,6 +146,13 @@
 #'   aoi, natdata_dir, project_dir,
 #'   aoi_union = TRUE, aoi_file = "aoi/aoi.gpkg", raster_file = NULL
 #' )
+#'
+#' # The planning units as 0s in a signed data type, in a band named "pu"
+#' pu <- create_wtw_planning_units(
+#'   aoi, natdata_dir, project_dir,
+#'   raster_value = 0, raster_datatype = "INT2S", raster_name = "pu"
+#' )
+#' terra::rast(file.path(project_dir, "aoi", "pu_1km.tif"))
 create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
                                       cells = "touches", value = "NCCID",
                                       id = "PUID", index = "template",
@@ -142,7 +161,10 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
                                       aoi_file = "aoi/aoi.shp",
                                       polygons_file = "aoi/pu_1km.shp",
                                       raster_file = "aoi/pu_1km.tif",
-                                      datatype = "INT1U", overwrite = TRUE) {
+                                      raster_value = 1,
+                                      raster_datatype = "INT1U",
+                                      raster_name = "layer",
+                                      overwrite = TRUE) {
   call <- environment()
   check_project_dir(project_dir, call)
   check_flag(trim, "trim", call)
@@ -155,7 +177,12 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
   for (arg in names(files)) {
     check_project_file(files[[arg]], arg, call)
   }
-  check_datatype(datatype, call)
+  check_number(raster_value, "raster_value", call)
+  check_datatype(raster_datatype, call, "raster_datatype")
+  check_value_fits_datatype(
+    raster_value, raster_datatype, "raster_value", "raster_datatype", call
+  )
+  check_band_name(raster_name, "raster_name", call)
   check_flag(overwrite, "overwrite", call)
   files <- files[!vapply(files, is.null, logical(1))]
   check_distinct_files(files, call)
@@ -193,11 +220,11 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
     write_vector(grid$polygons, paths[["polygons_file"]])
   }
   if ("raster_file" %in% names(paths)) {
-    ones <- terra::ifel(is.na(grid$aoi_raster), NA, 1)
-    names(ones) <- "layer"
+    pu <- terra::ifel(is.na(grid$aoi_raster), NA, raster_value)
+    names(pu) <- raster_name
     write_rasters(
-      ones,
-      datatype = datatype, filename = paths[["raster_file"]],
+      pu,
+      datatype = raster_datatype, filename = paths[["raster_file"]],
       overwrite = overwrite
     )
   }
@@ -251,6 +278,9 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
 #'   integer type, a whole number after rounding (halves away from zero)
 #'   within the type's range and not its NoData value (for example 0 to 254
 #'   for `"INT1U"`). Ignored without `align_file`.
+#' @param align_name A single, non-empty string, the name of the one band
+#'   (layer) of `align_file`, as terra reads it back with [names()]. The
+#'   default, `"layer"`, is wtw-data-prep2's. Ignored without `align_file`.
 #' @inheritParams extract_layers
 #' @param multiband A single logical: `FALSE` (the default) writes one file
 #'   per feature, as wtw-data-prep2 does; `TRUE` writes one multi-band file
@@ -288,10 +318,11 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
 #'    message.
 #' 4. **Aligned planning units** (only with `align_file`), after the layers:
 #'    a raster of `align_value` in the planning units and `NA` elsewhere, one
-#'    layer named `layer`, put on the template's full grid with
+#'    layer named `align_name`, put on the template's full grid with
 #'    [align_raster()] (nearest neighbour) and written in `align_datatype`,
 #'    `NA` as terra's NoData value for it. The defaults, 1 as `INT1U`
-#'    (NoData 255), are wtw-data-prep2's `pu_1km_align.tif`.
+#'    (NoData 255) in a layer named `layer`, are wtw-data-prep2's
+#'    `pu_1km_align.tif`.
 #'
 #' Arguments, `aoi_raster`, the template and the output files that can be
 #' named in advance are checked before any layer is read (see
@@ -347,11 +378,12 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
 #'   )
 #'   terra::rast(file.path(project_dir, "aoi", "pu_1km_align.tif"))
 #'
-#'   # The same file with the planning units as 0s, in a signed data type
+#'   # The same file with the planning units as 0s, in a signed data type,
+#'   # in a band named "pu"
 #'   paths <- extract_wtw_natdata(
 #'     natdata_dir, project_dir,
 #'     align_file = "aoi/pu_1km_align.tif", align_value = 0,
-#'     align_datatype = "INT2S", progress = NULL
+#'     align_datatype = "INT2S", align_name = "pu", progress = NULL
 #'   )
 #'   terra::rast(file.path(project_dir, "aoi", "pu_1km_align.tif"))
 #' }
@@ -362,6 +394,7 @@ extract_wtw_natdata <- function(natdata_dir, project_dir,
                                 layers = read_natdata_metadata(natdata_dir),
                                 tifs_dir = "tifs", align_file = NULL,
                                 align_value = 1, align_datatype = "INT1U",
+                                align_name = "layer",
                                 round_int = TRUE, multiband = FALSE,
                                 drop_empty = TRUE, overwrite = TRUE,
                                 progress = function(i, n, layer) {
@@ -379,6 +412,7 @@ extract_wtw_natdata <- function(natdata_dir, project_dir,
   check_value_fits_datatype(
     align_value, align_datatype, "align_value", "align_datatype", call
   )
+  check_band_name(align_name, "align_name", call)
   check_flag(round_int, "round_int", call)
   check_flag(multiband, "multiband", call)
   check_flag(drop_empty, "drop_empty", call)
@@ -438,7 +472,7 @@ extract_wtw_natdata <- function(natdata_dir, project_dir,
       )
     }
     pu <- terra::ifel(is.na(aoi_raster), NA, align_value)
-    names(pu) <- "layer"
+    names(pu) <- align_name
     create_dir(dirname(align_path))
     align_raster(
       pu, template,
@@ -803,6 +837,24 @@ check_project_file <- function(x, arg, call, folder = FALSE) {
     cli::cli_abort(
       "{.arg {arg}} must be a path relative to {.arg project_dir}, not
       {.file {x}}.",
+      call = call
+    )
+  }
+  invisible(x)
+}
+
+#' Check a band name argument, such as `raster_name`
+#'
+#' @param x The value given.
+#' @param arg The argument's name.
+#' @param call The environment that errors name.
+#' @return `x`, invisibly; an error if it is not a single, non-empty string.
+#' @noRd
+check_band_name <- function(x, arg, call) {
+  if (!assertthat::is.string(x) || is.na(x) || !nzchar(x)) {
+    cli::cli_abort(
+      "{.arg {arg}} must be a single, non-empty string, not
+      {.obj_type_friendly {x}}.",
       call = call
     )
   }

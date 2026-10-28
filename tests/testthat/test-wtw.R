@@ -331,7 +331,7 @@ test_that("file names, formats and data type are arguments", {
     aoi_file = "boundary/aoi.gpkg",
     polygons_file = "units/pu.gpkg",
     raster_file = "units/rasters/pu.tif",
-    datatype = "INT2U"
+    raster_datatype = "INT2U"
   )
   expect_setequal(
     list.files(project, recursive = TRUE),
@@ -359,6 +359,92 @@ test_that("file names, formats and data type are arguments", {
     list.files(project, recursive = TRUE),
     paste0("aoi/pu_1km.", c("dbf", "prj", "shp", "shx"))
   )
+})
+
+test_that("raster_value, raster_datatype and raster_name set pu_1km.tif", {
+  skip_if_not_installed("sf")
+  natdata <- fixture_natdata_idx_dir()
+  aoi <- fixture_aoi("inside")
+  project <- tempfile("project")
+  path <- file.path(project, "aoi", "pu_1km.tif")
+
+  # The defaults are 1 as INT1U in a band named "layer", the file the
+  # arguments' absence wrote
+  create_wtw_planning_units(
+    aoi, natdata, project,
+    raster_file = "default.tif"
+  )
+  create_wtw_planning_units(
+    aoi, natdata, project,
+    raster_file = "explicit.tif", raster_value = 1,
+    raster_datatype = "INT1U", raster_name = "layer"
+  )
+  default <- file.path(project, "default.tif")
+  explicit <- file.path(project, "explicit.tif")
+  expect_identical(file_values(default), file_values(explicit))
+  expect_identical(terra::datatype(terra::rast(default)), "INT1U")
+  expect_identical(terra::datatype(terra::rast(explicit)), "INT1U")
+  expect_identical(file_nodata(explicit), 255)
+  expect_identical(names(terra::rast(explicit)), "layer")
+
+  # A negative value as INT2S in a band named "pu": NoData -32768, the
+  # vector files and the returned list unchanged
+  pu <- create_wtw_planning_units(
+    aoi, natdata, project,
+    raster_value = -7, raster_datatype = "INT2S", raster_name = "pu"
+  )
+  r <- terra::rast(path)
+  expect_identical(terra::datatype(r), "INT2S")
+  expect_identical(file_nodata(path), -32768)
+  expect_identical(names(r), "pu")
+  expect_identical(extent_of(r), c(1003000, 1006000, 604000, 607000))
+  expect_equal(file_values(path), rep(-7, 9))
+  unwritten <- create_wtw_planning_units(aoi, natdata)
+  expect_identical(pu$polygons, unwritten$polygons)
+  expect_identical(
+    terra::values(pu$aoi_raster),
+    terra::values(unwritten$aoi_raster)
+  )
+  expect_identical(names(pu$aoi_raster), "NCCID")
+  expect_equal(
+    read_vector(file.path(project, "aoi", "pu_1km.shp"))$NCCID,
+    c(44, 45, 46, 54, 55, 56, 64, 65, 66)
+  )
+
+  # A decimal value as FLT4S is kept; as an integer type it is rounded
+  # halves away from zero
+  create_wtw_planning_units(
+    aoi, natdata, project,
+    raster_value = 2.5, raster_datatype = "FLT4S"
+  )
+  expect_identical(terra::datatype(terra::rast(path)), "FLT4S")
+  expect_equal(file_values(path), rep(2.5, 9))
+  create_wtw_planning_units(
+    aoi, natdata, project,
+    raster_value = 2.5, raster_datatype = "INT2U"
+  )
+  expect_identical(terra::datatype(terra::rast(path)), "INT2U")
+  expect_equal(file_values(path), rep(3, 9))
+
+  # The largest value INT1U stores, and 0
+  for (value in c(254, 0)) {
+    create_wtw_planning_units(aoi, natdata, project, raster_value = value)
+    expect_equal(file_values(path), rep(value, 9))
+  }
+
+  # Any non-empty string names the band
+  create_wtw_planning_units(aoi, natdata, project, raster_name = "pu 1km")
+  expect_identical(names(terra::rast(path)), "pu 1km")
+
+  # Ignored without raster_file, but still checked
+  project <- tempfile("project")
+  create_wtw_planning_units(
+    aoi, natdata, project,
+    raster_file = NULL, raster_value = 5, raster_datatype = "FLT8S",
+    raster_name = "pu"
+  )
+  expect_false(file.exists(file.path(project, "aoi", "pu_1km.tif")))
+  expect_true(file.exists(file.path(project, "aoi", "pu_1km.shp")))
 })
 
 test_that("overwrite replaces files, and the AOI can be the file replaced", {
@@ -536,7 +622,7 @@ test_that("create_wtw_planning_units() gives clear errors", {
     )
   })
   expect_snapshot(error = TRUE, {
-    create_wtw_planning_units(aoi, natdata, datatype = "INT9")
+    create_wtw_planning_units(aoi, natdata, raster_datatype = "INT9")
   })
   expect_snapshot(error = TRUE, {
     create_wtw_planning_units(aoi, natdata, overwrite = NA)
@@ -549,6 +635,39 @@ test_that("create_wtw_planning_units() gives clear errors", {
   })
   expect_snapshot(error = TRUE, {
     create_wtw_planning_units(aoi, "no_such_folder")
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, raster_value = NA)
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, raster_value = c(1, 2))
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, raster_value = 255)
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, raster_value = 254.5)
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(
+      aoi, natdata,
+      raster_value = -1, raster_datatype = "INT2U"
+    )
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(
+      aoi, natdata,
+      raster_value = 255, raster_file = NULL
+    )
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, raster_name = "")
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, raster_name = NA_character_)
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, raster_name = c("a", "b"))
   })
 })
 
@@ -757,6 +876,18 @@ test_that("align_value and align_datatype set the aligned file's values", {
   expect_identical(names(r), "layer")
   expected <- rep(NA_real_, 100)
   expected[pu_cells] <- -7
+  expect_equal(file_values(path), expected)
+  expect_identical(folder_rasters(file.path(project, "tifs")), layers_before)
+
+  # align_name names the band; the layers keep their band names
+  suppressMessages(extract_wtw_natdata(
+    natdata, project,
+    align_file = "aoi/pu_1km_align.tif", align_name = "pu 1km",
+    progress = NULL
+  ))
+  expect_identical(names(terra::rast(path)), "pu 1km")
+  expect_identical(terra::datatype(terra::rast(path)), "INT1U")
+  expected[pu_cells] <- 1
   expect_equal(file_values(path), expected)
   expect_identical(folder_rasters(file.path(project, "tifs")), layers_before)
 
@@ -1128,6 +1259,12 @@ test_that("extract_wtw_natdata() gives clear errors", {
       natdata, "project",
       align_value = -32768, align_datatype = "INT2S"
     )
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", align_name = "")
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", align_name = 1)
   })
 })
 

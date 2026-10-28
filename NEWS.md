@@ -1,4 +1,18 @@
-# constechr 0.0.0.9017
+# constechr 0.0.0.9018
+
+- `create_wtw_planning_units()`'s `datatype` argument is renamed
+  `raster_datatype`, and it has two new arguments for `raster_file`
+  (#79): `raster_value` (default `1`), the value of the planning units,
+  and `raster_name` (default `"layer"`), the name of its band, which were
+  fixed in the code. `extract_wtw_natdata()` has `align_name` (default
+  `"layer"`), the name of `align_file`'s band. The defaults are the old
+  values, so the files are unchanged. As for `align_value`, a
+  `raster_value` that `raster_datatype` cannot store (outside its range or
+  its NoData value, such as 255 as `INT1U`) is an error before the AOI is
+  read. Calls passing `datatype` must use `raster_datatype`; calls passing
+  `overwrite` (in `create_wtw_planning_units()`) or `round_int` or later
+  arguments (in `extract_wtw_natdata()`) by position must name them.
+  Decisions in ADR 0018 and ADR 0020.
 
 - `extract_wtw_natdata()` has two new arguments for the optional aligned
   planning-unit file (#76): `align_value` (default `1`) and

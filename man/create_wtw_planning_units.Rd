@@ -18,7 +18,9 @@ create_wtw_planning_units(
   aoi_file = "aoi/aoi.shp",
   polygons_file = "aoi/pu_1km.shp",
   raster_file = "aoi/pu_1km.tif",
-  datatype = "INT1U",
+  raster_value = 1,
+  raster_datatype = "INT1U",
+  raster_name = "layer",
   overwrite = TRUE
 )
 }
@@ -105,8 +107,8 @@ relative to \code{project_dir}, or \code{NULL} to not write that file:
 \item \code{aoi_file}: the AOI (see \code{aoi_union}). Default \code{"aoi/aoi.shp"}.
 \item \code{polygons_file}: the planning-unit polygons. Default
 \code{"aoi/pu_1km.shp"}.
-\item \code{raster_file}: the planning-unit raster, 1 in every planning unit.
-Default \code{"aoi/pu_1km.tif"}.
+\item \code{raster_file}: the planning-unit raster, \code{raster_value} in every
+planning unit. Default \code{"aoi/pu_1km.tif"}.
 }
 
 The defaults are the WTW project layout wtw-data-prep2 writes. The
@@ -114,9 +116,20 @@ vector files' format follows their extension (any format GDAL writes,
 such as \code{.shp} or \code{.gpkg}); \code{raster_file} is written by
 \code{\link[=write_rasters]{write_rasters()}}. The three must be different files.}
 
-\item{datatype}{The data type of \code{raster_file}, one of terra's data types
-(see \code{\link[terra:writeRaster]{terra::writeRaster()}}). The default, \code{"INT1U"}, is
-wtw-data-prep2's.}
+\item{raster_value}{A single finite number, the value of the planning
+units in \code{raster_file}. The default, \code{1}, is wtw-data-prep2's. Ignored
+without \code{raster_file}.}
+
+\item{raster_datatype}{The data type of \code{raster_file}, one of terra's data
+types (see \code{\link[terra:writeRaster]{terra::writeRaster()}}). The default, \code{"INT1U"}, is
+wtw-data-prep2's. \code{raster_value} must be a value it stores: for an
+integer type, a whole number after rounding (halves away from zero)
+within the type's range and not its NoData value (for example 0 to 254
+for \code{"INT1U"}). Ignored without \code{raster_file}.}
+
+\item{raster_name}{A single, non-empty string, the name of the one band
+(layer) of \code{raster_file}, as terra reads it back with \code{\link[=names]{names()}}. The
+default, \code{"layer"}, is wtw-data-prep2's. Ignored without \code{raster_file}.}
 
 \item{overwrite}{A single logical. \code{TRUE} (the default) replaces existing
 files, as wtw-data-prep2 does; \code{FALSE} is an error if any of the files
@@ -174,9 +187,12 @@ replaced) and \code{\link[=write_rasters]{write_rasters()}} for the raster:
 their geometry. \code{value} keeps the type it has in the polygons, so
 with NAT_DATA's \code{idx.tif} (an \verb{INT*} data type) \code{NCCID} is an
 integer field (ADR 0019);
-\item \code{raster_file}: the raster of step 2 with 1 in every planning unit and
-\code{NA} elsewhere, one layer named \code{layer}, in \code{datatype}
-(\code{INT1U} by default, whose NoData value terra writes as 255).
+\item \code{raster_file}: the raster of step 2 with \code{raster_value} in every
+planning unit and \code{NA} elsewhere, one layer named \code{raster_name}, in
+\code{raster_datatype}, \code{NA} as terra's NoData value for it (rounded
+halves away from zero before an integer type). The defaults, 1 as
+\code{INT1U} (NoData 255) in a layer named \code{layer}, are wtw-data-prep2's
+\code{pu_1km.tif}.
 }
 }
 
@@ -212,6 +228,13 @@ pu <- create_wtw_planning_units(
   aoi, natdata_dir, project_dir,
   aoi_union = TRUE, aoi_file = "aoi/aoi.gpkg", raster_file = NULL
 )
+
+# The planning units as 0s in a signed data type, in a band named "pu"
+pu <- create_wtw_planning_units(
+  aoi, natdata_dir, project_dir,
+  raster_value = 0, raster_datatype = "INT2S", raster_name = "pu"
+)
+terra::rast(file.path(project_dir, "aoi", "pu_1km.tif"))
 }
 \seealso{
 \code{\link[=create_1km_grid]{create_1km_grid()}}, which makes the planning units, and

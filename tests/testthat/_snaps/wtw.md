@@ -65,10 +65,10 @@
 ---
 
     Code
-      create_wtw_planning_units(aoi, natdata, datatype = "INT9")
+      create_wtw_planning_units(aoi, natdata, raster_datatype = "INT9")
     Condition
       Error in `create_wtw_planning_units()`:
-      ! `datatype` must be one of terra's data types, not a string.
+      ! `raster_datatype` must be one of terra's data types, not a string.
       i Use one of "INT1U", "INT2U", "INT2S", "INT4U", "INT4S", "INT8U", "INT8S", "FLT4S", or "FLT8S".
 
 ---
@@ -103,6 +103,82 @@
     Condition
       Error in `create_1km_grid()`:
       ! `natdata_dir` must be an existing folder; 'no_such_folder' is not one.
+
+---
+
+    Code
+      create_wtw_planning_units(aoi, natdata, raster_value = NA)
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `raster_value` must be a single finite number, not `NA`.
+
+---
+
+    Code
+      create_wtw_planning_units(aoi, natdata, raster_value = c(1, 2))
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `raster_value` must be a single finite number, not a double vector.
+
+---
+
+    Code
+      create_wtw_planning_units(aoi, natdata, raster_value = 255)
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `raster_value` (255) cannot be written as `raster_datatype` "INT1U"; it would be written as NoData.
+      i Use a value from 0 to 254, or another data type.
+
+---
+
+    Code
+      create_wtw_planning_units(aoi, natdata, raster_value = 254.5)
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `raster_value` (254.5) cannot be written as `raster_datatype` "INT1U"; it would be written as NoData.
+      i Use a value from 0 to 254, or another data type.
+
+---
+
+    Code
+      create_wtw_planning_units(aoi, natdata, raster_value = -1, raster_datatype = "INT2U")
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `raster_value` (-1) cannot be written as `raster_datatype` "INT2U"; it would be written as NoData.
+      i Use a value from 0 to 65534, or another data type.
+
+---
+
+    Code
+      create_wtw_planning_units(aoi, natdata, raster_value = 255, raster_file = NULL)
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `raster_value` (255) cannot be written as `raster_datatype` "INT1U"; it would be written as NoData.
+      i Use a value from 0 to 254, or another data type.
+
+---
+
+    Code
+      create_wtw_planning_units(aoi, natdata, raster_name = "")
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `raster_name` must be a single, non-empty string, not `""`.
+
+---
+
+    Code
+      create_wtw_planning_units(aoi, natdata, raster_name = NA_character_)
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `raster_name` must be a single, non-empty string, not a character `NA`.
+
+---
+
+    Code
+      create_wtw_planning_units(aoi, natdata, raster_name = c("a", "b"))
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `raster_name` must be a single, non-empty string, not a character vector.
 
 # extract_wtw_natdata() gives clear errors
 
@@ -306,6 +382,22 @@
       Error in `extract_wtw_natdata()`:
       ! `align_value` (-32768) cannot be written as `align_datatype` "INT2S"; it would be written as NoData.
       i Use a value from -32767 to 32767, or another data type.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_name = "")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `align_name` must be a single, non-empty string, not `""`.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", align_name = 1)
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `align_name` must be a single, non-empty string, not a number.
 
 # the WTW folder functions give clear errors
 

@@ -583,7 +583,8 @@ WTW projects (wtw-data-prep2, and other tools that build WTW projects):
 cells = "touches", value = "NCCID", id = "PUID", index = "template",
 order = "value", trim = TRUE, aoi_union = FALSE,
 aoi_file = "aoi/aoi.shp", polygons_file = "aoi/pu_1km.shp",
-raster_file = "aoi/pu_1km.tif", datatype = "INT1U", overwrite = TRUE)`
+raster_file = "aoi/pu_1km.tif", raster_value = 1,
+raster_datatype = "INT1U", raster_name = "layer", overwrite = TRUE)`
 
 - wtw-data-prep2's step 02 in one call: `create_1km_grid()`, then the WTW
   files.
@@ -602,13 +603,17 @@ raster_file = "aoi/pu_1km.tif", datatype = "INT1U", overwrite = TRUE)`
   mb_prairie AOI, the files match wtw-data-prep2's (the same `aoi.shp`,
   planning units and `pu_1km.tif`), in about 6 seconds. Since #67,
   `pu_1km.shp`'s `NCCID` field is an integer, `N(9,0)`, as wtw-data-prep2
-  writes it; the `.dbf` is the same size.
+  writes it; the `.dbf` is the same size. Since #79, `pu_1km.tif`'s
+  value, data type and band name are the arguments `raster_value`
+  (default 1), `raster_datatype` (default `"INT1U"`, formerly `datatype`)
+  and `raster_name` (default `"layer"`), so the defaults write today's
+  file; a value the data type cannot store is an error.
 
 `extract_wtw_natdata(natdata_dir, project_dir,
 aoi_raster = file.path(project_dir, "aoi", "pu_1km.tif"),
 layers = read_natdata_metadata(natdata_dir), tifs_dir = "tifs",
 align_file = NULL, align_value = 1, align_datatype = "INT1U",
-round_int = TRUE, multiband = FALSE, drop_empty = TRUE,
+align_name = "layer", round_int = TRUE, multiband = FALSE, drop_empty = TRUE,
 overwrite = TRUE, progress = <a message per layer>)`
 
 - wtw-data-prep2's step 03 in one call: `extract_layers()` with the
@@ -623,7 +628,8 @@ overwrite = TRUE, progress = <a message per layer>)`
   `align_raster()` from a raster of 1s as `INT1U`, as today; nothing
   downstream reads it, so not writing it by default is an intended change.
   Since #76, its value and data type are the arguments `align_value`
-  (default 1) and `align_datatype` (default `"INT1U"`).
+  (default 1) and `align_datatype` (default `"INT1U"`), and since #79 its
+  band name is `align_name` (default `"layer"`).
   `progress` prints a short message per layer by default. On
   NAT_DATA_20261009 and the mb_prairie project, it writes the same 1,256
   files as the project's `tifs/` (names, folders, data types, NoData values,
