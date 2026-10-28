@@ -1,19 +1,21 @@
 name: CI
 
-# PRs only: with strict branch protection every PR is tested against current
-# main before it merges, so a run on push to main would test the same code
-# again. If you do not use strict protection, add this back under `on:` so a
-# fresh repo gets a first run:
+# PRs only: with strict branch protection every PR is tested against the
+# current tip of its base (dev, or main for a promotion; ADR 0024) before it
+# merges, so a run on push would test the same code again. If you do not use
+# strict protection, add this back under `on:` so a fresh repo gets a first
+# run:
 #   push:
-#     branches: [main]
+#     branches: [dev, main]
 #
 # Weekly: R dependencies are only pinned to minimum versions, so a new sf or
 # terra release can break the package with no commit here. The scheduled run
-# checks main against current CRAN, and also saves the R package cache on
-# main, which PRs can read. workflow_dispatch allows a manual run.
+# checks the default branch (dev) against current CRAN, and also saves the R
+# package cache on it, which PRs can read. workflow_dispatch allows a manual
+# run.
 on:
   pull_request:
-    branches: [main]
+    branches: [dev, main]
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
@@ -35,8 +37,8 @@ concurrency:
 #   The Ubuntu job runs in a pinned rocker/geospatial container, which
 #   already has R and the system libraries (GDAL, GEOS, PROJ), so nothing is
 #   installed with apt from the Ubuntu mirror; R packages come from current
-#   P3M binaries. It also runs styler, lintr and test coverage, so each run
-#   sets up R on Ubuntu once. Coverage is reported in that job's log and is
+#   P3M binaries. It also runs styler, lintr, the pkgdown config check and
+#   test coverage, so each run sets up R on Ubuntu once. Coverage is reported in that job's log and is
 #   not a gate. Every job caches its R package library, keyed by the
 #   versions pak resolves, so a new CRAN release is still installed.
 # - checks: the one required status check. It passes when every job it needs
@@ -163,7 +165,7 @@ jobs:
           cache-version: ${{ matrix.config.deps }}
           upgrade: 'TRUE'
           dependencies: ${{ matrix.config.deps == 'hard' && '"hard"' || '"all"' }}
-          extra-packages: any::rcmdcheck, any::testthat${{ matrix.config.extras && ', any::lintr, any::styler, any::covr, local::.' || '' }}
+          extra-packages: any::rcmdcheck, any::testthat${{ matrix.config.extras && ', any::lintr, any::styler, any::covr, any::pkgdown, local::.' || '' }}
           needs: check
 
       # Style, lint and coverage run only in the extras job. Style and lint
@@ -181,6 +183,14 @@ jobs:
         env:
           LINTR_ERROR_ON_LINT: true
         run: lintr::lint_package()
+        shell: Rscript {0}
+
+      # The site's reference index must list every exported topic, so a new
+      # function or family is not left off the release site (ADR 0025).
+      # This checks _pkgdown.yml only; the site is built on release.
+      - name: Check pkgdown config
+        if: matrix.config.extras && !cancelled() && steps.deps.outcome == 'success'
+        run: pkgdown::check_pkgdown()
         shell: Rscript {0}
 
       - uses: r-lib/actions/check-r-package@v2

@@ -28,7 +28,9 @@ while its API settles, and it is used only by ConsTech tools.
   (the R convention), with markdownlint's MD025 turned off for that file
   only (#49; see `CONTRIBUTING.md`).
 - A release is a Git tag (`vX.Y.Z`) on `main`, matching the `DESCRIPTION`
-  version.
+  version. Since ADR 0024, work lands on `dev` and reaches `main` through a
+  promotion PR from `dev`; the tag goes on that PR's merge commit.
+  Pushing the tag publishes the reference site for it (ADR 0025).
 - Before each release, check that the pinned CI image is current (ADR
   0022): the `rocker/geospatial` tag in `.github/workflows/ci.yml` is on
   the current R minor version. If not, bump it in its own PR first.
