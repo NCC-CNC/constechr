@@ -34,10 +34,10 @@ produced it.
 
 ## Status
 
-As of 2026-10-28, every v0.1.0 function below is built, documented and
-tested on `main` (#13 to #27), with its design choices in ADRs 0007 to
-0023. The v0.1.0 release (#28) is next, then wtw-data-prep2 switches to it
-(#29).
+As of 2026-10-28, v0.1.0 is released (#28): every function below is built,
+documented and tested (#13 to #27), with its design choices in ADRs 0007 to
+0023. Work now lands on `dev` and reaches `main` only by a promotion PR
+(ADR 0024). Next, wtw-data-prep2 switches to v0.1.0 (#29).
 
 ## MVP scope
 
