@@ -1,3 +1,5 @@
+<!-- markdownlint-disable-file MD025 -->
+
 # constechr 0.0.0.9018
 
 - `create_wtw_planning_units()`'s `datatype` argument is renamed
@@ -14,6 +16,8 @@
   arguments (in `extract_wtw_natdata()`) by position must name them.
   Decisions in ADR 0018 and ADR 0020.
 
+# constechr 0.0.0.9017
+
 - `extract_wtw_natdata()` has two new arguments for the optional aligned
   planning-unit file (#76): `align_value` (default `1`) and
   `align_datatype` (default `"INT1U"`), the value of the planning units in
@@ -23,6 +27,8 @@
   `INT1U`) is an error before any layer is read. The two follow
   `align_file`, before `round_int`, so calls passing `round_int` or later
   arguments by position must name them. Decision in ADR 0020.
+
+# constechr 0.0.0.9016
 
 - New `create_dataprep_template()` and `dataprep_columns()` write the
   `dataprep/dataprep.csv` template of wtw-data-prep2's step 01 (#27):
@@ -36,6 +42,8 @@
   fields. Decisions in ADR 0023. With the defaults it writes the same file
   as wtw-data-prep2's `create_project_folder()`, byte for byte.
 
+# constechr 0.0.0.9015
+
 - New `create_wtw_project_folder()` and `wtw_project_folders()` are
   wtw-data-prep2's step 01 folders (#26): `create_wtw_project_folder()`
   creates a WTW project folder and the folders in `folders`, keeping
@@ -47,6 +55,8 @@
   `extract_wtw_natdata()` writes to. Decisions in ADR 0021. The
   `dataprep/dataprep.csv` template step 01 also writes is not written (it
   is #27).
+
+# constechr 0.0.0.9014
 
 - New `extract_wtw_natdata()` is wtw-data-prep2's step 03 in one call
   (#25): `natdata_template()` and `extract_layers()` with the NAT_DATA
@@ -63,6 +73,8 @@
   nothing reads it; `align_file = "aoi/pu_1km_align.tif"` writes it as
   before (1s on the national template's grid, `INT1U`).
 
+# constechr 0.0.0.9013
+
 - Raster values keep their stored type (#67, ADR 0019), a change to
   results in type, not value. `rasterize_aoi()` returns cell numbers as
   integers, the template's values as integers when the template stores
@@ -75,6 +87,8 @@
   `NCCID` as an integer field, `N(9,0)`, as wtw-data-prep2 does (it was a
   real field). Integers beyond R's integer range (`INT4U` and larger) stay
   doubles.
+
+# constechr 0.0.0.9012
 
 - New `create_wtw_planning_units()` is wtw-data-prep2's step 02 in one call
   (#24): `create_1km_grid()`, then, with `project_dir`, the WTW project's
@@ -94,6 +108,8 @@
   number, not an integer (same values; an integer since #67), and each
   square's vertices start at another corner.
 
+# constechr 0.0.0.9011
+
 - New `create_1km_grid()` makes an AOI's NAT_DATA 1 km planning units
   (#23): `read_aoi()` in the national template's CRS, `rasterize_aoi()` on
   `natdata_template()` (`cells = "touches"` by default) and
@@ -109,6 +125,8 @@
   `geometry` (not `NCCID`, `geometry`, `PUID`); the AOI is dissolved into
   one polygon without attributes; and the "touches" rule is explicit, not
   reached through a 1000 m buffer and a mask.
+
+# constechr 0.0.0.9010
 
 - New `natdata_template()` opens the national 1 km template raster in a
   NAT_DATA folder, `_1km/idx.tif` by default (#22).
@@ -127,6 +145,8 @@
   (#22, ADR 0016). Tables with a `type` column for this must rename it.
 - `extract_layers()` gains `path_column`, the name of the `layers` column
   of file paths; the default, `"path"`, keeps its behaviour (#22).
+
+# constechr 0.0.0.9009
 
 - New `extract_layers()` extracts many data layers on a template for an AOI
   (#21): each layer (a GeoTIFF on the template or an `.rds` rij matrix) is
@@ -147,6 +167,9 @@
   folders created as needed.
 - `rij_matrix_to_raster()` now builds its rasters through the same internal
   helpers as `extract_layers()`; its results are unchanged.
+
+# constechr 0.0.0.9008
+
 - New `write_rasters()` writes the layers of a raster to files: one GeoTIFF
   per layer, `<dir>/<prefix><layer name>.tif`, or all layers to one
   multi-band file, `filename` or, for a raster read from one file,
@@ -163,6 +186,9 @@
   leaves no new files.
 - `align_raster()` now writes through the same internal writer as
   `write_rasters()`; its results are unchanged.
+
+# constechr 0.0.0.9007
+
 - New `rij_matrix_to_raster()` turns the rows of an rij matrix clipped to
   an AOI back into rasters on the template's grid, one layer per row,
   cropped to the AOI raster's extent and held in memory (#19). Decisions in
@@ -173,6 +199,9 @@
   `write_rasters()`), an rij matrix with no rows is an error instead of
   returning `NULL`, and the national template is not copied in memory for
   each layer.
+
+# constechr 0.0.0.9006
+
 - New `clip_rij_matrix()` keeps the columns of an rij matrix that fall in
   an AOI raster on the template's grid, and by default drops the rows with
   no values there, naming them in a message (#18). Decisions in ADR 0012. It
@@ -185,6 +214,9 @@
   an AOI raster off the template's grid is an error.
 - The error for repeated row names in `read_rij_matrix()` now reads "The
   row names of the rij matrix from `x` must be unique".
+
+# constechr 0.0.0.9005
+
 - New `read_rij_matrix()` reads one data layer as an rij matrix on a
   template: one row per feature, one column per template cell with data
   (#17). A raster on the template's grid (a GeoTIFF path or a `SpatRaster`)
@@ -198,6 +230,9 @@
   nor `.rds` needs `type`, instead of being read as an `.rds` file.
 - Matrix moves from `Suggests` to `Imports`; prioritizr is added to
   `Suggests`, needed only to convert rasters to rij matrices.
+
+# constechr 0.0.0.9004
+
 - New `align_raster()` puts any one-layer raster onto a template raster's
   grid (CRS, extent, resolution) with `terra::project()` (#16). `filename =
   NULL` writes `<input>_align.tif` beside a file input and keeps an
@@ -217,6 +252,9 @@
   - values written as an integer type are rounded, not truncated, which
     matters only for methods other than `"near"`;
   - an input that does not overlap the template is an error.
+
+# constechr 0.0.0.9003
+
 - New `polygonize_raster()` turns each cell of a one-layer raster that has
   a value into its own square polygon, as an `sf` layer (#15). `value`
   names the value column (default: the layer name) and `id` optionally adds
@@ -228,6 +266,9 @@
   are in terra's cell order (row by row from the top-left), not sorted by
   value, so on a template numbered from the bottom-left (such as
   `idx.tif`) the `PUID`s run from the top row down.
+
+# constechr 0.0.0.9002
+
 - New `rasterize_aoi()` rasterizes an AOI onto a template raster, onto
   coarser cells that nest in the template's, or onto a new grid at a given
   resolution (#14). `cells` (`"touches"` or `"centre"`) is required.
@@ -241,6 +282,9 @@
   Intended changes from that code: the cell rule is an explicit argument
   instead of a buffer and terra defaults, and an AOI that does not overlap
   the template is an error instead of an empty result.
+
+# constechr 0.0.0.9001
+
 - New `read_aoi()` reads an area of interest from `sf` or `SpatVector`
   polygons, a file (shapefile, GeoPackage, GeoJSON, `<gdb>/<layer>`) or
   bounds, with optional reprojection and dissolve (#13). It replaces the
@@ -252,6 +296,9 @@
   always named `geometry`.
 - sf and terra move from `Suggests` to `Imports`, with assertthat and cli
   for argument checks.
+
+# constechr 0.0.0.9000
+
 - Test fixtures (`tests/testthat/helper-fixtures.R`) and example files in
   `inst/extdata/` (a 10 x 10 template raster, an AOI and an rij matrix) for
   known-answer tests and examples (#11).

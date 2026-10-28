@@ -24,6 +24,9 @@ while its API settles, and it is used only by ConsTech tools.
     may include changes to results; each is called out in `NEWS.md`.
 - Every change to a function's results or arguments gets a `NEWS.md` entry
   and a version bump.
+- `NEWS.md` has one `# constechr x.y.z` heading per version, newest first
+  (the R convention), with markdownlint's MD025 turned off for that file
+  only (#49; see `CONTRIBUTING.md`).
 - A release is a Git tag (`vX.Y.Z`) on `main`, matching the `DESCRIPTION`
   version.
 - Before each release, check that the pinned CI image is current (ADR
