@@ -32,6 +32,13 @@ When a method changes, it changes once, in a new version, and each tool takes
 it when it is ready. A tool's output can record the constechr version that
 produced it.
 
+## Status
+
+As of 2026-10-28, every v0.1.0 function below is built, documented and
+tested on `main` (#13 to #27), with its design choices in ADRs 0007 to
+0023. The v0.1.0 release (#28) is next, then wtw-data-prep2 switches to it
+(#29).
+
 ## MVP scope
 
 The first release (v0.1.0), planned in the
@@ -113,6 +120,32 @@ which wait on the area and intersection methods ADR (#30).
 
 ## Open questions
 
-- One package, or a family of smaller packages as the scope grows?
-- The area and intersection methods to standardize on (CRS, planar or
-  spherical, partial cells, rounding).
+Each is tracked by an open issue:
+
+- The area and intersection methods to standardize on: CRS for areas,
+  planar or spherical, coverage-weighted or plain sums, partial cells, units
+  and rounding (#30). Not needed for v0.1.0, which has no area functions;
+  needed before the zonal sums and overlap areas in #35.
+- Whether wtw-data-prep2 runs its full pipeline on v0.1.0 with unchanged
+  outputs, so its copies can be deleted (#29, after the release).
+- Which later functions to add, and when: `summarize_aoi_raster()` (#31),
+  and zonal sums, overlap areas, ecoregions and unit conversions (#35,
+  after #30).
+- How tools find and trust the functions: a pkgdown reference site (#32), a
+  Claude Code plugin that maps tasks to functions (#33, design principle 7),
+  and a CI job that runs consumers' tests against `main` (#34).
+- Internal tidying: shared argument checks in one file (#53), with no change
+  to behaviour.
+
+## Settled questions
+
+- One package or a family of smaller packages: one package for now, with
+  the conditions for revisiting it (ADR 0003).
+- Raster alignment, terra or `gdalwarp`: terra only, after checking that it
+  gives the same output (#10, ADR 0007).
+- Versioning, distribution and licence: semantic versions installed from
+  GitHub tags (ADR 0004), GPL-3 (ADR 0005).
+- The methods and defaults of the v0.1.0 functions (AOI raster cells, rij
+  matrices, raster values, NAT_DATA and WTW conventions): ADRs 0008, 0010
+  to 0021 and 0023.
+- CI layout and the pinned Linux image: ADRs 0009 and 0022.
