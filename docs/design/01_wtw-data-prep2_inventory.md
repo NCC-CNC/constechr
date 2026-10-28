@@ -114,7 +114,7 @@ Design points for constechr:
 
 ### `natdata()`, `align_pu()`, `rij_clip()`, `rij_to_raster()`
 
-The extraction works on the whole national template (267,790,000 cells) through
+The extraction works on the whole national template (26,790,000 cells) through
 rij sparse matrices (`prioritizr::rij_matrix()`), so prebuilt species `.rds`
 rij files can be clipped without rasterizing them.
 
