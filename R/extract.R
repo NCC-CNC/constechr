@@ -102,6 +102,13 @@
 #'   where it reaches past its edge): the feature's values in the AOI cells
 #'   with template data, 0 where it has none, `NA` elsewhere. Values are
 #'   kept as they are (doubles, not rounded, no areas).
+#' - **Names in memory**: without `dir`, each raster is named after its
+#'   layer's file name without its extension. Repeated names (layers with
+#'   the same file name in different folders, or a layer given twice) are
+#'   made unique with [make.unique()], in the order of `layers`, among the
+#'   layers that are not skipped: the first keeps the name and later ones
+#'   get `.1`, `.2` and so on (`rij`, `rij.1`). Names that do not repeat are
+#'   unchanged. Written files are named by feature, not by these names.
 #' - **Writing** ([write_rasters()]), with `dir`: to
 #'   `<dir>/<subdir>/<prefix><feature>.tif`, or with `multiband = TRUE`
 #'   `<dir>/<subdir>/<prefix><file name without extension>.tif`. Each
@@ -133,9 +140,10 @@
 #'
 #' @return Without `dir`, a list of `SpatRaster`s held in memory, one per
 #'   layer with features left after clipping, in the order of `layers`, named
-#'   after the layer's file name without its extension; each has one layer
-#'   per feature, named after it. Layers that were skipped are left out, so
-#'   the list can be empty.
+#'   after the layer's file name without its extension, with repeated names
+#'   made unique by [make.unique()] (`rij`, `rij.1`; see Method); each has
+#'   one layer per feature, named after it. Layers that were skipped are left
+#'   out, so the list can be empty.
 #'
 #'   With `dir`, the paths of the files written, invisibly: a character
 #'   vector in the order written, named after the feature for one file per
@@ -282,6 +290,9 @@ extract_layers <- function(layers, aoi_raster, template, dir = NULL,
   }
   if (write) {
     return(invisible(written))
+  }
+  if (length(result) > 0) {
+    names(result) <- make.unique(names(result))
   }
   result
 }

@@ -81,6 +81,43 @@ test_that("raster layers are named after the file or their layers", {
   expect_equal(layer_values(y$cover), list(cover = inside_cover))
 })
 
+test_that("repeated file names are made unique in memory", {
+  old <- setwd(fixture_layers_dir())
+  on.exit(setwd(old), add = TRUE)
+  template <- fixture_template()
+  pu <- fixture_pu("inside")
+  rij <- fixture_rij()
+  dir.create("species")
+  dir.create("habitat")
+  saveRDS(rij, file.path("species", "rij.rds"))
+  saveRDS(rij["cover", , drop = FALSE], file.path("habitat", "rij.rds"))
+
+  # Two layers named rij in different folders, and one unique name between
+  # them: the first rij keeps its name, the second is rij.1, features is
+  # unchanged, and each holds its own rasters
+  x <- suppressMessages(
+    extract_layers(
+      c("species/rij.rds", "features.rds", "habitat/rij.rds"), pu, template
+    )
+  )
+  expect_identical(names(x), c("rij", "features", "rij.1"))
+  expect_identical(names(x$rij), c("sp_a", "cover"))
+  expect_identical(names(x$rij.1), "cover")
+  expect_equal(
+    layer_values(x$rij),
+    list(sp_a = inside_sp_a, cover = inside_cover)
+  )
+  expect_equal(layer_values(x$rij.1), list(cover = inside_cover))
+  expect_equal(layer_values(x$features), layer_values(x$rij))
+
+  # A layer given twice is named the same way, in the order of layers
+  y <- suppressMessages(
+    extract_layers(c("habitat/rij.rds", "habitat/rij.rds"), pu, template)
+  )
+  expect_identical(names(y), c("rij", "rij.1"))
+  expect_equal(layer_values(y$rij.1), list(cover = inside_cover))
+})
+
 test_that("files are written with each layer's prefix, type and subfolder", {
   skip_if_not_installed("prioritizr")
   old <- setwd(fixture_layers_dir())

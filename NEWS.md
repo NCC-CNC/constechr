@@ -1,5 +1,14 @@
 <!-- markdownlint-disable-file MD025 -->
 
+# constechr 0.1.0.9005
+
+- `extract_layers()` without `dir` makes repeated list names unique with
+  `make.unique()` (#96, ADR 0015). Two layers with the same file name in
+  different folders (such as `species/rij.rds` and `habitat/rij.rds`), or a
+  layer given twice, were both named `rij`, so `x[["rij"]]` returned only
+  the first; now they are `rij` and `rij.1`, in the order of `layers`.
+  Names change only for repeated file names; written files are unaffected.
+
 # constechr 0.1.0.9004
 
 - `rasterize_aoi()`'s `cells` argument has a default, `"centre"` (cells
