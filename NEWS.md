@@ -1,5 +1,17 @@
 <!-- markdownlint-disable-file MD025 -->
 
+# constechr 0.1.0.9006
+
+- `polygonize_raster()` gains `dissolve = FALSE` (#107). The default is
+  unchanged: one polygon per cell. `dissolve = TRUE` merges all cells with
+  the same value into one feature per value, whether or not they touch (a
+  value in separate patches gives one `MULTIPOLYGON`), ordered by value,
+  ascending, so `id` numbers the values. Values are matched exactly and
+  keep the raster's stored type (ADR 0019); they are not rounded or
+  compared in single precision, as `terra::as.polygons()`'s own
+  `dissolve = TRUE` does. `create_1km_grid()` and
+  `create_wtw_planning_units()` are unchanged.
+
 # constechr 0.1.0.9005
 
 - `extract_layers()` without `dir` makes repeated list names unique with

@@ -267,3 +267,82 @@ test_that("invalid arguments give clear errors", {
     polygonize_raster(x, value = "NCCID", id = "NCCID")
   })
 })
+
+test_that("dissolve = TRUE gives one feature per value, ordered by value", {
+  for (type in c("integer", "double")) {
+    x <- fixture_classes(as(c(3, 3, 1, 2, NA, 1, 1, 2, 2, 2, 1, 2), type))
+    p <- polygonize_raster(x, id = "id", dissolve = TRUE)
+
+    expect_s3_class(p, "sf")
+    expect_named(p, c("class", "id", "geometry"))
+    expect_identical(p$class, as(1:3, type), label = type)
+    expect_identical(p$id, 1:3)
+    expect_equal(
+      as.character(sf::st_geometry_type(p)),
+      c("POLYGON", "MULTIPOLYGON", "POLYGON"),
+      label = type
+    )
+    expect_identical(lengths(sf::st_geometry(p)[2]), 2L)
+    # Area is the cell count times the 1e6 m2 cell area
+    expect_equal(as.numeric(sf::st_area(p)), c(4, 5, 2) * 1e6, label = type)
+    expect_equal(sf::st_crs(p), sf::st_crs(fixture_template()))
+    expect_equal(
+      as.vector(sf::st_bbox(p[2, ])),
+      c(0, 0, 4000, 3000)
+    )
+  }
+})
+
+test_that("dissolve = TRUE orders by value, not by cell", {
+  # Values not in cell order, and not whole: order is ascending by value
+  x <- fixture_classes(
+    c(7.5, 7.5, -2, 0.25, NA, -2, -2, 0.25, 0.25, 0.25, -2, 0.25)
+  )
+  p <- polygonize_raster(x, value = "v", id = "id", dissolve = TRUE)
+  expect_identical(p$v, c(-2, 0.25, 7.5))
+  expect_identical(p$id, 1:3)
+  expect_equal(as.numeric(sf::st_area(p)), c(4, 5, 2) * 1e6)
+})
+
+test_that("dissolve = TRUE keeps values exactly, without rounding", {
+  # terra's own dissolve rounds to whole numbers and compares in single
+  # precision; these values would merge or change there
+  values <- c(0.1, 0.1, 1, 1 + 1e-12, NA, 1.4, 1.4, 1.6, 2, 2, 2, 2)
+  p <- polygonize_raster(fixture_classes(values), dissolve = TRUE)
+  expect_identical(p$class, c(0.1, 1, 1 + 1e-12, 1.4, 1.6, 2))
+  expect_equal(as.numeric(sf::st_area(p)), c(2, 1, 1, 2, 1, 4) * 1e6)
+})
+
+test_that("dissolve = TRUE on an AOI raster and on a raster without values", {
+  template <- fixture_template()
+  ones <- rasterize_aoi(
+    fixture_aoi("inside"), template,
+    cells = "touches", value = 1L
+  )
+  p <- polygonize_raster(ones, dissolve = TRUE)
+  expect_identical(nrow(p), 1L)
+  expect_identical(p$aoi, 1L)
+  expect_equal(as.numeric(sf::st_area(p)), 9e6)
+  expect_equal(as.vector(sf::st_bbox(p)), c(1003000, 604000, 1006000, 607000))
+
+  # Cell numbers are all distinct: one feature per cell, in value order
+  x <- rasterize_aoi(fixture_aoi("inside"), template, cells = "touches")
+  p <- polygonize_raster(x, dissolve = TRUE)
+  expect_identical(p$index, c(34L, 35L, 36L, 44L, 45L, 46L, 54L, 55L, 56L))
+
+  empty <- terra::rast(template)
+  terra::values(empty) <- rep(NA_integer_, 100)
+  p <- polygonize_raster(empty, value = "v", id = "id", dissolve = TRUE)
+  expect_identical(nrow(p), 0L)
+  expect_named(p, c("v", "id", "geometry"))
+  expect_identical(p$v, integer(0))
+})
+
+test_that("dissolve must be a flag", {
+  expect_snapshot(error = TRUE, {
+    polygonize_raster(fixture_template(), dissolve = "yes")
+  })
+  expect_snapshot(error = TRUE, {
+    polygonize_raster(fixture_template(), dissolve = NA)
+  })
+})
