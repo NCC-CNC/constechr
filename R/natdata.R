@@ -359,31 +359,6 @@ open_natdata_template <- function(natdata_dir, call) {
   )
 }
 
-#' Check an argument that takes one of a few strings
-#'
-#' @param x The value given.
-#' @param arg The argument's name.
-#' @param choices The accepted strings.
-#' @param call The environment that errors name.
-#' @return `x`, invisibly; an error if it is not one of `choices`.
-#' @noRd
-check_choice <- function(x, arg, choices, call) {
-  if (assertthat::is.string(x) && !(x %in% choices)) {
-    cli::cli_abort(
-      "{.arg {arg}} must be one of {.or {.str {choices}}}, not {.str {x}}.",
-      call = call
-    )
-  }
-  if (!assertthat::is.string(x)) {
-    cli::cli_abort(
-      "{.arg {arg}} must be one of {.or {.str {choices}}}, not
-      {.obj_type_friendly {x}}.",
-      call = call
-    )
-  }
-  invisible(x)
-}
-
 #' Check the `natdata_dir` argument
 #'
 #' @param natdata_dir The value given.
