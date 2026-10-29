@@ -8,7 +8,7 @@ name: pkgdown
 #   builds and deploys that tag.
 # - workflow_dispatch rebuilds the site for a tag given as input, for
 #   example to publish a release made before this workflow existed, or to
-#   redeploy after a failed run. Run it from dev (the default branch); the
+#   redeploy after a failed run. Run it from main (the default branch); the
 #   input must be a release tag. A tag made before _pkgdown.yml existed is
 #   built with the _pkgdown.yml of the branch the workflow runs from.
 on:
