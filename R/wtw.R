@@ -67,12 +67,13 @@
 #' 1. **AOI**: read once, with [read_aoi()]'s input handling and checks
 #'    (polygons or multipolygons only, with a CRS), files with
 #'    [read_layer()]; Z and M dropped; reprojected to the template's CRS
-#'    (`_1km/idx.tif`, Canada_Albers_WGS_1984) with [sf::st_transform()]
-#'    (PROJ), which moves each vertex. It must be one feature, or the
-#'    function stops before anything is written; nothing is dissolved
-#'    silently.
+#'    (`template_file` in `natdata_dir`, by default `_1km/idx.tif`, in
+#'    Canada_Albers_WGS_1984) with [sf::st_transform()] (PROJ), which moves
+#'    each vertex. It must be one feature, or the function stops before
+#'    anything is written; nothing is dissolved silently.
 #' 2. **Planning units**: [create_1km_grid()] on that feature, with
-#'    `cells`, `value`, `id`, `index` and `order` (its Method section has
+#'    `cells`, `value`, `id`, `index`, `order` and `template_file` (its
+#'    Method section has
 #'    the details): the AOI dissolved by [read_aoi()] (one feature, so the
 #'    same area); its cells on the template by
 #'    raster intersection (`"touches"` is GDAL's all-touched rule), without
@@ -170,9 +171,12 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
                                       raster_value = 1,
                                       raster_datatype = "INT1U",
                                       raster_name = "layer",
-                                      overwrite = TRUE) {
+                                      overwrite = TRUE,
+                                      template_file = "_1km/idx.tif") {
   call <- environment()
-  check_1km_grid_args(natdata_dir, cells, value, id, index, order, call)
+  check_1km_grid_args(
+    natdata_dir, cells, value, id, index, order, template_file, call
+  )
   check_project_dir(project_dir, call)
   check_flag(trim, "trim", call)
   files <- list(
@@ -203,7 +207,7 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
     }
   }
 
-  template <- open_natdata_template(natdata_dir, call)
+  template <- open_natdata_template(natdata_dir, template_file, call)
   aoi <- read_aoi_features(
     aoi, as_aoi_crs(template, call), call,
     arg = "aoi"
@@ -221,7 +225,8 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
 
   grid <- create_1km_grid(
     aoi, natdata_dir,
-    cells = cells, value = value, id = id, index = index, order = order
+    cells = cells, value = value, id = id, index = index, order = order,
+    template_file = template_file
   )
   if (trim && any(!is.na(terra::values(grid$aoi_raster, mat = FALSE)))) {
     grid$aoi_raster <- terra::trim(grid$aoi_raster)
@@ -259,10 +264,11 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
 #' except `aoi/pu_1km_align.tif`, written only when `align_file` asks for it.
 #'
 #' @param natdata_dir The NAT_DATA folder: a single path to an existing
-#'   folder, such as a dated release (`NAT_DATA_20261009`). Its template is
-#'   opened with [natdata_template()] (`_1km/idx.tif`) and, by default, its
-#'   catalogue read with [read_natdata_metadata()]. Where NAT_DATA lives is
-#'   each tool's own setting; this function only reads from it.
+#'   folder, such as a dated release (`NAT_DATA_20261009`). Its template,
+#'   the file `template_file`, is opened with [natdata_template()] and, by
+#'   default, its catalogue read with [read_natdata_metadata()]. Where
+#'   NAT_DATA lives is each tool's own setting; this function only reads
+#'   from it.
 #' @param project_dir The WTW project folder: a single folder path, under
 #'   which `tifs_dir` (and `align_file`) are written. Missing folders,
 #'   `project_dir` included, are created. Where the project lives is each
@@ -299,6 +305,7 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
 #'   (layer) of `align_file`, as terra reads it back with [names()]. The
 #'   default, `"layer"`, is wtw-data-prep2's. Ignored without `align_file`.
 #' @inheritParams extract_layers
+#' @inheritParams create_1km_grid
 #' @param multiband A single logical: `FALSE` (the default) writes one file
 #'   per feature, as wtw-data-prep2 does; `TRUE` writes one multi-band file
 #'   per layer, named after the layer's file (see [extract_layers()]).
@@ -313,9 +320,10 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
 #'   national extraction can take a while.
 #'
 #' @section Method:
-#' 1. **Template**: [natdata_template()] opens `natdata_dir`'s
-#'    `_1km/idx.tif`, the national grid of 1 km cells in
-#'    Canada_Albers_WGS_1984; only which of its cells have data is used.
+#' 1. **Template**: [natdata_template()] opens `template_file` in
+#'    `natdata_dir`, by default `_1km/idx.tif`, the national grid of 1 km
+#'    cells in Canada_Albers_WGS_1984; only which of its cells have data is
+#'    used.
 #' 2. **Layers**: [extract_layers()] with `path_column = "file"`, one layer
 #'    at a time, in the order of `layers`: each layer is read as an rij
 #'    matrix (a GeoTIFF on the template's grid, or an `.rds` rij matrix),
@@ -418,9 +426,11 @@ extract_wtw_natdata <- function(natdata_dir, project_dir,
                                   cli::cli_inform(
                                     "Layer {i} of {n}: {basename(layer)}"
                                   )
-                                }) {
+                                },
+                                template_file = "_1km/idx.tif") {
   call <- environment()
   check_natdata_dir(natdata_dir, call)
+  check_natdata_file(template_file, call, arg = "template_file")
   check_project_dir(project_dir, call, null_ok = FALSE)
   check_project_file(tifs_dir, "tifs_dir", call, folder = TRUE)
   check_project_file(align_file, "align_file", call)
@@ -455,7 +465,7 @@ extract_wtw_natdata <- function(natdata_dir, project_dir,
     )
   }
   aoi_raster <- as_raster_layer(aoi_raster, "aoi_raster", call)
-  template <- open_natdata_template(natdata_dir, call)
+  template <- open_natdata_template(natdata_dir, template_file, call)
 
   align_path <- NULL
   if (!is.null(align_file)) {

@@ -1,5 +1,17 @@
 <!-- markdownlint-disable-file MD025 -->
 
+# constechr 0.1.0.9009
+
+- `create_1km_grid()`, `create_wtw_planning_units()` and
+  `extract_wtw_natdata()` gain `template_file`, the national template's
+  file within `natdata_dir` as a path relative to it, passed to
+  `natdata_template()` as its `file` (#110). The default,
+  `"_1km/idx.tif"`, is the file they opened before, so no existing call or
+  result changes. Another path opens a template kept elsewhere in a
+  NAT_DATA folder, such as another version or resolution. It is the last
+  argument of each, so positional calls keep working. When the template
+  cannot be opened, the error names `template_file` and the path tried.
+
 # constechr 0.1.0.9008
 
 - New `write_raster_file()` writes a raster to one file at a given path

@@ -595,6 +595,44 @@ test_that("create_1km_grid()'s arguments are passed on", {
   expect_equal(pu$polygons$NCCID, c(45, 46, 55, 56, 65, 66))
 })
 
+test_that("template_file opens a template elsewhere in natdata_dir", {
+  skip_if_not_installed("sf")
+  aoi <- fixture_aoi("inside")
+  project <- tempfile("project")
+  default <- create_wtw_planning_units(aoi, fixture_natdata_idx_dir(), project)
+
+  natdata <- move_natdata_template(
+    fixture_natdata_idx_dir(), "grids/v2/template.tif"
+  )
+  moved <- tempfile("project")
+  pu <- create_wtw_planning_units(
+    aoi, natdata, moved,
+    template_file = "grids/v2/template.tif"
+  )
+  expect_identical(pu$polygons, default$polygons)
+  expect_identical(pu$aoi, default$aoi)
+  expect_identical(
+    terra::values(pu$aoi_raster, mat = FALSE),
+    terra::values(default$aoi_raster, mat = FALSE)
+  )
+  expect_identical(
+    pu$polygons$NCCID,
+    c(44L, 45L, 46L, 54L, 55L, 56L, 64L, 65L, 66L)
+  )
+  tif <- file.path("aoi", "pu_1km.tif")
+  expect_identical(
+    file_values(file.path(moved, tif)), file_values(file.path(project, tif))
+  )
+  expect_identical(
+    extent_of(terra::rast(file.path(moved, tif))),
+    extent_of(terra::rast(file.path(project, tif)))
+  )
+  expect_equal(
+    read_vector(file.path(moved, "aoi", "pu_1km.shp")),
+    read_vector(file.path(project, "aoi", "pu_1km.shp"))
+  )
+})
+
 test_that("an AOI without planning units warns and is not trimmed", {
   skip_if_not_installed("sf")
   natdata <- fixture_natdata_idx_dir()
@@ -660,6 +698,16 @@ test_that("create_wtw_planning_units() gives clear errors", {
   expect_snapshot(error = TRUE, {
     create_wtw_planning_units(aoi, natdata, project_dir = "a_file")
   })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(aoi, natdata, template_file = "")
+  })
+  expect_snapshot(error = TRUE, {
+    create_wtw_planning_units(
+      aoi, natdata, "new_project",
+      template_file = "_1km/missing.tif"
+    )
+  })
+  expect_false(dir.exists("new_project"))
   expect_snapshot(error = TRUE, {
     create_wtw_planning_units(aoi, natdata, trim = NA)
   })
@@ -848,6 +896,33 @@ test_that("extract_wtw_natdata() follows create_wtw_planning_units()", {
     aoi_raster = file.path(project, "aoi", "pu_1km.tif")
   ))
   expect_identical(written, folder_rasters(file.path(other, "tifs")))
+})
+
+test_that("extract_wtw_natdata() opens template_file in natdata_dir", {
+  skip_if_not_installed("sf")
+  skip_if_not_installed("prioritizr")
+  project <- fixture_project("inside")
+  suppressMessages(extract_wtw_natdata(fixture_natdata_dir(), project))
+  expected <- folder_rasters(file.path(project, "tifs"))
+
+  # The same template at another path gives the same files
+  natdata <- move_natdata_template(
+    fixture_natdata_dir(), "grids/v2/template.tif"
+  )
+  moved <- fixture_project("inside")
+  suppressMessages(extract_wtw_natdata(
+    natdata, moved,
+    template_file = "grids/v2/template.tif"
+  ))
+  written <- folder_rasters(file.path(moved, "tifs"))
+  expect_identical(written, expected)
+  expect_setequal(names(written), names(natdata_step03_files()))
+  for (file in names(natdata_step03_files())) {
+    expect_equal(
+      written[[file]]$values, natdata_step03_files()[[file]][[2]],
+      tolerance = 1e-7, label = file
+    )
+  }
 })
 
 test_that("align_file writes the planning units on the template's grid", {
@@ -1295,6 +1370,15 @@ test_that("extract_wtw_natdata() gives clear errors", {
     extract_wtw_natdata(
       "no_template", "project",
       layers = file.path(natdata, "themes", "habitat", "cover.tif")
+    )
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(natdata, "project", template_file = 1)
+  })
+  expect_snapshot(error = TRUE, {
+    extract_wtw_natdata(
+      natdata, "project",
+      template_file = "_1km/missing.tif"
     )
   })
   expect_snapshot(error = TRUE, {

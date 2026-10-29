@@ -26,6 +26,25 @@
 ---
 
     Code
+      create_wtw_planning_units(aoi, natdata, template_file = "")
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `template_file` must be a single file path relative to `natdata_dir`, not `""`.
+
+---
+
+    Code
+      create_wtw_planning_units(aoi, natdata, "new_project", template_file = "_1km/missing.tif")
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! The national template (`template_file`) in `natdata_dir` could not be opened.
+      i Path tried: 'natdata/_1km/missing.tif'.
+      Caused by error in `natdata_template()`:
+      ! `file` must be an existing file; 'natdata/_1km/missing.tif' does not exist.
+
+---
+
+    Code
       create_wtw_planning_units(aoi, natdata, trim = NA)
     Condition
       Error in `create_wtw_planning_units()`:
@@ -337,9 +356,29 @@
         "themes", "habitat", "cover.tif"))
     Condition
       Error in `extract_wtw_natdata()`:
-      ! The national template in `natdata_dir` could not be opened.
+      ! The national template (`template_file`) in `natdata_dir` could not be opened.
+      i Path tried: 'no_template/_1km/idx.tif'.
       Caused by error in `natdata_template()`:
       ! `file` must be an existing file; 'no_template/_1km/idx.tif' does not exist.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", template_file = 1)
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `template_file` must be a single file path relative to `natdata_dir`, not a number.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", template_file = "_1km/missing.tif")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! The national template (`template_file`) in `natdata_dir` could not be opened.
+      i Path tried: 'natdata/_1km/missing.tif'.
+      Caused by error in `natdata_template()`:
+      ! `file` must be an existing file; 'natdata/_1km/missing.tif' does not exist.
 
 ---
 
