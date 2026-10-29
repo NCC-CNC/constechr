@@ -136,6 +136,24 @@ fixture_template_bottom_left <- function() {
   x
 }
 
+# A 3 by 4 raster of 1000 m cells for dissolve = TRUE, by row from the top:
+#   3  3  1  2
+#   NA 1  1  2
+#   2  2  1  2
+# Value 1 is one patch of 4 cells, value 2 two patches (cells 9 and 10, and
+# cells 4, 8 and 12) of 5 cells in all, value 3 one patch of 2 cells. Layer
+# "class", in the template's CRS. Needs terra.
+fixture_classes <- function(values = c(3, 3, 1, 2, NA, 1, 1, 2, 2, 2, 1, 2)) {
+  x <- terra::rast(
+    nrows = 3, ncols = 4,
+    xmin = 0, xmax = 4000, ymin = 0, ymax = 3000,
+    crs = terra::crs(fixture_template())
+  )
+  terra::values(x) <- values
+  names(x) <- "class"
+  x
+}
+
 # AOI rectangles as offsets in metres from the template's left (x) and top
 # (y) edges: c(x_from, x_to, y_from, y_to). See the table above.
 fixture_aoi_offsets <- function() {

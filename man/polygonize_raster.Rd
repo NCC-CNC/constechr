@@ -2,48 +2,73 @@
 % Please edit documentation in R/polygonize.R
 \name{polygonize_raster}
 \alias{polygonize_raster}
-\title{Polygonize a raster, one polygon per cell}
+\title{Polygonize a raster, by cell or by value}
 \usage{
-polygonize_raster(x, value = names(x), id = NULL)
+polygonize_raster(x, value = names(x), id = NULL, dissolve = FALSE)
 }
 \arguments{
 \item{x}{The raster: a \code{SpatRaster} with one layer, or a path to a raster
 file with one layer.}
 
-\item{value}{The name of the column that holds each cell's raster value:
-a single, non-empty string. Defaults to the layer's name (\code{"index"} for
+\item{value}{The name of the column that holds the raster value: a
+single, non-empty string. Defaults to the layer's name (\code{"index"} for
 the default output of \code{\link[=rasterize_aoi]{rasterize_aoi()}}). wtw-data-prep2 uses
 \code{"NCCID"}.}
 
 \item{id}{\code{NULL} (the default) or the name of a column to add that numbers
-the polygons 1 to n in their order (see "Method"): a single, non-empty
+the rows 1 to n in their order (see "Method"): a single, non-empty
 string, different from \code{value}. wtw-data-prep2 uses \code{"PUID"}.}
+
+\item{dissolve}{\code{FALSE} (the default) for one polygon per cell, or \code{TRUE}
+for one feature per distinct value, merging all cells with that value
+(see "Method").}
 }
 \value{
-An \code{sf} data frame with one \code{POLYGON} row per cell that has a
-value, in the raster's CRS, with the columns \code{value} (the cell's value,
-an integer or a double as the raster stores it), then \code{id} (an integer,
-1 to n) if given, then \code{geometry}. A raster with no values gives zero
-rows. Nothing is written.
+An \code{sf} data frame in the raster's CRS: with \code{dissolve = FALSE},
+one \code{POLYGON} row per cell that has a value; with \code{dissolve = TRUE}, one
+\code{POLYGON} or \code{MULTIPOLYGON} row per distinct value. Its columns are
+\code{value} (the raster value, an integer or a double as the raster stores
+it), then \code{id} (an integer, 1 to n) if given, then \code{geometry}. A raster
+with no values gives zero rows. Nothing is written.
 }
 \description{
-Turns each cell of a one-layer raster that has a value into a square
-polygon holding that value, such as the planning-unit polygons of an AOI
-raster from \code{\link[=rasterize_aoi]{rasterize_aoi()}}. Neighbouring cells with the same value stay
-separate polygons, so every cell keeps its own row.
+Turns the cells of a one-layer raster that have a value into polygons
+holding that value. By default each cell becomes its own square polygon,
+such as the planning-unit polygons of an AOI raster from
+\code{\link[=rasterize_aoi]{rasterize_aoi()}}: neighbouring cells with the same value stay separate
+polygons, so every cell keeps its own row. With \code{dissolve = TRUE}, all
+cells with the same value are merged into one feature, such as one
+feature per class of a classified raster.
 }
 \section{Method}{
 
 \itemize{
-\item \strong{Polygons}: \code{\link[terra:as.polygons]{terra::as.polygons()}} with \code{dissolve = FALSE}. Each cell
-that is not \code{NA} becomes one square polygon whose corners are the
-cell's corners (a ring of four corners, closed), so polygons share
-edges exactly with their neighbours. Neighbouring cells with equal
-values are not merged. Cells that are \code{NA} get no polygon.
-\item \strong{Order}: terra's cell order, row by row from the top-left cell, so
-\code{id} 1 is the first cell with a value in the top row that has one.
-The order does not depend on the values.
-\item \strong{Values}: each cell's value, not rounded, in the type the raster
+\item \strong{Polygons} (\code{dissolve = FALSE}, the default): \code{\link[terra:as.polygons]{terra::as.polygons()}}
+with \code{dissolve = FALSE}. Each cell that is not \code{NA} becomes one square
+polygon whose corners are the cell's corners (a ring of four corners,
+closed), so polygons share edges exactly with their neighbours.
+Neighbouring cells with equal values are not merged. Cells that are
+\code{NA} get no polygon.
+\item \strong{Order} (\code{dissolve = FALSE}): terra's cell order, row by row from the
+top-left cell, so \code{id} 1 is the first cell with a value in the top row
+that has one. The order does not depend on the values.
+\item \strong{Merged polygons} (\code{dissolve = TRUE}): one feature per distinct value,
+holding every cell with that value, whether or not the cells touch.
+The distinct values are found exactly (no rounding) and numbered 1 to
+n in ascending order, and the raster of those numbers is polygonized
+with \code{\link[terra:as.polygons]{terra::as.polygons()}} (\code{dissolve = TRUE}). So values that differ
+only slightly are never merged, as they could be with terra's own
+\code{dissolve = TRUE}, which rounds values and compares them in single
+precision. Edges shared by cells of the same value are removed. A value
+in one connected patch gives a \code{POLYGON} (with holes where it encloses
+other cells); a value in several separate patches gives one
+\code{MULTIPOLYGON}, so the geometry column can mix the two types. Each
+feature's area is its number of cells times the cell area. Cells that
+are \code{NA} get no polygon. One feature per connected patch, rather than
+per value, is not offered.
+\item \strong{Order} (\code{dissolve = TRUE}): by value, ascending, so \code{id} numbers the
+values 1 to n, not the cells.
+\item \strong{Values}: the raster's values, not rounded, in the type the raster
 stores (ADR 0019): an integer column if the raster stores integers
 (\code{\link[terra:is.int]{terra::is.int()}}: an \verb{INT*} data type on file, such as NAT_DATA's
 \code{idx.tif}, or integer values in memory, such as the cell numbers of
@@ -56,9 +81,10 @@ field.
 computed.
 }
 
-Every cell with a value becomes a polygon, so polygonizing a large raster
-(such as the whole national template) makes millions of polygons; crop the
-raster to the area first, as \code{\link[=rasterize_aoi]{rasterize_aoi()}} does by default.
+With \code{dissolve = FALSE}, every cell with a value becomes a polygon, so
+polygonizing a large raster (such as the whole national template) makes
+millions of polygons; crop the raster to the area first, as
+\code{\link[=rasterize_aoi]{rasterize_aoi()}} does by default.
 }
 
 \examples{
@@ -76,6 +102,11 @@ pu
 # Equal values are not merged: nine cells of 1 give nine polygons
 ones <- rasterize_aoi(aoi, template, cells = "touches", value = 1)
 nrow(polygonize_raster(ones))
+
+# dissolve = TRUE merges cells by value: here, one feature per class of
+# the template's cell numbers grouped into tens
+classes <- terra::rast(template) \%/\% 10
+polygonize_raster(classes, value = "class", id = "id", dissolve = TRUE)
 }
 \seealso{
 \code{\link[=rasterize_aoi]{rasterize_aoi()}} makes the AOI rasters this function is used on.

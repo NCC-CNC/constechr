@@ -317,7 +317,7 @@ cells = "centre", value = "index", drop_na = TRUE, crop = TRUE)`
   wtw-data-prep2's `create_1km_grid()` gives the same cells as
   `cells = "touches"` on the fixtures (an equivalence test records them).
 
-`polygonize_raster(x, value = names(x), id = NULL)`
+`polygonize_raster(x, value = names(x), id = NULL, dissolve = FALSE)`
 
 - Split out of `create_1km_grid()`.
 - Polygonizes any one-layer raster (`SpatRaster` or path) with one polygon
@@ -340,6 +340,11 @@ cells = "centre", value = "index", drop_na = TRUE, crop = TRUE)`
   for a raster that stores integers (an `INT*` data type, or integer values
   in memory, such as `rasterize_aoi()`'s cell numbers), a double column for
   floats.
+- `dissolve = TRUE` (#107) merges all cells with the same value into one
+  feature per value (a `MULTIPOLYGON` for a value in separate patches),
+  ordered by value, so `id` numbers values. Values are matched exactly, not
+  rounded as `terra::as.polygons()`'s own dissolve does. Planning units keep
+  the default `FALSE`.
 
 `summarize_aoi_raster(aoi_raster, template = NULL)` (candidate)
 
