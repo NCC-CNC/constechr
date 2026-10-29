@@ -1,14 +1,17 @@
 #' Read an area of interest
 #'
 #' Reads an area of interest (AOI) from polygons, a file or bounds, and
-#' returns it as an `sf` polygon layer, optionally reprojected and dissolved
-#' into one feature. It is the one entry point for AOIs in constechr, so
-#' every tool reads an AOI the same way before rasterizing or extracting data
-#' for it.
+#' returns it as one area: an `sf` data frame with one row, the polygons
+#' dissolved into one polygon or multipolygon, without attributes, and
+#' optionally reprojected. It is the one entry point for AOIs in constechr,
+#' so every tool reads an AOI the same way before rasterizing or extracting
+#' data for it. To read features with their attributes, such as polygons to
+#' summarise data by, use [read_layer()] (and [sf::st_transform()] to
+#' reproject them) instead.
 #'
 #' @param x The AOI, one of:
 #'   - an `sf` data frame or `sfc` geometry column of polygons or
-#'     multipolygons;
+#'     multipolygons, with one feature or several;
 #'   - a terra `SpatVector` of polygons;
 #'   - a file path (a single string) to a vector file that GDAL can read,
 #'     such as a shapefile (`.shp`), GeoPackage (`.gpkg`) or GeoJSON
@@ -25,9 +28,6 @@
 #'   `SpatRaster`, `SpatVector`) whose CRS to use. `NULL` (the default) keeps
 #'   the input's CRS. For bounds that carry no CRS (a numeric vector or a
 #'   `SpatExtent`), `crs` is required and is the CRS the bounds are in.
-#' @param union A single logical. `TRUE` (the default) dissolves all the
-#'   polygons into one feature and drops their attributes; `FALSE` keeps the
-#'   features and their attributes as they are.
 #'
 #' @section Method:
 #' - **Reading**: files are read with [read_layer()] ([sf::st_read()],
@@ -40,17 +40,18 @@
 #'   with [sf::st_transform()] (PROJ), which moves each vertex; edges are not
 #'   densified, so a rectangle keeps its four corners. When `crs` is `NULL`
 #'   or the same as the input's, coordinates are left untouched.
-#' - **Dissolve** (`union = TRUE`): [sf::st_union()], after reprojection, in
-#'   the target CRS. In a projected CRS the union is planar (GEOS). In a
-#'   geographic (longitude and latitude) CRS it is spherical (s2) when
-#'   [sf::sf_use_s2()] is `TRUE`, sf's default, and planar otherwise.
+#' - **Dissolve**: always, with [sf::st_union()], after reprojection, in the
+#'   target CRS, so the AOI is one area whatever the number of input
+#'   features; attributes are dropped and empty geometries disappear. In a
+#'   projected CRS the union is planar (GEOS). In a geographic (longitude
+#'   and latitude) CRS it is spherical (s2) when [sf::sf_use_s2()] is
+#'   `TRUE`, sf's default, and planar otherwise.
 #' - No areas or lengths are computed.
 #'
-#' @return An `sf` data frame of `POLYGON` or `MULTIPOLYGON` geometries in
-#'   the target CRS (the input's when `crs` is `NULL`), with its geometry
-#'   column named `geometry`. With `union = TRUE`, one row and no attribute
-#'   columns; with `union = FALSE`, one row per input feature with its
-#'   attributes. Nothing is written.
+#' @return An `sf` data frame with one row: one `POLYGON` or `MULTIPOLYGON`
+#'   geometry in the target CRS (the input's when `crs` is `NULL`), in a
+#'   geometry column named `geometry`, and no attribute columns. Nothing is
+#'   written.
 #'
 #' @family aoi
 #' @seealso [read_layer()] to read a vector layer's features and attributes
@@ -77,29 +78,38 @@
 #'   c(xmin = 1003000, ymin = 604000, xmax = 1006000, ymax = 607000),
 #'   crs = template
 #' )
-read_aoi <- function(x, crs = NULL, union = TRUE) {
+read_aoi <- function(x, crs = NULL) {
   call <- environment()
-  if (!assertthat::is.flag(union) || is.na(union)) {
-    cli::cli_abort(
-      "{.arg union} must be {.code TRUE} or {.code FALSE}, not
-      {.obj_type_friendly {union}}.",
-      call = call
-    )
-  }
   target <- if (is.null(crs)) NULL else as_aoi_crs(crs, call)
+  aoi <- read_aoi_features(x, target, call)
+  aoi <- sf::st_sf(geometry = sf::st_union(aoi))
+  sf::st_geometry(aoi) <- "geometry"
+  aoi
+}
 
+#' Read an AOI's features: checked, two-dimensional and reprojected
+#'
+#' The input handling of `read_aoi()`, without the dissolve, shared with
+#' `create_wtw_planning_units()`, which keeps the one feature it requires
+#' with its attributes.
+#'
+#' @param x Anything `read_aoi()` accepts.
+#' @param crs The target CRS (a `crs` object, from `as_aoi_crs()`) or
+#'   `NULL` to keep the input's.
+#' @param call The environment that errors name.
+#' @param arg The name of the argument that errors name.
+#' @return An `sf` data frame, one row per feature with its attributes, its
+#'   geometry column named `geometry`, Z and M dropped, in `crs`.
+#' @noRd
+read_aoi_features <- function(x, crs, call, arg = "x") {
   aoi <- if (is_aoi_bounds(x)) {
-    aoi_from_bounds(x, target, call)
+    aoi_from_bounds(x, crs, call, arg)
   } else {
-    aoi_from_polygons(x, call)
+    aoi_from_polygons(x, call, arg)
   }
-
   aoi <- sf::st_zm(aoi)
-  if (!is.null(target) && sf::st_crs(aoi) != target) {
-    aoi <- sf::st_transform(aoi, target)
-  }
-  if (union) {
-    aoi <- sf::st_sf(geometry = sf::st_union(aoi))
+  if (!is.null(crs) && sf::st_crs(aoi) != crs) {
+    aoi <- sf::st_transform(aoi, crs)
   }
   sf::st_geometry(aoi) <- "geometry"
   aoi
@@ -148,9 +158,10 @@ as_aoi_crs <- function(crs, call) {
 #' @param crs The target CRS (a `crs` object) or `NULL`; used as the bounds'
 #'   CRS when the bounds carry none.
 #' @param call The environment that errors name.
+#' @param arg The name of the argument that errors name.
 #' @return An `sf` data frame with one rectangle, in the bounds' CRS.
 #' @noRd
-aoi_from_bounds <- function(x, crs, call) {
+aoi_from_bounds <- function(x, crs, call, arg = "x") {
   coords <- c("xmin", "ymin", "xmax", "ymax")
   bounds_crs <- sf::NA_crs_
   if (inherits(x, "SpatExtent")) {
@@ -167,7 +178,7 @@ aoi_from_bounds <- function(x, crs, call) {
     if (!setequal(names(x), coords) || anyDuplicated(names(x)) > 0) {
       cli::cli_abort(
         c(
-          "Bounds in {.arg x} must be named {.val {coords}}.",
+          "Bounds in {.arg {arg}} must be named {.val {coords}}.",
           "x" = "Names given: {.val {names(x)}}."
         ),
         call = call
@@ -182,7 +193,7 @@ aoi_from_bounds <- function(x, crs, call) {
   if (!valid) {
     cli::cli_abort(
       c(
-        "Bounds in {.arg x} must be finite, with {.code xmin < xmax} and
+        "Bounds in {.arg {arg}} must be finite, with {.code xmin < xmax} and
         {.code ymin < ymax}.",
         "i" = "An unnamed vector is read as {.code c(xmin, ymin, xmax,
         ymax)}."
@@ -215,19 +226,20 @@ aoi_from_bounds <- function(x, crs, call) {
 #'
 #' @param x An `sf`, `sfc` or `SpatVector`, or a file path.
 #' @param call The environment that errors name.
+#' @param arg The name of the argument that errors name.
 #' @return An `sf` data frame.
 #' @noRd
-aoi_from_polygons <- function(x, call) {
+aoi_from_polygons <- function(x, call, arg = "x") {
   if (inherits(x, "sfc")) {
     x <- sf::st_sf(geometry = x)
   } else if (inherits(x, "SpatVector")) {
     x <- sf::st_as_sf(x)
   } else if (assertthat::is.string(x) && !is.na(x)) {
-    x <- read_aoi_file(x, call)
+    x <- read_aoi_file(x, call, arg)
   } else if (!inherits(x, "sf")) {
     cli::cli_abort(
       c(
-        "{.arg x} must be an AOI, not {.obj_type_friendly {x}}.",
+        "{.arg {arg}} must be an AOI, not {.obj_type_friendly {x}}.",
         "i" = "Use an {.cls sf} or {.cls SpatVector} of polygons, a file
         path, or bounds {.code c(xmin, ymin, xmax, ymax)}."
       ),
@@ -237,25 +249,31 @@ aoi_from_polygons <- function(x, call) {
 
   empty <- sf::st_is_empty(x)
   if (nrow(x) == 0 || all(empty)) {
-    cli::cli_abort("{.arg x} has no polygons.", call = call)
+    cli::cli_abort("{.arg {arg}} has no polygons.", call = call)
   }
   types <- unique(as.character(sf::st_geometry_type(x)[!empty]))
   other <- setdiff(types, c("POLYGON", "MULTIPOLYGON"))
   if (length(other) > 0) {
     cli::cli_abort(
       c(
-        "{.arg x} must hold polygons or multipolygons only.",
+        "{.arg {arg}} must hold polygons or multipolygons only.",
         "x" = "It holds {.val {other}} geometr{?y/ies}."
       ),
       call = call
     )
   }
   if (is.na(sf::st_crs(x))) {
+    # Only read_aoi() (argument `x`) has a `crs` argument to mention.
+    hint <- if (identical(arg, "x")) {
+      "Set one with {.fn sf::st_set_crs} first; {.arg crs} is the CRS to
+      reproject to."
+    } else {
+      "Set one with {.fn sf::st_set_crs} first."
+    }
     cli::cli_abort(
       c(
-        "{.arg x} has no coordinate reference system.",
-        "i" = "Set one with {.fn sf::st_set_crs} first; {.arg crs} is the
-        CRS to reproject to."
+        "{.arg {arg}} has no coordinate reference system.",
+        "i" = hint
       ),
       call = call
     )
@@ -266,15 +284,16 @@ aoi_from_polygons <- function(x, call) {
 #' Read an AOI file as sf
 #'
 #' Splits `<path>/<layer>` and reads the layer with `read_vector_layer()`,
-#' the reader behind [read_layer()], so errors name `x`.
+#' the reader behind [read_layer()], so errors name `arg`.
 #'
 #' @param path A single string: a file or folder GDAL can open, or
 #'   `<path>/<layer>` to name a layer in it. Without a layer, the first
 #'   layer is read, with a message if there are others.
 #' @param call The environment that errors name.
+#' @param arg The name of the argument that errors name.
 #' @return An `sf` data frame.
 #' @noRd
-read_aoi_file <- function(path, call) {
+read_aoi_file <- function(path, call, arg = "x") {
   if (file.exists(path)) {
     dsn <- path
     layer <- NULL
@@ -283,7 +302,8 @@ read_aoi_file <- function(path, call) {
     layer <- basename(path)
     if (identical(dsn, path) || !file.exists(dsn)) {
       cli::cli_abort(
-        "{.arg x} must be an existing file; {.file {path}} does not exist.",
+        "{.arg {arg}} must be an existing file; {.file {path}} does not
+        exist.",
         call = call
       )
     }
@@ -293,6 +313,7 @@ read_aoi_file <- function(path, call) {
     layer = layer,
     read_args = list(),
     hint = "Name one as {.code <path>/<layer>}.",
-    call = call
+    call = call,
+    arg = arg
   )
 }

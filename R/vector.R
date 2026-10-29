@@ -109,8 +109,8 @@ check_layer <- function(layer, call) {
 
 #' Read one layer of an existing vector source as sf, checked
 #'
-#' Shared by `read_layer()` and `read_aoi()`. Errors name `x`, the source
-#' argument of both.
+#' Shared by `read_layer()` and `read_aoi()`. Errors name `arg`, the
+#' source argument (`x` in both).
 #'
 #' @param dsn A single string: an existing file or folder.
 #' @param layer `NULL` (the first layer), a layer name or a layer position.
@@ -119,26 +119,28 @@ check_layer <- function(layer, call) {
 #' @param hint A cli string, the hint in the message for a multi-layer
 #'   source read without a layer: how to choose another layer.
 #' @param call The environment that errors name.
+#' @param arg The name of the argument that errors name, the source.
 #' @return An `sf` data frame.
 #' @noRd
-read_vector_layer <- function(dsn, layer, read_args, hint, call) {
+read_vector_layer <- function(dsn, layer, read_args, hint, call,
+                              arg = "x") {
   layers <- tryCatch(
     sf::st_layers(dsn)$name,
     error = function(e) NULL
   )
   if (is.null(layers)) {
     cli::cli_abort(
-      "{.arg x} could not be opened as vector data.",
+      "{.arg {arg}} could not be opened as vector data.",
       call = call
     )
   }
   if (length(layers) == 0) {
-    cli::cli_abort("{.arg x} has no layers.", call = call)
+    cli::cli_abort("{.arg {arg}} has no layers.", call = call)
   }
 
   if (any(names(read_args) == "dsn")) {
     cli::cli_abort(
-      "{.arg dsn} cannot be passed to {.fn sf::st_read}; use {.arg x}.",
+      "{.arg dsn} cannot be passed to {.fn sf::st_read}; use {.arg {arg}}.",
       call = call
     )
   }
@@ -150,7 +152,7 @@ read_vector_layer <- function(dsn, layer, read_args, hint, call) {
       cli::cli_inform(
         c(
           "Reading layer {.val {layer}}, the first of {length(layers)}
-          layers in {.arg x}.",
+          layers in {.arg {arg}}.",
           "i" = "Its other layer{?s} {?is/are} {.val {layers[-1]}}.",
           "i" = hint
         )
@@ -160,7 +162,7 @@ read_vector_layer <- function(dsn, layer, read_args, hint, call) {
     if (!(layer %in% layers)) {
       cli::cli_abort(
         c(
-          "Layer {.val {layer}} does not exist in {.arg x}.",
+          "Layer {.val {layer}} does not exist in {.arg {arg}}.",
           "i" = "Its layers are {.val {layers}}."
         ),
         call = call
@@ -170,7 +172,7 @@ read_vector_layer <- function(dsn, layer, read_args, hint, call) {
     if (layer > length(layers)) {
       cli::cli_abort(
         c(
-          "{.arg layer} is position {layer}, but {.arg x} has
+          "{.arg layer} is position {layer}, but {.arg {arg}} has
           {length(layers)} layer{?s}.",
           "i" = "Its layers are {.val {layers}}."
         ),
@@ -188,9 +190,9 @@ read_vector_layer <- function(dsn, layer, read_args, hint, call) {
   out <- do.call(sf::st_read, c(source, read_args, defaults))
   if (!inherits(out, "sf")) {
     msg <- if (has_query) {
-      "The query on {.arg x} returned no geometries."
+      "The query on {.arg {arg}} returned no geometries."
     } else {
-      "Layer {.val {layer}} of {.arg x} has no geometries."
+      "Layer {.val {layer}} of {.arg {arg}} has no geometries."
     }
     cli::cli_abort(msg, call = call)
   }

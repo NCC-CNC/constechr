@@ -194,6 +194,13 @@ fixture_aoi_two <- function() {
   )
 }
 
+# fixture_aoi_two() as one feature: its two rectangles as one MULTIPOLYGON
+# row, named "ab", in the template's CRS. It gets the same cells. Needs sf.
+fixture_aoi_multi <- function() {
+  two <- fixture_aoi_two()
+  sf::st_sf(name = "ab", geometry = sf::st_combine(sf::st_geometry(two)))
+}
+
 # A planning-unit raster for an AOI, as wtw-data-prep2's `pu_1km.tif`: 1 in
 # the cells `fixture_aoi(name)` gets under `cells` ("touches" or "centre"),
 # NA elsewhere, on the template's grid cropped to the AOI (snapped out to

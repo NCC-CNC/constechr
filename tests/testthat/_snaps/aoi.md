@@ -19,16 +19,6 @@
       ! `x` must be an AOI, not a character vector.
       i Use an <sf> or <SpatVector> of polygons, a file path, or bounds `c(xmin, ymin, xmax, ymax)`.
     Code
-      read_aoi(aoi, union = NA)
-    Condition
-      Error in `read_aoi()`:
-      ! `union` must be `TRUE` or `FALSE`, not `NA`.
-    Code
-      read_aoi(aoi, union = "yes")
-    Condition
-      Error in `read_aoi()`:
-      ! `union` must be `TRUE` or `FALSE`, not a string.
-    Code
       read_aoi(aoi, crs = "not a crs")
     Condition
       Error in `read_aoi()`:

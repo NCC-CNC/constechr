@@ -4,13 +4,13 @@
 \alias{read_aoi}
 \title{Read an area of interest}
 \usage{
-read_aoi(x, crs = NULL, union = TRUE)
+read_aoi(x, crs = NULL)
 }
 \arguments{
 \item{x}{The AOI, one of:
 \itemize{
 \item an \code{sf} data frame or \code{sfc} geometry column of polygons or
-multipolygons;
+multipolygons, with one feature or several;
 \item a terra \code{SpatVector} of polygons;
 \item a file path (a single string) to a vector file that GDAL can read,
 such as a shapefile (\code{.shp}), GeoPackage (\code{.gpkg}) or GeoJSON
@@ -29,24 +29,22 @@ order, or unnamed in that order), an \code{sf} \code{bbox} (from
 \code{SpatRaster}, \code{SpatVector}) whose CRS to use. \code{NULL} (the default) keeps
 the input's CRS. For bounds that carry no CRS (a numeric vector or a
 \code{SpatExtent}), \code{crs} is required and is the CRS the bounds are in.}
-
-\item{union}{A single logical. \code{TRUE} (the default) dissolves all the
-polygons into one feature and drops their attributes; \code{FALSE} keeps the
-features and their attributes as they are.}
 }
 \value{
-An \code{sf} data frame of \code{POLYGON} or \code{MULTIPOLYGON} geometries in
-the target CRS (the input's when \code{crs} is \code{NULL}), with its geometry
-column named \code{geometry}. With \code{union = TRUE}, one row and no attribute
-columns; with \code{union = FALSE}, one row per input feature with its
-attributes. Nothing is written.
+An \code{sf} data frame with one row: one \code{POLYGON} or \code{MULTIPOLYGON}
+geometry in the target CRS (the input's when \code{crs} is \code{NULL}), in a
+geometry column named \code{geometry}, and no attribute columns. Nothing is
+written.
 }
 \description{
 Reads an area of interest (AOI) from polygons, a file or bounds, and
-returns it as an \code{sf} polygon layer, optionally reprojected and dissolved
-into one feature. It is the one entry point for AOIs in constechr, so
-every tool reads an AOI the same way before rasterizing or extracting data
-for it.
+returns it as one area: an \code{sf} data frame with one row, the polygons
+dissolved into one polygon or multipolygon, without attributes, and
+optionally reprojected. It is the one entry point for AOIs in constechr,
+so every tool reads an AOI the same way before rasterizing or extracting
+data for it. To read features with their attributes, such as polygons to
+summarise data by, use \code{\link[=read_layer]{read_layer()}} (and \code{\link[sf:st_transform]{sf::st_transform()}} to
+reproject them) instead.
 }
 \section{Method}{
 
@@ -61,10 +59,12 @@ AOI is two-dimensional. Geometries are neither validated nor repaired.
 with \code{\link[sf:st_transform]{sf::st_transform()}} (PROJ), which moves each vertex; edges are not
 densified, so a rectangle keeps its four corners. When \code{crs} is \code{NULL}
 or the same as the input's, coordinates are left untouched.
-\item \strong{Dissolve} (\code{union = TRUE}): \code{\link[sf:st_union]{sf::st_union()}}, after reprojection, in
-the target CRS. In a projected CRS the union is planar (GEOS). In a
-geographic (longitude and latitude) CRS it is spherical (s2) when
-\code{\link[sf:sf_use_s2]{sf::sf_use_s2()}} is \code{TRUE}, sf's default, and planar otherwise.
+\item \strong{Dissolve}: always, with \code{\link[sf:st_union]{sf::st_union()}}, after reprojection, in the
+target CRS, so the AOI is one area whatever the number of input
+features; attributes are dropped and empty geometries disappear. In a
+projected CRS the union is planar (GEOS). In a geographic (longitude
+and latitude) CRS it is spherical (s2) when \code{\link[sf:sf_use_s2]{sf::sf_use_s2()}} is
+\code{TRUE}, sf's default, and planar otherwise.
 \item No areas or lengths are computed.
 }
 }

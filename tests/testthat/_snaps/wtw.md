@@ -1,3 +1,12 @@
+# an AOI of several features is an error, and nothing is written
+
+    Code
+      create_wtw_planning_units(fixture_aoi_two(), natdata, project)
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `aoi` must be one feature, not 2.
+      i Dissolve the features into one first, for example with `read_aoi()`.
+
 # create_wtw_planning_units() gives clear errors
 
     Code
@@ -25,10 +34,28 @@
 ---
 
     Code
-      create_wtw_planning_units(aoi, natdata, aoi_union = "yes")
+      create_wtw_planning_units(1:3, natdata)
     Condition
       Error in `create_wtw_planning_units()`:
-      ! `aoi_union` must be `TRUE` or `FALSE`, not a string.
+      ! `aoi` must be an AOI, not an integer vector.
+      i Use an <sf> or <SpatVector> of polygons, a file path, or bounds `c(xmin, ymin, xmax, ymax)`.
+
+---
+
+    Code
+      create_wtw_planning_units(sf::st_set_crs(aoi, NA), natdata)
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `aoi` has no coordinate reference system.
+      i Set one with `sf::st_set_crs()` first.
+
+---
+
+    Code
+      create_wtw_planning_units(file.path("no-such-folder", "aoi.shp"), natdata)
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `aoi` must be an existing file; 'no-such-folder/aoi.shp' does not exist.
 
 ---
 
@@ -93,7 +120,7 @@
     Code
       create_wtw_planning_units(aoi, natdata, cells = "all")
     Condition
-      Error in `create_1km_grid()`:
+      Error in `create_wtw_planning_units()`:
       ! `cells` must be one of "touches" or "centre", not a string.
 
 ---
@@ -101,7 +128,7 @@
     Code
       create_wtw_planning_units(aoi, "no_such_folder")
     Condition
-      Error in `create_1km_grid()`:
+      Error in `create_wtw_planning_units()`:
       ! `natdata_dir` must be an existing folder; 'no_such_folder' is not one.
 
 ---
