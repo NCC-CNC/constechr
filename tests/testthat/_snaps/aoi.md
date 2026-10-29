@@ -1,3 +1,45 @@
+# a geometry collection with points or lines is rejected
+
+    Code
+      read_aoi(aoi)
+    Condition
+      Error in `read_aoi()`:
+      ! `x` must hold polygons or multipolygons only.
+      x It holds "LINESTRING" geometry.
+      i A geometry collection is accepted only if it holds polygons only.
+
+# invalid geometries give a clear error
+
+    Code
+      read_aoi(aoi)
+    Condition
+      Error in `read_aoi()`:
+      ! `x` has 1 invalid geometry.
+      x Feature 2: Self-intersection[1003500 604500]
+      i Repair it first, for example with `sf::st_make_valid()`, and check the result: a repair can change its shape.
+    Code
+      read_aoi(aoi[2, ])
+    Condition
+      Error in `read_aoi()`:
+      ! `x` has 1 invalid geometry.
+      x Feature 1: Self-intersection[1003500 604500]
+      i Repair it first, for example with `sf::st_make_valid()`, and check the result: a repair can change its shape.
+
+---
+
+    Code
+      read_aoi(many)
+    Condition
+      Error in `read_aoi()`:
+      ! `x` has 7 invalid geometries.
+      x Feature 1: Self-intersection[1003500 604500]
+      x Feature 2: Self-intersection[1003500 604500]
+      x Feature 3: Self-intersection[1003500 604500]
+      x Feature 4: Self-intersection[1003500 604500]
+      x Feature 5: Self-intersection[1003500 604500]
+      x And 2 more.
+      i Repair them first, for example with `sf::st_make_valid()`, and check the result: a repair can change their shape.
+
 # invalid arguments give clear errors
 
     Code

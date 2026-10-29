@@ -227,6 +227,81 @@ test_that("empty geometries are dropped by the dissolve", {
   expect_equal(area_of(read_aoi(both)), 2200 * 2300)
 })
 
+# A square polygon with its lower-left corner at (x, y) and side `size`.
+square <- function(x, y, size) {
+  sf::st_polygon(list(rbind(
+    c(x, y), c(x + size, y), c(x + size, y + size), c(x, y + size), c(x, y)
+  )))
+}
+
+test_that("a geometry collection of polygons is accepted", {
+  # Two squares, 1000 m and 500 m a side, apart: 1,250,000 m2.
+  gc <- sf::st_geometrycollection(list(
+    square(1003000, 604000, 1000),
+    square(1005000, 604000, 500)
+  ))
+  aoi <- sf::st_sf(
+    name = "gc",
+    geometry = sf::st_sfc(gc, crs = fixture_crs())
+  )
+  x <- read_aoi(aoi)
+  expect_equal(nrow(x), 1)
+  expect_equal(as.character(sf::st_geometry_type(x)), "MULTIPOLYGON")
+  expect_equal(area_of(x), 1000^2 + 500^2)
+  expect_equal(
+    bbox_of(x),
+    c(xmin = 1003000, ymin = 604000, xmax = 1005500, ymax = 605000)
+  )
+
+  # Mixed with an ordinary polygon feature: both are kept, and one
+  # collection stays one feature (as create_wtw_planning_units() needs).
+  both <- sf::st_sfc(gc, square(1007000, 604000, 100), crs = fixture_crs())
+  expect_equal(area_of(read_aoi(both)), 1000^2 + 500^2 + 100^2)
+  features <- read_aoi_features(both, NULL, environment())
+  expect_equal(nrow(features), 2)
+  expect_equal(
+    as.character(sf::st_geometry_type(features)),
+    c("MULTIPOLYGON", "POLYGON")
+  )
+})
+
+test_that("a geometry collection with points or lines is rejected", {
+  line <- sf::st_linestring(rbind(c(1003000, 604000), c(1004000, 605000)))
+  gc <- sf::st_geometrycollection(list(square(1003000, 604000, 1000), line))
+  aoi <- sf::st_sfc(gc, crs = fixture_crs())
+  expect_snapshot(error = TRUE, read_aoi(aoi))
+})
+
+test_that("invalid geometries give a clear error", {
+  # A bowtie: its edges cross at (1003500, 604500).
+  bowtie <- sf::st_polygon(list(rbind(
+    c(1003000, 604000), c(1004000, 605000), c(1004000, 604000),
+    c(1003000, 605000), c(1003000, 604000)
+  )))
+  aoi <- sf::st_sf(
+    name = c("ok", "bowtie"),
+    geometry = sf::st_sfc(
+      square(1006000, 604000, 100), bowtie,
+      crs = fixture_crs()
+    )
+  )
+  expect_snapshot(error = TRUE, {
+    read_aoi(aoi)
+    read_aoi(aoi[2, ])
+  })
+  expect_error(read_aoi(aoi), class = "rlang_error")
+  # Checked in the target CRS too (s2 in longitude and latitude).
+  expect_error(read_aoi(aoi, crs = 4326), "invalid geometry")
+
+  # Many invalid features: the first five are listed.
+  many <- aoi[rep(2, 7), ]
+  expect_snapshot(error = TRUE, read_aoi(many))
+
+  # Repaired with sf::st_make_valid(), as the error suggests, it reads.
+  fixed <- read_aoi(sf::st_make_valid(aoi))
+  expect_equal(area_of(fixed), 100^2 + 2 * (1000 * 500 / 2))
+})
+
 test_that("results match wtw-data-prep2's reading of the AOI", {
   # wtw-data-prep2 (aoi_to_grid() and create_1km_grid()) read the AOI with
   # sf::read_sf() and reprojected it to the template's CRS with

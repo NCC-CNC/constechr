@@ -11,7 +11,8 @@
 #'
 #' @param x The AOI, one of:
 #'   - an `sf` data frame or `sfc` geometry column of polygons or
-#'     multipolygons, with one feature or several;
+#'     multipolygons, with one feature or several. A geometry collection
+#'     that holds only polygons or multipolygons is accepted too;
 #'   - a terra `SpatVector` of polygons;
 #'   - a file path (a single string) to a vector file that GDAL can read,
 #'     such as a shapefile (`.shp`), GeoPackage (`.gpkg`) or GeoJSON
@@ -21,7 +22,10 @@
 #'     first layer is read, with a message naming it if there are others;
 #'   - bounds: a numeric vector `c(xmin, ymin, xmax, ymax)` (named, in any
 #'     order, or unnamed in that order), an `sf` `bbox` (from
-#'     [sf::st_bbox()]) or a terra `SpatExtent`.
+#'     [sf::st_bbox()]) or a terra `SpatExtent`. For the bounds of a
+#'     raster or any other spatial object, with its CRS, pass
+#'     `sf::st_bbox(r)`. A `SpatRaster` itself is not accepted, because it
+#'     is ambiguous as an AOI (its extent or its cells).
 #' @param crs The target coordinate reference system (CRS): anything
 #'   [sf::st_crs()] accepts, such as an EPSG code (`3347`), a WKT or
 #'   `"EPSG:<code>"` string, a `crs` object, or a spatial object (`sf`,
@@ -35,11 +39,21 @@
 #' - **Bounds**: become one rectangle with its corners at the bounds
 #'   ([sf::st_as_sfc()] of an [sf::st_bbox()]).
 #' - **Geometry**: Z and M coordinates are dropped ([sf::st_zm()]), so the
-#'   AOI is two-dimensional. Geometries are neither validated nor repaired.
+#'   AOI is two-dimensional. A geometry collection that holds only polygons
+#'   becomes one multipolygon of them ([sf::st_collection_extract()],
+#'   `"POLYGON"`); one that holds points or lines is an error, as is a mix
+#'   of polygons with points or lines, so nothing is dropped silently.
 #' - **CRS**: when `crs` differs from the input's CRS, the AOI is reprojected
 #'   with [sf::st_transform()] (PROJ), which moves each vertex; edges are not
 #'   densified, so a rectangle keeps its four corners. When `crs` is `NULL`
 #'   or the same as the input's, coordinates are left untouched.
+#' - **Validity**: geometries are checked, not repaired, in the target CRS
+#'   just before the dissolve, with [sf::st_is_valid()] (GEOS in a
+#'   projected CRS; s2 in a geographic CRS when [sf::sf_use_s2()] is
+#'   `TRUE`). Invalid geometries, such as self-intersecting polygons, are an
+#'   error naming the features and why they are invalid. Repair them first,
+#'   for example with [sf::st_make_valid()], knowing that a repair can
+#'   change their shape.
 #' - **Dissolve**: always, with [sf::st_union()], after reprojection, in the
 #'   target CRS, so the AOI is one area whatever the number of input
 #'   features; attributes are dropped and empty geometries disappear. In a
@@ -78,10 +92,14 @@
 #'   c(xmin = 1003000, ymin = 604000, xmax = 1006000, ymax = 607000),
 #'   crs = template
 #' )
+#'
+#' # The bounds of a raster (or any spatial object), with its CRS
+#' read_aoi(sf::st_bbox(template))
 read_aoi <- function(x, crs = NULL) {
   call <- environment()
   target <- if (is.null(crs)) NULL else as_aoi_crs(crs, call)
   aoi <- read_aoi_features(x, target, call)
+  check_aoi_valid(aoi, call)
   aoi <- sf::st_sf(geometry = sf::st_union(aoi))
   sf::st_geometry(aoi) <- "geometry"
   aoi
@@ -219,10 +237,64 @@ aoi_from_bounds <- function(x, crs, call, arg = "x") {
   )
 }
 
+#' Stop if any AOI geometry is invalid
+#'
+#' Checks with [sf::st_is_valid()] (GEOS, or s2 in a geographic CRS when
+#' sf uses s2), so the dissolve does not fail later with a GEOS error, or
+#' pass an invalid area on. A geometry whose validity cannot be determined
+#' (`NA`) counts as invalid.
+#'
+#' @param x An `sf` data frame.
+#' @param call The environment that errors name.
+#' @param arg The name of the argument that errors name.
+#' @param max The most features to list in the error.
+#' @return `x`, invisibly; an error if any geometry is invalid.
+#' @noRd
+check_aoi_valid <- function(x, call, arg = "x", max = 5) {
+  bad <- which(!(sf::st_is_valid(x) %in% TRUE))
+  if (length(bad) == 0) {
+    return(invisible(x))
+  }
+  hint <- if (length(bad) == 1) c("it", "its") else c("them", "their")
+  hint <- sprintf(
+    "Repair %s first, for example with {.fn sf::st_make_valid}, and check
+    the result: a repair can change %s shape.",
+    hint[1], hint[2]
+  )
+  shown <- bad[seq_len(min(length(bad), max))]
+  reasons <- sf::st_is_valid(x[shown, ], reason = TRUE)
+  reasons[is.na(reasons)] <- "validity could not be determined"
+  details <- stats::setNames(
+    cli_escape(paste0("Feature ", shown, ": ", reasons)),
+    rep("x", length(shown))
+  )
+  if (length(bad) > max) {
+    details <- c(details, "x" = paste0("And ", length(bad) - max, " more."))
+  }
+  cli::cli_abort(
+    c(
+      "{.arg {arg}} has {length(bad)} invalid geometr{?y/ies}.",
+      details,
+      "i" = hint
+    ),
+    call = call
+  )
+}
+
+#' Escape braces so cli prints text as is
+#'
+#' @param x A character vector.
+#' @return `x` with `{` and `}` doubled.
+#' @noRd
+cli_escape <- function(x) {
+  gsub("}", "}}", gsub("{", "{{", x, fixed = TRUE), fixed = TRUE)
+}
+
 #' Polygons as an sf data frame, checked
 #'
 #' Checks that the polygons hold at least one non-empty polygon or
-#' multipolygon, only polygons, and have a CRS.
+#' multipolygon, only polygons, and have a CRS. Geometry collections that
+#' hold only polygons become multipolygons, one per feature.
 #'
 #' @param x An `sf`, `sfc` or `SpatVector`, or a file path.
 #' @param call The environment that errors name.
@@ -251,16 +323,30 @@ aoi_from_polygons <- function(x, call, arg = "x") {
   if (nrow(x) == 0 || all(empty)) {
     cli::cli_abort("{.arg {arg}} has no polygons.", call = call)
   }
-  types <- unique(as.character(sf::st_geometry_type(x)[!empty]))
+  geoms <- sf::st_geometry(x)
+  is_gc <- !empty &
+    as.character(sf::st_geometry_type(x)) == "GEOMETRYCOLLECTION"
+  types <- unique(unlist(lapply(geoms[!empty], geometry_part_types)))
   other <- setdiff(types, c("POLYGON", "MULTIPOLYGON"))
   if (length(other) > 0) {
+    hint <- if (any(is_gc)) {
+      c("i" = "A geometry collection is accepted only if it holds polygons
+        only.")
+    }
     cli::cli_abort(
       c(
         "{.arg {arg}} must hold polygons or multipolygons only.",
-        "x" = "It holds {.val {other}} geometr{?y/ies}."
+        "x" = "It holds {.val {other}} geometr{?y/ies}.",
+        hint
       ),
       call = call
     )
+  }
+  if (any(is_gc)) {
+    parts <- lapply(seq_along(geoms), function(i) {
+      if (is_gc[i]) collection_to_multipolygon(geoms[[i]]) else geoms[[i]]
+    })
+    sf::st_geometry(x) <- sf::st_sfc(parts, crs = sf::st_crs(geoms))
   }
   if (is.na(sf::st_crs(x))) {
     # Only read_aoi() (argument `x`) has a `crs` argument to mention.
@@ -279,6 +365,31 @@ aoi_from_polygons <- function(x, call, arg = "x") {
     )
   }
   x
+}
+
+#' The geometry types in a geometry, looking inside a geometry collection
+#'
+#' @param g An `sfg`.
+#' @return A character vector: the types of a collection's parts, or the
+#'   geometry's own type.
+#' @noRd
+geometry_part_types <- function(g) {
+  if (inherits(g, "GEOMETRYCOLLECTION")) {
+    vapply(g, function(p) class(p)[2], character(1))
+  } else {
+    class(g)[2]
+  }
+}
+
+#' A geometry collection of polygons as one multipolygon
+#'
+#' @param g A `GEOMETRYCOLLECTION` `sfg` holding only polygons or
+#'   multipolygons.
+#' @return A `MULTIPOLYGON` `sfg` of its polygons.
+#' @noRd
+collection_to_multipolygon <- function(g) {
+  polygons <- sf::st_collection_extract(sf::st_sfc(g), "POLYGON")
+  sf::st_cast(sf::st_combine(polygons), "MULTIPOLYGON")[[1]]
 }
 
 #' Read an AOI file as sf

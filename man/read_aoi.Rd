@@ -10,7 +10,8 @@ read_aoi(x, crs = NULL)
 \item{x}{The AOI, one of:
 \itemize{
 \item an \code{sf} data frame or \code{sfc} geometry column of polygons or
-multipolygons, with one feature or several;
+multipolygons, with one feature or several. A geometry collection
+that holds only polygons or multipolygons is accepted too;
 \item a terra \code{SpatVector} of polygons;
 \item a file path (a single string) to a vector file that GDAL can read,
 such as a shapefile (\code{.shp}), GeoPackage (\code{.gpkg}) or GeoJSON
@@ -20,7 +21,10 @@ the first, such as one layer of a file geodatabase, name it as
 first layer is read, with a message naming it if there are others;
 \item bounds: a numeric vector \code{c(xmin, ymin, xmax, ymax)} (named, in any
 order, or unnamed in that order), an \code{sf} \code{bbox} (from
-\code{\link[sf:st_bbox]{sf::st_bbox()}}) or a terra \code{SpatExtent}.
+\code{\link[sf:st_bbox]{sf::st_bbox()}}) or a terra \code{SpatExtent}. For the bounds of a
+raster or any other spatial object, with its CRS, pass
+\code{sf::st_bbox(r)}. A \code{SpatRaster} itself is not accepted, because it
+is ambiguous as an AOI (its extent or its cells).
 }}
 
 \item{crs}{The target coordinate reference system (CRS): anything
@@ -54,11 +58,21 @@ GDAL), from the layer named in the path, or from the first layer.
 \item \strong{Bounds}: become one rectangle with its corners at the bounds
 (\code{\link[sf:st_as_sfc]{sf::st_as_sfc()}} of an \code{\link[sf:st_bbox]{sf::st_bbox()}}).
 \item \strong{Geometry}: Z and M coordinates are dropped (\code{\link[sf:st_zm]{sf::st_zm()}}), so the
-AOI is two-dimensional. Geometries are neither validated nor repaired.
+AOI is two-dimensional. A geometry collection that holds only polygons
+becomes one multipolygon of them (\code{\link[sf:st_collection_extract]{sf::st_collection_extract()}},
+\code{"POLYGON"}); one that holds points or lines is an error, as is a mix
+of polygons with points or lines, so nothing is dropped silently.
 \item \strong{CRS}: when \code{crs} differs from the input's CRS, the AOI is reprojected
 with \code{\link[sf:st_transform]{sf::st_transform()}} (PROJ), which moves each vertex; edges are not
 densified, so a rectangle keeps its four corners. When \code{crs} is \code{NULL}
 or the same as the input's, coordinates are left untouched.
+\item \strong{Validity}: geometries are checked, not repaired, in the target CRS
+just before the dissolve, with \code{\link[sf:st_is_valid]{sf::st_is_valid()}} (GEOS in a
+projected CRS; s2 in a geographic CRS when \code{\link[sf:sf_use_s2]{sf::sf_use_s2()}} is
+\code{TRUE}). Invalid geometries, such as self-intersecting polygons, are an
+error naming the features and why they are invalid. Repair them first,
+for example with \code{\link[sf:st_make_valid]{sf::st_make_valid()}}, knowing that a repair can
+change their shape.
 \item \strong{Dissolve}: always, with \code{\link[sf:st_union]{sf::st_union()}}, after reprojection, in the
 target CRS, so the AOI is one area whatever the number of input
 features; attributes are dropped and empty geometries disappear. In a
@@ -89,6 +103,9 @@ read_aoi(
   c(xmin = 1003000, ymin = 604000, xmax = 1006000, ymax = 607000),
   crs = template
 )
+
+# The bounds of a raster (or any spatial object), with its CRS
+read_aoi(sf::st_bbox(template))
 }
 \seealso{
 \code{\link[=read_layer]{read_layer()}} to read a vector layer's features and attributes
