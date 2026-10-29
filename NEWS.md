@@ -13,7 +13,8 @@ argument" error.
   (`natdata_dir`, `project_dir`, `tifs_dir`) and no longer shadowing
   `base::dir()`. Behaviour is unchanged; only the name changes. Calls that
   pass the folder by position are unaffected; calls that name it
-  (`dir = `) must use `output_dir = `. Error messages name `output_dir`.
+  (`dir = "out"`) must use `output_dir = "out"`. Error messages name
+  `output_dir`.
 
 # constechr 0.1.0.9006
 
