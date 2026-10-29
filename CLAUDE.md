@@ -97,6 +97,10 @@ Run from the repo root.
   every exported topic. Gate: CI fails if not. A new `@family` needs a
   section in `_pkgdown.yml`. Needs pandoc (bundled with RStudio; set
   `RSTUDIO_PANDOC` to its folder if pandoc is not on the path).
+- `npx --yes markdownlint-cli '**/*.md' --ignore node_modules --ignore LICENSE.md`:
+  lint Markdown (settings in `.markdownlint.json`). Gate: CI fails on any
+  error. Needs Node.js; where it is missing, check by eye against the
+  Markdown rule in "Working rules".
 - `Rscript -e "pkgdown::build_site()"`: preview the site in `site/`. Not
   committed; CI builds and deploys it on release tags.
 - `Rscript -e "devtools::install()"`: install the working copy locally, for
@@ -131,6 +135,13 @@ job. `CONTRIBUTING.md` Setup should match.
 - Conventional Commits (for example `feat: ...`, `fix: ...`, `chore: ...`,
   `docs: ...`).
 - No em dashes in code, comments, docs, commit messages, or user-facing text.
+- Markdown must pass markdownlint (see "Commands"). The usual failures:
+  - A line that starts with a hash and a number, such as an issue
+    reference at the start of a line or of a wrapped line, reads as a
+    heading (MD018). Put a word before it ("Issue #114") or rewrap.
+  - A code span with a space just inside a backtick, such as a span
+    holding `dir =` followed by a space (MD038). Trim it: `dir`, or
+    `dir = "x"`.
 - Significant technical or design decisions get an ADR in `docs/decisions/`.
 - Design notes live in `docs/design/`; session handoffs in `docs/handoffs/` (see "Where durable context lives").
 - Keep changes small and focused; update docs when behaviour or design changes.
