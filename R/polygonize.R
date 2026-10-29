@@ -100,29 +100,3 @@ polygonize_raster <- function(x, value = names(x), id = NULL) {
     geometry = geometry
   )
 }
-
-#' Check a column-name argument
-#'
-#' @param x The value given.
-#' @param arg The argument's name.
-#' @param call The environment that errors name.
-#' @return `x`, invisibly; an error if it is not a single, non-empty string,
-#'   or is `"geometry"`.
-#' @noRd
-check_column_name <- function(x, arg, call) {
-  if (!assertthat::is.string(x) || is.na(x) || !nzchar(x)) {
-    cli::cli_abort(
-      "{.arg {arg}} must be a single, non-empty string, not
-      {.obj_type_friendly {x}}.",
-      call = call
-    )
-  }
-  if (identical(x, "geometry")) {
-    cli::cli_abort(
-      "{.arg {arg}} cannot be {.str geometry}, the name of the geometry
-      column.",
-      call = call
-    )
-  }
-  invisible(x)
-}
