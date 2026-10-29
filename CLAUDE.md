@@ -116,10 +116,15 @@ job. `CONTRIBUTING.md` Setup should match.
 
 ## Working rules
 
-- Branch from `dev`; one short-lived branch per change. Open a pull request
-  into `dev`; CI must pass before merge. Non-draft PRs into `dev` from
-  branches in this repo auto-merge (squash) when CI passes, so open a draft
-  if a PR must not merge yet. These hold unless the owner says otherwise.
+- Work on `dev` only. `main` is the GitHub default branch, for people who
+  clone or browse the repo; a session that starts on `main` switches to
+  `dev` first. Branch from `dev`; one short-lived branch per change. Open a
+  pull request into `dev`, always with `--base dev` (without it, `gh pr
+  create` targets `main`); CI must pass before merge. Non-draft PRs into
+  `dev` from branches in this repo auto-merge (squash) when CI passes, so
+  open a draft if a PR must not merge yet. "Closes #N" closes the issue when
+  the PR merges into `dev` (`close-issues.yml`). These hold unless the owner
+  says otherwise.
 - Never open a pull request into `main`, retarget one to `main`, or push to
   `main`, unless the owner asks. `main` changes only by a promotion PR from
   `dev` (merge commit), usually for a release (ADR 0024).

@@ -4,11 +4,12 @@ Feedback, bug reports, and ideas are welcome through GitHub issues.
 
 The workflow is:
 
-1. Branch from `dev`, the default branch (one short-lived branch per
-   change).
+1. Branch from `dev`, the integration branch (one short-lived branch per
+   change). `main`, the default branch, holds the latest release.
 2. Keep changes small and focused.
 3. Run the package checks locally before pushing (see Setup below).
-4. Open a pull request into `dev`. CI must pass before merge. A PR into
+4. Open a pull request into `dev` (choose `dev` as the base; GitHub offers
+   `main` by default). CI must pass before merge. A PR into
    `dev` from a branch in this repo merges itself (squash) once CI passes,
    and is kept up to date with `dev` while it waits; this is done by the NCC
    ConsTech Automation app (`.github/workflows/auto-merge.yml` and
