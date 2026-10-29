@@ -113,6 +113,7 @@ polygonize_raster(classes, value = "class", id = "id", dissolve = TRUE)
 
 Other raster:
 \code{\link[=align_raster]{align_raster()}},
+\code{\link[=write_raster_file]{write_raster_file()}},
 \code{\link[=write_rasters]{write_rasters()}}
 }
 \concept{raster}

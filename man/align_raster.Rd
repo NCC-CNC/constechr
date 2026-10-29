@@ -39,7 +39,8 @@ categories and cell numbers, which must not be averaged.}
 \code{"INT1U"}, \code{"INT2U"}, \code{"INT2S"}, \code{"INT4U"}, \code{"INT4S"}, \code{"INT8U"},
 \code{"INT8S"}, \code{"FLT4S"} or \code{"FLT8S"}. \code{NULL} (the default) uses the data
 type of the file \code{x} was read from, as \code{gdalwarp} does; an in-memory \code{x}
-has none, so \code{datatype} is then required to write it. Ignored when
+has none, so the type is then inferred from the aligned values, as
+\code{\link[=write_raster_file]{write_raster_file()}} does, with a message naming it. Ignored when
 nothing is written.}
 
 \item{overwrite}{A single logical: \code{TRUE} (the default) replaces an
@@ -76,7 +77,11 @@ are computed.
 \code{x} has no NoData value. The warp runs without writing (to memory, or to
 a temporary file for large rasters) and the result is then written with
 \code{\link[terra:writeRaster]{terra::writeRaster()}}, so cells outside \code{x} are never filled with 0.
-\item \strong{Writing}: in \code{datatype}. For an integer type the values are first
+\item \strong{Writing}: with \code{\link[=write_raster_file]{write_raster_file()}}'s writer, in \code{datatype}; with
+\code{NULL}, in the data type of \code{x}'s file, or for an in-memory \code{x} the
+smallest integer type that holds the aligned values if they are whole
+numbers, else \code{"FLT4S"} (\code{"FLT8S"} beyond its range), \code{"INT1U"} if all
+are \code{NA} (ADR 0027). For an integer type the values are first
 rounded to the nearest whole number, halves away from zero
 (\code{terra::round()}), because GDAL truncates decimals when it writes them
 as integers; with \code{"near"} on an integer input nothing changes. \code{NA} is
@@ -84,9 +89,9 @@ written as terra's NoData value for the type (for example 255 for
 \code{"INT1U"}). A result kept in memory is not rounded.
 }
 
-Method choices are recorded in ADR 0007 and ADR 0010. Compared with
-wtw-data-prep2's \code{align_pu()} (\code{gdalwarp}), the cells and values are the
-same, except that cells outside an input with no NoData value are \code{NA}
+Method choices are recorded in ADR 0007, ADR 0010 and ADR 0027. Compared
+with wtw-data-prep2's \code{align_pu()} (\code{gdalwarp}), the cells and values are
+the same, except that cells outside an input with no NoData value are \code{NA}
 rather than 0, a few edge cells can differ when reprojecting (\code{gdalwarp}
 uses an approximate transformation by default), and the stored CRS and
 grid are the template's exactly.
@@ -125,6 +130,7 @@ template's full grid directly.
 
 Other raster:
 \code{\link[=polygonize_raster]{polygonize_raster()}},
+\code{\link[=write_raster_file]{write_raster_file()}},
 \code{\link[=write_rasters]{write_rasters()}}
 }
 \concept{raster}

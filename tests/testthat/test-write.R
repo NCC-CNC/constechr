@@ -93,9 +93,28 @@ test_that("datatype = NULL uses each layer's stored data type", {
   )
   expect_equal(file_values(paths[["cover"]]), cover_values(c(0, 2, 2, 7)))
 
-  # An in-memory layer has no stored type
-  expect_error(write_rasters(x, folder), "required to write in-memory layers")
-  expect_error(write_rasters(c(sp_a, x[["sp_b"]]), folder), "sp_b")
+  # An in-memory layer has no stored type, so each file's type is inferred
+  # from its values: sp_a and sp_b are 0 and 1 (INT1U), cover has decimals
+  # (FLT4S). A file-backed layer beside them keeps its stored type.
+  expect_message(
+    paths <- write_rasters(x, folder, prefix = "m_"),
+    "inferred from its values"
+  )
+  types <- vapply(
+    paths, function(p) terra::datatype(terra::rast(p)), character(1)
+  )
+  expect_identical(types, c(sp_a = "INT1U", sp_b = "INT1U", cover = "FLT4S"))
+  expect_equal(
+    file_values(paths[["cover"]]), cover_values(c(0.4, 1.6, 2.2, 7.25)),
+    tolerance = 1e-7
+  )
+  paths <- suppressMessages(
+    write_rasters(c(sp_a, x[["sp_b"]]), folder, prefix = "n_")
+  )
+  types <- vapply(
+    paths, function(p) terra::datatype(terra::rast(p)), character(1)
+  )
+  expect_identical(types, c(sp_a = "INT1U", sp_b = "INT1U"))
 })
 
 test_that("multiband = TRUE writes all layers to filename", {
@@ -160,12 +179,15 @@ test_that("multiband = TRUE without filename uses the source file's name", {
     write_rasters(c(a, b), folder, multiband = TRUE),
     "not read from one file"
   )
-  # Mixed stored types in one file need datatype
+  # Mixed stored types in one file: the type is inferred from all values
+  # (cover's decimals make it FLT4S)
   cover <- terra::rast(fixture_file(x[["cover"]], "cover", "FLT4S"))
-  expect_error(
-    write_rasters(c(a, cover), multiband = TRUE, filename = tempfile()),
+  out <- tempfile(fileext = ".tif")
+  expect_message(
+    write_rasters(c(a, cover), multiband = TRUE, filename = out),
     "different stored data types"
   )
+  expect_identical(unname(terra::datatype(terra::rast(out))), rep("FLT4S", 2))
 })
 
 test_that("filename takes a one-layer raster whatever multiband is", {
@@ -272,7 +294,7 @@ test_that("files a failed call created are removed", {
   kept <- file.path(folder, "sp_b.tif")
   writeLines("not a raster", kept)
   local_mocked_bindings(
-    write_raster_file = function(x, filename, ...) {
+    write_raster = function(x, filename, ...) {
       if (basename(filename) == "cover.tif") stop("disk full")
       writeLines("written", filename)
     }
@@ -372,9 +394,6 @@ test_that("invalid arguments give clear errors", {
   expect_snapshot(error = TRUE, {
     write_rasters(x, folder, datatype = "INT1U", multiband = TRUE)
   })
-  expect_snapshot(error = TRUE, {
-    write_rasters(x, folder)
-  })
   names(x) <- c("a", "A", "b/c")
   expect_snapshot(error = TRUE, {
     write_rasters(x, folder, datatype = "INT1U")
@@ -428,4 +447,157 @@ test_that("check_value_fits_datatype() matches what terra writes", {
   expect_true(fits(1e300, "FLT8S"))
   expect_true(fits(-1, "INT8S"))
   expect_false(fits(-1, "INT8U"))
+})
+
+# write_raster_file() ----------------------------------------------------
+
+# A one-row in-memory raster holding `v`.
+row_raster <- function(v) {
+  r <- terra::rast(nrows = 1, ncols = length(v), vals = v)
+  names(r) <- "v"
+  r
+}
+
+test_that("write_raster_file() infers an in-memory raster's data type", {
+  folder <- tempfile("write")
+  out <- file.path(folder, "v.tif")
+  cases <- list(
+    list(v = c(0, 100, 254, NA), type = "INT1U"),
+    list(v = c(0, 255), type = "INT2U"),
+    list(v = c(0, 65535), type = "INT4U"),
+    list(v = c(-1, 0, 100), type = "INT2S"),
+    list(v = c(-32768, 0), type = "INT4S"),
+    list(v = c(0.5, 2, NA), type = "FLT4S"),
+    list(v = c(0, 2^32), type = "FLT4S"),
+    list(v = c(-1, 1e39), type = "FLT8S"),
+    list(v = c(NA, NA), type = "INT1U")
+  )
+  for (case in cases) {
+    expect_message(
+      write_raster_file(row_raster(case$v), out),
+      case$type,
+      fixed = TRUE
+    )
+    expect_identical(terra::datatype(terra::rast(out)), case$type)
+    expect_equal(
+      file_values(out), as.numeric(case$v),
+      tolerance = 1e-7, label = paste(case$v, collapse = " ")
+    )
+  }
+})
+
+test_that("write_raster_file() names the inferred type and why", {
+  # A relative path, so the messages are the same on every system
+  folder <- tempfile("write")
+  dir.create(folder)
+  old <- setwd(folder)
+  on.exit(setwd(old), add = TRUE)
+  out <- "v.tif"
+  expect_snapshot(write_raster_file(row_raster(c(0, 254)), out))
+  x <- c(row_raster(c(-1, 2)), row_raster(c(0.5, NA)))
+  expect_snapshot(write_raster_file(x, out))
+  a <- terra::rast(fixture_file(row_raster(c(0, 1)), "a", "INT1U"))
+  b <- terra::rast(fixture_file(row_raster(c(0, 300)), "b", "INT2U"))
+  expect_snapshot(write_raster_file(c(a, b), out))
+  # Different stored types: inferred from all values, 0 to 300
+  expect_identical(
+    unname(terra::datatype(terra::rast(out))), c("INT2U", "INT2U")
+  )
+})
+
+test_that("write_raster_file() keeps a stored type and takes a given one", {
+  folder <- tempfile("write")
+  cover <- fixture_features()[["cover"]]
+  src <- fixture_file(cover, "cover", "INT2S")
+
+  # A file-backed raster keeps its stored type, with no message, as does a
+  # path to it
+  out <- file.path(folder, "a.tif")
+  expect_no_message(f <- write_raster_file(terra::rast(src), out))
+  expect_identical(f, out)
+  expect_identical(terra::datatype(terra::rast(out)), "INT2S")
+  expect_no_message(write_raster_file(src, out))
+  expect_identical(terra::datatype(terra::rast(out)), "INT2S")
+  # (fixture_file() lets terra truncate: 1.6 was written as 1)
+  expect_equal(file_values(out), cover_values(c(0, 1, 2, 7)))
+
+  # A given type is used, with no message; integers are rounded halves away
+  # from zero, or truncated with round_int = FALSE; floats are not rounded
+  expect_no_message(write_raster_file(cover, out, datatype = "INT1U"))
+  expect_identical(terra::datatype(terra::rast(out)), "INT1U")
+  expect_equal(file_values(out), cover_values(c(0, 2, 2, 7)))
+  write_raster_file(cover, out, datatype = "INT1U", round_int = FALSE)
+  expect_equal(file_values(out), cover_values(c(0, 1, 2, 7)))
+  write_raster_file(cover, out, datatype = "FLT8S")
+  expect_equal(file_values(out), cover_values(c(0.4, 1.6, 2.2, 7.25)))
+
+  # Returned invisibly
+  expect_invisible(write_raster_file(cover, out, datatype = "FLT4S"))
+})
+
+test_that("write_raster_file() writes several layers as named bands", {
+  x <- fixture_features()
+  out <- file.path(tempfile("write"), "sub", "deeper", "features.tif")
+
+  # Missing folders are created; sp_a and sp_b are 0 and 1 but cover has
+  # decimals, so the one file is FLT4S
+  expect_message(f <- write_raster_file(x, out), "FLT4S")
+  expect_identical(f, out)
+  r <- terra::rast(out)
+  expect_identical(names(r), c("sp_a", "sp_b", "cover"))
+  expect_identical(unname(terra::datatype(r)), rep("FLT4S", 3))
+  expect_true(on_template_grid(r[[1]]))
+  expect_equal(layer_values(r), layer_values(x), tolerance = 1e-7)
+
+  # Overwritten by default
+  expect_message(write_raster_file(x[[c("sp_a", "sp_b")]], out), "INT1U")
+  r <- terra::rast(out)
+  expect_identical(names(r), c("sp_a", "sp_b"))
+  expect_identical(unname(terra::datatype(r)), rep("INT1U", 2))
+})
+
+test_that("write_raster_file() checks its arguments before writing", {
+  x <- fixture_features()
+  # A relative path, so the errors are the same on every system
+  folder <- tempfile("write")
+  dir.create(folder)
+  old <- setwd(folder)
+  on.exit(setwd(old), add = TRUE)
+  out <- "x.tif"
+
+  expect_snapshot(error = TRUE, {
+    write_raster_file(1, out)
+  })
+  expect_snapshot(error = TRUE, {
+    write_raster_file(x, c("a.tif", "b.tif"))
+  })
+  expect_snapshot(error = TRUE, {
+    write_raster_file(x, "")
+  })
+  expect_snapshot(error = TRUE, {
+    write_raster_file(x, NULL)
+  })
+  expect_snapshot(error = TRUE, {
+    write_raster_file(x, out, datatype = "INT1")
+  })
+  expect_snapshot(error = TRUE, {
+    write_raster_file(x, out, round_int = NA)
+  })
+  expect_snapshot(error = TRUE, {
+    write_raster_file(x, out, overwrite = "yes")
+  })
+  writeLines("a file", "a file")
+  expect_snapshot(error = TRUE, {
+    write_raster_file(x, "a file/x.tif")
+  })
+  src <- fixture_file(x, "features", "FLT4S")
+  expect_snapshot(error = TRUE, {
+    write_raster_file(src, src)
+  })
+  file.create(out)
+  expect_snapshot(error = TRUE, {
+    write_raster_file(x, out, overwrite = FALSE)
+  })
+  expect_identical(sort(list.files()), c("a file", "x.tif"))
+  expect_identical(file.size(out), 0)
 })

@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted; the data type with `datatype = NULL` for in-memory rasters amended by
+0027-raster-data-type-inference.md (#108)
 
 ## Context
 

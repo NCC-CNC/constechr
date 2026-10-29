@@ -1,5 +1,31 @@
 <!-- markdownlint-disable-file MD025 -->
 
+# constechr 0.1.0.9008
+
+- New `write_raster_file()` writes a raster to one file at a given path
+  (#108, ADR 0027): one layer, or several layers as the bands of one file,
+  each band named after its layer. It is the writer `write_rasters()`
+  already used internally, now exported with its checks: missing parent
+  folders are created, and `filename` must be a single path, not inside an
+  existing file, not a file `x` is read from, and not an existing file with
+  `overwrite = FALSE`. Rounding (`round_int`) and NoData are as in
+  `write_rasters()`.
+- With `datatype = NULL`, a raster with no stored data type (held in
+  memory, such as one made or changed in R) or with layers of different
+  stored types is no longer an error: its data type is inferred from its
+  values, and a message names the type and why (#108, ADR 0027). Whole
+  numbers get the smallest integer type that holds their range without its
+  NoData value (`INT1U`, `INT2U` or `INT4U` when the smallest value is 0 or
+  more, else `INT2S` or `INT4S`); values with decimals, or beyond 32-bit
+  integers, get `FLT4S` (`FLT8S` beyond its range); all `NA` gets `INT1U`.
+  This applies to `write_raster_file()`, `write_rasters()` (for each file),
+  `align_raster()` (for an in-memory input written to `filename`) and
+  `extract_layers()` and `extract_wtw_natdata()` (for a layer with no
+  `datatype` in `layers`, no `datatype` argument and no stored type, such as
+  an `.rds` rij matrix, which no longer stops the call before extracting).
+  Where a data type was found before, it is still used, so no call that
+  worked before changes its output.
+
 # constechr 0.1.0.9007
 
 ## Breaking changes

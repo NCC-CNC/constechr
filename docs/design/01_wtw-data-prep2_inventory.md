@@ -374,7 +374,8 @@ datatype = NULL, overwrite = TRUE)`
 - Returns the aligned `SpatRaster`.
 - As built (#16, ADR 0010): a `SpatRaster` read from a file and not changed
   counts as a file input, like its path. `datatype = NULL` uses the input
-  file's data type; an in-memory input needs `datatype` to be written.
+  file's data type; for an in-memory input it is inferred from the aligned
+  values (since #108, ADR 0027).
   Values written as an integer type are rounded first (halves away from
   zero), since GDAL would truncate them. An input whose extent misses the
   template is an error. On the fixtures and the real mb_prairie AOI it gives
@@ -443,11 +444,11 @@ multiband = FALSE, filename = NULL, overwrite = TRUE)`
 
 - The writing half of `rij_to_raster()`, usable for any rasters. `x` is a
   `SpatRaster` or a path to a raster file.
-- `datatype`: `NULL` uses each layer's stored data type when it can be
-  inferred (a raster read from a file, `terra::datatype()`); an in-memory
-  raster has none, so `datatype` is then required and the function stops
-  with an error rather than guessing. Rasters from `rij_matrix_to_raster()` are in
-  memory, so they always need it.
+- `datatype`: `NULL` uses each file's stored data type (a raster read from
+  a file, `terra::datatype()`). Until #108 an in-memory raster (such as one
+  from `rij_matrix_to_raster()`) needed `datatype`; since #108 (ADR 0027)
+  its type is inferred from the values, with a message, by
+  `write_raster_file()`, which `write_rasters()` writes each file through.
 - Where the layers go (ADR 0014): one file per layer,
   `<output_dir>/<prefix><layer name>.tif` (today); `filename` (a full path) for a
   one-layer `x`, or for all layers with `multiband = TRUE` (the toolkit's
@@ -464,14 +465,24 @@ multiband = FALSE, filename = NULL, overwrite = TRUE)`
   Errors only where the request cannot be met or is ambiguous: no `output_dir` (or
   `filename`); `filename` with several layers and `multiband = FALSE`;
   `multiband = TRUE` with no `filename` and no single source file to name
-  it after; `datatype = NULL` with an in-memory layer, or with different
-  stored types going into one file; layer names that cannot be file names
+  it after; layer names that cannot be file names
   (empty, a path separator or a character Windows does not allow, repeated
   ignoring case) with one file per layer; an output that is a file `x` is
   read from; an existing file with `overwrite = FALSE`. `prefix` may hold a
   path separator for a subfolder. The writing and rounding helper is shared
   with `align_raster()`. On the fixtures and the mb_prairie AOI with
   NAT_DATA_20261009 it writes the same files as `rij_to_raster()`.
+
+`write_raster_file(x, filename, datatype = NULL, round_int = TRUE,
+overwrite = TRUE)`
+
+- Added in #108 (ADR 0027): the shared writer made public, to write one
+  raster (one or more layers, as bands) to one named file, with the same
+  checks, rounding and NoData as `write_rasters()`, which writes each of
+  its files through it. It is the one place a file's data type is decided:
+  a given type, else the one stored type all layers share, else inferred
+  from the values (the smallest integer type for whole numbers, else
+  `FLT4S` or `FLT8S`), with a message.
 
 `extract_layers(layers, aoi_raster, template, output_dir = NULL,
 prefix = "",
@@ -490,8 +501,9 @@ overwrite = TRUE, progress = NULL, path_column = "path")`
   want.
 - `datatype` (when writing): taken per layer from the `layers` table, else
   this argument, else the source GeoTIFF's stored type. A prebuilt `.rds`
-  rij layer has no stored type, so it needs one of the first two, or the
-  function stops before extracting anything.
+  rij layer has no stored type; without one of the first two, its type is
+  inferred from the extracted values when written (since #108, ADR 0027;
+  before, the function stopped before extracting anything).
 - `round_int` is passed to `write_rasters()` (ADR 0014). For a multi-band
   file per layer, `extract_layers()` builds `filename` from the layer's file
   stem (the toolkit's names), since its rasters are in memory.

@@ -110,16 +110,6 @@
 ---
 
     Code
-      write_rasters(x, folder)
-    Condition
-      Error in `write_rasters()`:
-      ! `datatype` is required to write in-memory layers of `x`.
-      x In memory, with no stored data type: "sp_a", "sp_b", and "cover".
-      i Give one, such as "INT1U", "INT4S" or "FLT4S".
-
----
-
-    Code
       write_rasters(x, folder, datatype = "INT1U")
     Condition
       Error in `write_rasters()`:
@@ -146,4 +136,110 @@
       ! The layer names of `x` name the files, so they must not be empty.
       x Layers 2 and 3 have no name.
       i Name the layers with `names(x) <-`.
+
+# write_raster_file() names the inferred type and why
+
+    Code
+      write_raster_file(row_raster(c(0, 254)), out)
+    Message
+      Writing 'v.tif' as "INT1U", inferred from its values (whole numbers from 0 to 254), because the raster is held in memory, with no stored data type.
+      i Give `datatype` to choose another type.
+
+---
+
+    Code
+      write_raster_file(x, out)
+    Message
+      Writing 'v.tif' as "FLT4S", inferred from its values (numbers with decimals from -1 to 2), because a layer is held in memory, with no stored data type.
+      i Give `datatype` to choose another type.
+
+---
+
+    Code
+      write_raster_file(c(a, b), out)
+    Message
+      Writing 'v.tif' as "INT2U", inferred from its values (whole numbers from 0 to 300), because the layers have different stored data types ("INT1U" and "INT2U").
+      i Give `datatype` to choose another type.
+
+# write_raster_file() checks its arguments before writing
+
+    Code
+      write_raster_file(1, out)
+    Condition
+      Error in `write_raster_file()`:
+      ! `x` must be a <SpatRaster> or a file path, not a number.
+
+---
+
+    Code
+      write_raster_file(x, c("a.tif", "b.tif"))
+    Condition
+      Error in `write_raster_file()`:
+      ! `filename` must be a single file path, not a character vector.
+
+---
+
+    Code
+      write_raster_file(x, "")
+    Condition
+      Error in `write_raster_file()`:
+      ! `filename` must be a single file path, not `""`.
+
+---
+
+    Code
+      write_raster_file(x, NULL)
+    Condition
+      Error in `write_raster_file()`:
+      ! `filename` must be a single file path, not NULL.
+
+---
+
+    Code
+      write_raster_file(x, out, datatype = "INT1")
+    Condition
+      Error in `write_raster_file()`:
+      ! `datatype` must be one of terra's data types, not a string.
+      i Use one of "INT1U", "INT2U", "INT2S", "INT4U", "INT4S", "INT8U", "INT8S", "FLT4S", or "FLT8S".
+
+---
+
+    Code
+      write_raster_file(x, out, round_int = NA)
+    Condition
+      Error in `write_raster_file()`:
+      ! `round_int` must be `TRUE` or `FALSE`, not `NA`.
+
+---
+
+    Code
+      write_raster_file(x, out, overwrite = "yes")
+    Condition
+      Error in `write_raster_file()`:
+      ! `overwrite` must be `TRUE` or `FALSE`, not a string.
+
+---
+
+    Code
+      write_raster_file(x, "a file/x.tif")
+    Condition
+      Error in `write_raster_file()`:
+      ! The folder of `filename` must be a folder; 'a file' is a file.
+
+---
+
+    Code
+      write_raster_file(src, src)
+    Condition
+      Error in `write_raster_file()`:
+      ! `filename` must not be the file `x` is read from.
+
+---
+
+    Code
+      write_raster_file(x, out, overwrite = FALSE)
+    Condition
+      Error in `write_raster_file()`:
+      ! `filename` already exists: 'x.tif'.
+      i Use `overwrite = TRUE` to replace it.
 

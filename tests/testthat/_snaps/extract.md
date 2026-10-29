@@ -183,18 +183,18 @@
       ! The prioritizr package is needed to convert a raster to an rij matrix.
       i Install it with `install.packages("prioritizr")`.
 
-# output problems are found before extracting where possible
+# a layer with no data type is written in one inferred from values
 
     Code
-      extract_layers(c("cover.tif", "features.rds", "features2.rds"), pu, template,
-      output_dir = folder, progress = progress)
-    Condition
-      Error in `extract_layers()`:
-      ! A `datatype` is needed to write layers with no stored data type (such as rij matrices in '.rds' files).
-      x No data type: 'features.rds' and 'features2.rds'.
-      i Give it in a datatype column of `layers`, or as `datatype`.
+      paths <- extract_layers("features.rds", pu, template, output_dir = "out")
+    Message
+      Dropped 1 row of 'features.rds' with no values in the AOI: "sp_b".
+      Writing 'out/sp_a.tif' as "INT1U", inferred from its values (whole numbers from 0 to 1), because the raster is held in memory, with no stored data type.
+      i Give `datatype` to choose another type.
+      Writing 'out/cover.tif' as "FLT4S", inferred from its values (numbers with decimals from 0 to 1.6), because the raster is held in memory, with no stored data type.
+      i Give `datatype` to choose another type.
 
----
+# output problems are found before extracting where possible
 
     Code
       extract_layers(data.frame(path = "features.rds", datatype = c("INT1U", "int")),

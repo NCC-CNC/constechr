@@ -70,9 +70,10 @@ in it puts the files in a subfolder, as in \code{\link[=write_rasters]{write_ras
 \code{datatype} in \code{layers}: one of terra's types (\code{"INT1U"}, \code{"INT2U"},
 \code{"INT2S"}, \code{"INT4U"}, \code{"INT4S"}, \code{"INT8U"}, \code{"INT8S"}, \code{"FLT4S"} or
 \code{"FLT8S"}). \code{NULL} (the default) uses the data type of the layer's
-raster file. An \code{.rds} rij matrix has no stored data type, so a layer
-read from one needs a \code{datatype}, in \code{layers} or here; without one the
-function stops before extracting anything.}
+raster file. A layer with none of these (such as an \code{.rds} rij matrix,
+which has no stored data type) has its type inferred from each file's
+extracted values when it is written, as \code{\link[=write_raster_file]{write_raster_file()}} does,
+with a message naming it.}
 
 \item{round_int}{A single logical, passed to \code{\link[=write_rasters]{write_rasters()}}: \code{TRUE}
 (the default) rounds values to whole numbers, halves away from zero,
@@ -164,14 +165,17 @@ unchanged. Written files are named by feature, not by these names.
 \verb{<output_dir>/<subdir>/<prefix><feature>.tif}, or with \code{multiband = TRUE}
 \verb{<output_dir>/<subdir>/<prefix><file name without extension>.tif}. Each
 layer's \code{prefix}, \code{datatype} and \code{subdir} come from \code{layers}, else from
-the arguments; the data type, else, from the layer's raster file. With
-\code{round_int = TRUE}, values are rounded halves away from zero before an
-integer type.
+the arguments; the data type, else, from the layer's raster file, else
+(such as for an \code{.rds} rij matrix) it is inferred from each file's
+extracted values as in \code{\link[=write_raster_file]{write_raster_file()}} (ADR 0027): the smallest
+integer type that holds whole numbers without its NoData value, else
+\code{"FLT4S"}, with a message naming it. With \code{round_int = TRUE}, values
+are rounded halves away from zero before an integer type.
 \item \strong{Checks first}: before any layer is read, the layer files must exist,
 their type must be known, raster layers must open on the template's
-grid, and, when writing, every layer must have a valid data type,
-prefix and subfolder, and the files that can be named without reading
-the layers (raster layers' features, and multi-band files) must be
+grid, and, when writing, every data type given must be valid, every
+prefix and subfolder allowed, and the files that can be named without
+reading the layers (raster layers' features, and multi-band files) must be
 distinct (ignoring case), must not be a layer's input file and, with
 \code{overwrite = FALSE}, must not exist. The files of an \code{.rds} layer's
 features are checked the same way when it is written. If a layer still
@@ -206,8 +210,8 @@ names(x)
 x$rij
 
 # Written: one file per feature, T_sp_a.tif and T_cover.tif, in a
-# "species" subfolder. An .rds layer needs a datatype; cover's 1.6 is
-# rounded to 2.
+# "species" subfolder, as INT1U (without a datatype, it would be inferred
+# from the values, with a message); cover's 1.6 is rounded to 2.
 layers <- data.frame(
   path = rij, prefix = "T_", datatype = "INT1U", subdir = "species"
 )
