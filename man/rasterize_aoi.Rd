@@ -130,6 +130,9 @@ If the AOI's bounding box does not overlap the grid (the template, with a
 template), the function stops with an error. If the AOI overlaps but gets
 no cells (for example a small AOI that covers no cell centre, or only
 cells without data), it warns and returns a raster that is all \code{NA}.
+The warning is only for an AOI that gets no cells at all: with
+\code{cells = "centre"}, or with \code{drop_na = TRUE}, a small part of an AOI in
+several parts (such as an islet) can get no cells, without a warning.
 }
 
 \examples{

@@ -92,6 +92,9 @@
 #' template), the function stops with an error. If the AOI overlaps but gets
 #' no cells (for example a small AOI that covers no cell centre, or only
 #' cells without data), it warns and returns a raster that is all `NA`.
+#' The warning is only for an AOI that gets no cells at all: with
+#' `cells = "centre"`, or with `drop_na = TRUE`, a small part of an AOI in
+#' several parts (such as an islet) can get no cells, without a warning.
 #'
 #' @return A `SpatRaster` with one layer, in the template's CRS (or the
 #'   target CRS without a template): `value` in the AOI's cells and `NA`

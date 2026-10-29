@@ -1,5 +1,23 @@
 <!-- markdownlint-disable-file MD025 -->
 
+# constechr 0.1.0.9003
+
+- `read_aoi()` checks that the AOI's geometries are valid
+  (`sf::st_is_valid()`), in the target CRS before the dissolve, and stops
+  with a clear error naming the invalid features and why, suggesting
+  `sf::st_make_valid()` (#103). Geometries are checked, not repaired.
+  Before, an invalid AOI failed with a GEOS error in `sf::st_union()`, or,
+  for a single invalid feature, was passed on as is. `rasterize_aoi()` and
+  the other functions that read an AOI with `read_aoi()` check it too.
+- `read_aoi()` and `create_wtw_planning_units()` accept a geometry
+  collection that holds only polygons or multipolygons, as one multipolygon
+  of its polygons (#103). A collection holding points or lines is still an
+  error, so nothing is dropped silently.
+- `read_aoi()` documents how to use the bounds of a raster or other spatial
+  object (`read_aoi(sf::st_bbox(r))`), and `rasterize_aoi()` documents that
+  a small part of an AOI in several parts can get no cells without a
+  warning.
+
 # constechr 0.1.0.9002
 
 ## Breaking changes
