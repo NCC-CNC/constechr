@@ -6,7 +6,7 @@
 \usage{
 write_rasters(
   x,
-  dir,
+  output_dir,
   prefix = "",
   datatype = NULL,
   round_int = TRUE,
@@ -20,13 +20,13 @@ write_rasters(
 path to a raster file. With one file per layer, its layer names name the
 files.}
 
-\item{dir}{The folder to write to: a single path. It is created, with any
-missing parent folders, if it does not exist. Required unless \code{filename}
-is given, which takes its place.}
+\item{output_dir}{The folder to write to: a single path. It is created,
+with any missing parent folders, if it does not exist. Required unless
+\code{filename} is given, which takes its place.}
 
 \item{prefix}{A single string put before each file name (\code{""}, the
 default, adds none), such as \code{"T_"} for \verb{T_<layer name>.tif}. A path
-separator in it puts the files in a subfolder of \code{dir}, which is
+separator in it puts the files in a subfolder of \code{output_dir}, which is
 created. Not used when \code{filename} is given.}
 
 \item{datatype}{The data type of the written files, one of terra's types:
@@ -73,13 +73,13 @@ rasters to new files in another data type.
 Where the layers go:
 \itemize{
 \item Neither \code{filename} nor \code{multiband = TRUE} (the defaults): one file per
-layer in \code{dir}, \verb{<prefix><layer name>.tif}.
+layer in \code{output_dir}, \verb{<prefix><layer name>.tif}.
 \item \code{filename} and a one-layer \code{x}: that layer, to \code{filename}, whatever
 \code{multiband} is.
 \item \code{filename} and \code{multiband = TRUE}: all layers, one band each, to
 \code{filename}.
 \item \code{multiband = TRUE} without \code{filename}: all layers to
-\verb{<dir>/<prefix><stem>.tif}, where \verb{<stem>} is the name, without its
+\verb{<output_dir>/<prefix><stem>.tif}, where \verb{<stem>} is the name, without its
 extension, of the one file \code{x} is read from (as the
 opportunity-screening-toolkit names its files). An \code{x} held in memory or
 read from several files has no such name, so it needs \code{filename}.
@@ -87,15 +87,15 @@ read from several files has no such name, so it needs \code{filename}.
 name cannot name several files.
 }
 
-\code{dir} and \code{prefix} are not used when \code{filename} is given.
+\code{output_dir} and \code{prefix} are not used when \code{filename} is given.
 }
 \section{Method}{
 
 \itemize{
 \item \strong{Files}: each layer is written with \code{\link[terra:writeRaster]{terra::writeRaster()}} to
-\verb{<dir>/<prefix><layer name>.tif}, a GeoTIFF; or all layers to one file
-as bands in layer order, each band named after its layer. Cells, extent,
-resolution and CRS are written as they are: no resampling or
+\verb{<output_dir>/<prefix><layer name>.tif}, a GeoTIFF; or all layers to one
+file as bands in layer order, each band named after its layer. Cells,
+extent, resolution and CRS are written as they are: no resampling or
 reprojection.
 \item \strong{Data type}: \code{datatype}, or with \code{NULL} each layer's stored data type
 (in one file, the one type all layers share).
@@ -142,15 +142,15 @@ names(r)
 
 # One file per layer: sp_a and cover, as T_sp_a.tif and T_cover.tif.
 # r is in memory, so datatype is required.
-dir <- file.path(tempdir(), "layers")
-paths <- write_rasters(r, dir, prefix = "T_", datatype = "INT1U")
+output_dir <- file.path(tempdir(), "layers")
+paths <- write_rasters(r, output_dir, prefix = "T_", datatype = "INT1U")
 basename(paths)
 
 # cover's 1.6 is rounded to 2 before it is written as an integer
 terra::values(terra::rast(paths[["cover"]]), mat = FALSE)
 
 # With round_int = FALSE it is cut off to 1, as terra does
-paths <- write_rasters(r, dir, datatype = "INT1U", round_int = FALSE)
+paths <- write_rasters(r, output_dir, datatype = "INT1U", round_int = FALSE)
 terra::values(terra::rast(paths[["cover"]]), mat = FALSE)
 
 # One multi-band file instead
@@ -161,8 +161,8 @@ f <- write_rasters(
 )
 
 # A raster read from one file can be copied without a filename: here to
-# <dir>/layers.tif, as integers
-write_rasters(f, dir, datatype = "INT2S", multiband = TRUE)
+# <output_dir>/layers.tif, as integers
+write_rasters(f, output_dir, datatype = "INT2S", multiband = TRUE)
 
 # One layer to a named file
 write_rasters(

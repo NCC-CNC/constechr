@@ -124,7 +124,7 @@ natdata_template <- function(natdata_dir, file = "_1km/idx.tif") {
 #'   aoi_raster <- rasterize_aoi(aoi, template, cells = "touches")
 #'   paths <- extract_layers(
 #'     layers, aoi_raster, template,
-#'     dir = file.path(tempdir(), "tifs"), path_column = "file"
+#'     output_dir = file.path(tempdir(), "tifs"), path_column = "file"
 #'   )
 #'   basename(paths)
 #' }

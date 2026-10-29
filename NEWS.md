@@ -1,5 +1,21 @@
 <!-- markdownlint-disable-file MD025 -->
 
+# constechr 0.1.0.9007
+
+## Breaking changes
+
+Renamed outright, without a deprecation period, by the owner's decision
+while constechr is 0.x (#109, ADR 0026). Passing `dir` is now R's "unused
+argument" error.
+
+- `extract_layers()` and `write_rasters()`: the output folder argument
+  `dir` is now `output_dir`, matching constechr's other folder arguments
+  (`natdata_dir`, `project_dir`, `tifs_dir`) and no longer shadowing
+  `base::dir()`. Behaviour is unchanged; only the name changes. Calls that
+  pass the folder by position are unaffected; calls that name it
+  (`dir = "out"`) must use `output_dir = "out"`. Error messages name
+  `output_dir`.
+
 # constechr 0.1.0.9006
 
 - `polygonize_raster()` gains `dissolve = FALSE` (#107). The default is

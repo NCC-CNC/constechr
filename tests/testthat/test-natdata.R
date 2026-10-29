@@ -284,7 +284,7 @@ test_that("the catalogue and template extract as natdata() did", {
   paths <- suppressMessages(
     extract_layers(
       layers, fixture_pu("inside"), template,
-      dir = tifs, path_column = "file"
+      output_dir = tifs, path_column = "file"
     )
   )
   expected <- list(

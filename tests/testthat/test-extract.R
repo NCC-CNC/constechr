@@ -124,7 +124,7 @@ test_that("files are written with each layer's prefix, type and subfolder", {
   on.exit(setwd(old), add = TRUE)
   template <- fixture_template()
   pu <- fixture_pu("inside")
-  dir <- tempfile("extract")
+  folder <- tempfile("extract")
 
   # features.rds takes its prefix, data type and subfolder from the table;
   # cover.tif takes the prefix argument and its file's stored type (FLT4S).
@@ -136,15 +136,15 @@ test_that("files are written with each layer's prefix, type and subfolder", {
   )
   expect_invisible(
     paths <- suppressMessages(
-      extract_layers(layers, pu, template, dir = dir, prefix = "W_")
+      extract_layers(layers, pu, template, output_dir = folder, prefix = "W_")
     )
   )
   expect_identical(names(paths), c("sp_a", "cover", "cover"))
   expect_identical(
     unname(paths),
     c(
-      file.path(dir, "themes/species", c("T_sp_a.tif", "T_cover.tif")),
-      file.path(dir, "W_cover.tif")
+      file.path(folder, "themes/species", c("T_sp_a.tif", "T_cover.tif")),
+      file.path(folder, "W_cover.tif")
     )
   )
   expect_true(all(file.exists(paths)))
@@ -166,7 +166,7 @@ test_that("files are written with each layer's prefix, type and subfolder", {
   paths <- suppressMessages(
     extract_layers(
       layers, pu, template,
-      dir = dir, datatype = "INT2U", round_int = FALSE
+      output_dir = folder, datatype = "INT2U", round_int = FALSE
     )
   )
   expect_identical(basename(paths[[3]]), "cover.tif")
@@ -181,7 +181,7 @@ test_that("multiband = TRUE writes one file per layer, named after it", {
   on.exit(setwd(old), add = TRUE)
   template <- fixture_template()
   pu <- fixture_pu("inside")
-  dir <- tempfile("extract")
+  folder <- tempfile("extract")
 
   layers <- data.frame(
     path = c("features.rds", "cover.tif"),
@@ -191,13 +191,13 @@ test_that("multiband = TRUE writes one file per layer, named after it", {
   paths <- suppressMessages(
     extract_layers(
       layers, pu, template,
-      dir = dir, prefix = "T_", multiband = TRUE
+      output_dir = folder, prefix = "T_", multiband = TRUE
     )
   )
   expect_identical(names(paths), c("features", "cover"))
   expect_identical(
     unname(paths),
-    file.path(dir, c("species/T_features.tif", "habitat/T_cover.tif"))
+    file.path(folder, c("species/T_features.tif", "habitat/T_cover.tif"))
   )
   r <- terra::rast(paths[["features"]])
   expect_identical(names(r), c("sp_a", "cover"))
@@ -218,7 +218,7 @@ test_that("empty features are dropped and empty layers skipped, or kept", {
   template <- fixture_template()
   # The single AOI is cell 77, where every feature is 0
   pu <- fixture_pu("single")
-  dir <- tempfile("extract")
+  folder <- tempfile("extract")
 
   expect_snapshot(
     x <- extract_layers(c("features.rds", "cover.tif"), pu, template)
@@ -227,11 +227,11 @@ test_that("empty features are dropped and empty layers skipped, or kept", {
   expect_snapshot(
     paths <- extract_layers(
       "features.rds", pu, template,
-      dir = dir, datatype = "INT1U"
+      output_dir = folder, datatype = "INT1U"
     )
   )
   expect_identical(paths, character())
-  expect_false(dir.exists(dir))
+  expect_false(dir.exists(folder))
 
   # drop_empty = FALSE keeps them: 0 in the AOI's one cell
   expect_no_message(
@@ -314,7 +314,7 @@ test_that("progress is called before each layer with i, n and the path", {
 test_that("layers tables keep other columns and accept factors and NAs", {
   old <- setwd(fixture_layers_dir())
   on.exit(setwd(old), add = TRUE)
-  dir <- tempfile("extract")
+  folder <- tempfile("extract")
   layers <- data.frame(
     id = 1,
     path = factor("features.rds"),
@@ -326,10 +326,10 @@ test_that("layers tables keep other columns and accept factors and NAs", {
   paths <- suppressMessages(
     extract_layers(
       layers, fixture_pu("inside"), fixture_template(),
-      dir = dir
+      output_dir = folder
     )
   )
-  expect_identical(unname(paths), file.path(dir, c("sp_a.tif", "cover.tif")))
+  expect_identical(unname(paths), file.path(folder, c("sp_a.tif", "cover.tif")))
 
   # No layers: nothing to extract
   expect_identical(
@@ -339,7 +339,7 @@ test_that("layers tables keep other columns and accept factors and NAs", {
   expect_identical(
     extract_layers(
       layers[0, ], fixture_pu("inside"), fixture_template(),
-      dir = dir
+      output_dir = folder
     ),
     character()
   )
@@ -348,7 +348,7 @@ test_that("layers tables keep other columns and accept factors and NAs", {
 test_that("path_column names the column of paths; type is not format", {
   old <- setwd(fixture_layers_dir())
   on.exit(setwd(old), add = TRUE)
-  dir <- tempfile("extract")
+  folder <- tempfile("extract")
   # A catalogue-like table: path is a folder, file the layer's file, and
   # type a role (like NAT_DATA's include, theme or weight), all ignored
   layers <- data.frame(
@@ -361,12 +361,12 @@ test_that("path_column names the column of paths; type is not format", {
   paths <- suppressMessages(
     extract_layers(
       layers, fixture_pu("inside"), fixture_template(),
-      dir = dir, path_column = "file"
+      output_dir = folder, path_column = "file"
     )
   )
   expect_identical(
     unname(paths),
-    file.path(dir, "species", c("sp_a.tif", "cover.tif"))
+    file.path(folder, "species", c("sp_a.tif", "cover.tif"))
   )
   expect_equal(file_values(paths[["sp_a"]]), inside_sp_a)
 
@@ -461,7 +461,7 @@ test_that("invalid arguments give clear errors before extracting", {
   pu <- fixture_pu("inside")
   writeLines("not a raster", "text.tif")
   writeLines("no extension", "layer")
-  dir <- "out"
+  folder <- "out"
 
   expect_snapshot(error = TRUE, {
     extract_layers(1, pu, template)
@@ -507,13 +507,19 @@ test_that("invalid arguments give clear errors before extracting", {
     extract_layers("features.rds", pu, template, progress = "yes")
   })
   expect_snapshot(error = TRUE, {
-    extract_layers("features.rds", pu, template, dir = 1)
+    extract_layers("features.rds", pu, template, output_dir = 1)
   })
   expect_snapshot(error = TRUE, {
-    extract_layers("features.rds", pu, template, dir = dir, datatype = "INT")
+    extract_layers(
+      "features.rds", pu, template,
+      output_dir = folder, datatype = "INT"
+    )
   })
   expect_snapshot(error = TRUE, {
-    extract_layers("features.rds", pu, template, dir = dir, multiband = "yes")
+    extract_layers(
+      "features.rds", pu, template,
+      output_dir = folder, multiband = "yes"
+    )
   })
   expect_snapshot(error = TRUE, {
     extract_layers("features.rds", 1, template)
@@ -534,7 +540,19 @@ test_that("invalid arguments give clear errors before extracting", {
   expect_snapshot(error = TRUE, {
     extract_layers(c("features.rds", "cover.tif"), pu, template)
   })
-  expect_false(dir.exists(dir))
+  expect_false(dir.exists(folder))
+})
+
+test_that("the removed dir argument is an error (#109)", {
+  old <- setwd(fixture_layers_dir())
+  on.exit(setwd(old), add = TRUE)
+  expect_error(
+    extract_layers("cover.tif", fixture_pu("inside"), fixture_template(),
+      dir = "out"
+    ),
+    "unused argument"
+  )
+  expect_false(dir.exists("out"))
 })
 
 test_that("output problems are found before extracting where possible", {
@@ -544,7 +562,7 @@ test_that("output problems are found before extracting where possible", {
   pu <- fixture_pu("inside")
   local_mocked_bindings(prioritizr_installed = function() TRUE)
   file.copy("features.rds", "features2.rds")
-  dir <- "out"
+  folder <- "out"
   calls <- 0
   progress <- function(i, n, layer) calls <<- calls + 1
 
@@ -552,7 +570,7 @@ test_that("output problems are found before extracting where possible", {
   expect_snapshot(error = TRUE, {
     extract_layers(
       c("cover.tif", "features.rds", "features2.rds"), pu, template,
-      dir = dir, progress = progress
+      output_dir = folder, progress = progress
     )
   })
   # Data types, prefixes and subfolders in the table
@@ -560,28 +578,28 @@ test_that("output problems are found before extracting where possible", {
     extract_layers(
       data.frame(path = "features.rds", datatype = c("INT1U", "int")),
       pu, template,
-      dir = dir
+      output_dir = folder
     )
   })
   expect_snapshot(error = TRUE, {
     extract_layers(
       data.frame(path = "features.rds", prefix = "a?", datatype = "INT1U"),
       pu, template,
-      dir = dir
+      output_dir = folder
     )
   })
   expect_snapshot(error = TRUE, {
     extract_layers(
       data.frame(path = "features.rds", subdir = "C:/x", datatype = "INT1U"),
       pu, template,
-      dir = dir
+      output_dir = folder
     )
   })
   # The same layer twice with the same prefix and subfolder
   expect_snapshot(error = TRUE, {
     extract_layers(
       c("features.rds", "features.rds"), pu, template,
-      dir = dir, datatype = "INT1U"
+      output_dir = folder, datatype = "INT1U"
     )
   })
   # Two layers writing the same file: cover.tif's feature and features.tif's
@@ -589,21 +607,24 @@ test_that("output problems are found before extracting where possible", {
   expect_snapshot(error = TRUE, {
     extract_layers(
       c("cover.tif", "features.tif"), pu, template,
-      dir = dir, progress = progress
+      output_dir = folder, progress = progress
     )
   })
   # An output file that is a layer's input file
   expect_snapshot(error = TRUE, {
-    extract_layers("cover.tif", pu, template, dir = ".")
+    extract_layers("cover.tif", pu, template, output_dir = ".")
   })
   # An existing file with overwrite = FALSE
-  dir.create(dir)
-  file.create(file.path(dir, "cover.tif"))
+  dir.create(folder)
+  file.create(file.path(folder, "cover.tif"))
   expect_snapshot(error = TRUE, {
-    extract_layers("cover.tif", pu, template, dir = dir, overwrite = FALSE)
+    extract_layers(
+      "cover.tif", pu, template,
+      output_dir = folder, overwrite = FALSE
+    )
   })
   expect_identical(calls, 0)
-  expect_identical(list.files(dir), "cover.tif")
+  expect_identical(list.files(folder), "cover.tif")
 })
 
 test_that("a layer failing while extracted is named; earlier files are kept", {
@@ -615,32 +636,32 @@ test_that("a layer failing while extracted is named; earlier files are kept", {
   saveRDS(data.frame(x = 1), "bad.rds")
 
   # An .rds file that does not hold an rij matrix
-  dir <- "out1"
+  folder <- "out1"
   expect_snapshot(error = TRUE, {
     suppressMessages(
       extract_layers(
         c("features.rds", "bad.rds"), pu, template,
-        dir = dir, datatype = "INT1U"
+        output_dir = folder, datatype = "INT1U"
       )
     )
   })
-  expect_setequal(list.files(dir), c("sp_a.tif", "cover.tif"))
+  expect_setequal(list.files(folder), c("sp_a.tif", "cover.tif"))
   expect_snapshot(error = TRUE, {
     suppressMessages(extract_layers(c("features.rds", "bad.rds"), pu, template))
   })
 
   # Two .rds layers whose features would write the same files, found once
   # the second is read
-  dir <- "out2"
+  folder <- "out2"
   expect_snapshot(error = TRUE, {
     suppressMessages(
       extract_layers(
         c("features.rds", "features2.rds"), pu, template,
-        dir = dir, datatype = "INT1U"
+        output_dir = folder, datatype = "INT1U"
       )
     )
   })
-  expect_setequal(list.files(dir), c("sp_a.tif", "cover.tif"))
+  expect_setequal(list.files(folder), c("sp_a.tif", "cover.tif"))
 
   # An .rds layer whose features would overwrite a later layer's input
   # file: sp_a.tif here is an rij matrix too, read as one by its format
@@ -648,7 +669,7 @@ test_that("a layer failing while extracted is named; earlier files are kept", {
   layers <- data.frame(path = c("features.rds", "sp_a.tif"), format = "rij")
   expect_snapshot(error = TRUE, {
     suppressMessages(
-      extract_layers(layers, pu, template, dir = ".", datatype = "INT1U")
+      extract_layers(layers, pu, template, output_dir = ".", datatype = "INT1U")
     )
   })
   expect_identical(readRDS("sp_a.tif"), fixture_rij())

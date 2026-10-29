@@ -1,7 +1,7 @@
 # invalid arguments give clear errors
 
     Code
-      write_rasters(1, dir)
+      write_rasters(1, folder)
     Condition
       Error in `write_rasters()`:
       ! `x` must be a <SpatRaster> or a file path, not a number.
@@ -12,7 +12,7 @@
       write_rasters(x, datatype = "INT1U")
     Condition
       Error in `write_rasters()`:
-      ! `dir` is required when `filename` is not given.
+      ! `output_dir` is required when `filename` is not given.
       i Give the folder to write to, or `filename`.
 
 ---
@@ -21,7 +21,7 @@
       write_rasters(x, c("a", "b"), datatype = "INT1U")
     Condition
       Error in `write_rasters()`:
-      ! `dir` must be a single folder path, not a character vector.
+      ! `output_dir` must be a single folder path, not a character vector.
 
 ---
 
@@ -29,12 +29,12 @@
       write_rasters(x, file, datatype = "INT1U")
     Condition
       Error in `write_rasters()`:
-      ! `dir` must be a folder; '<file>' is a file.
+      ! `output_dir` must be a folder; '<file>' is a file.
 
 ---
 
     Code
-      write_rasters(x, dir, prefix = NA, datatype = "INT1U")
+      write_rasters(x, folder, prefix = NA, datatype = "INT1U")
     Condition
       Error in `write_rasters()`:
       ! `prefix` must be a single string, not `NA`.
@@ -42,7 +42,7 @@
 ---
 
     Code
-      write_rasters(x, dir, prefix = "a?", datatype = "INT1U")
+      write_rasters(x, folder, prefix = "a?", datatype = "INT1U")
     Condition
       Error in `write_rasters()`:
       ! `prefix` must not contain characters not allowed in file names: "a?".
@@ -51,7 +51,7 @@
 ---
 
     Code
-      write_rasters(x, dir, datatype = "INT1")
+      write_rasters(x, folder, datatype = "INT1")
     Condition
       Error in `write_rasters()`:
       ! `datatype` must be one of terra's data types, not a string.
@@ -60,7 +60,7 @@
 ---
 
     Code
-      write_rasters(x, dir, datatype = "INT1U", round_int = NA)
+      write_rasters(x, folder, datatype = "INT1U", round_int = NA)
     Condition
       Error in `write_rasters()`:
       ! `round_int` must be `TRUE` or `FALSE`, not `NA`.
@@ -68,7 +68,7 @@
 ---
 
     Code
-      write_rasters(x, dir, datatype = "INT1U", multiband = "yes")
+      write_rasters(x, folder, datatype = "INT1U", multiband = "yes")
     Condition
       Error in `write_rasters()`:
       ! `multiband` must be `TRUE` or `FALSE`, not a string.
@@ -76,7 +76,7 @@
 ---
 
     Code
-      write_rasters(x, dir, datatype = "INT1U", overwrite = NULL)
+      write_rasters(x, folder, datatype = "INT1U", overwrite = NULL)
     Condition
       Error in `write_rasters()`:
       ! `overwrite` must be `TRUE` or `FALSE`, not NULL.
@@ -96,12 +96,12 @@
     Condition
       Error in `write_rasters()`:
       ! `filename` names one file, but `x` has 3 layers.
-      i Use `multiband = TRUE` to write them all to `filename`, or `dir` and `prefix` (without `filename`) for one file per layer.
+      i Use `multiband = TRUE` to write them all to `filename`, or `output_dir` and `prefix` (without `filename`) for one file per layer.
 
 ---
 
     Code
-      write_rasters(x, dir, datatype = "INT1U", multiband = TRUE)
+      write_rasters(x, folder, datatype = "INT1U", multiband = TRUE)
     Condition
       Error in `write_rasters()`:
       ! `filename` is required to write `x` as one multi-band file, because `x` is not read from one file whose name could be used.
@@ -110,7 +110,7 @@
 ---
 
     Code
-      write_rasters(x, dir)
+      write_rasters(x, folder)
     Condition
       Error in `write_rasters()`:
       ! `datatype` is required to write in-memory layers of `x`.
@@ -120,7 +120,7 @@
 ---
 
     Code
-      write_rasters(x, dir, datatype = "INT1U")
+      write_rasters(x, folder, datatype = "INT1U")
     Condition
       Error in `write_rasters()`:
       ! The layer names of `x` name the files, so they must not contain path separators or other characters not allowed in file names.
@@ -130,7 +130,7 @@
 ---
 
     Code
-      write_rasters(x, dir, datatype = "INT1U")
+      write_rasters(x, folder, datatype = "INT1U")
     Condition
       Error in `write_rasters()`:
       ! The layer names of `x` name the files, so they must be unique, ignoring case.
@@ -140,7 +140,7 @@
 ---
 
     Code
-      write_rasters(x, dir, datatype = "INT1U")
+      write_rasters(x, folder, datatype = "INT1U")
     Condition
       Error in `write_rasters()`:
       ! The layer names of `x` name the files, so they must not be empty.

@@ -438,7 +438,7 @@ change from wtw-data-prep2's (`ncc_1km` to `template`, `ncc_1km_idx` to
   layers). On the fixtures and the mb_prairie AOI with NAT_DATA_20261009 it
   gives the same rasters as `rij_to_raster()` before rounding and writing.
 
-`write_rasters(x, dir, prefix = "", datatype = NULL, round_int = TRUE,
+`write_rasters(x, output_dir, prefix = "", datatype = NULL, round_int = TRUE,
 multiband = FALSE, filename = NULL, overwrite = TRUE)`
 
 - The writing half of `rij_to_raster()`, usable for any rasters. `x` is a
@@ -449,11 +449,11 @@ multiband = FALSE, filename = NULL, overwrite = TRUE)`
   with an error rather than guessing. Rasters from `rij_matrix_to_raster()` are in
   memory, so they always need it.
 - Where the layers go (ADR 0014): one file per layer,
-  `<dir>/<prefix><layer name>.tif` (today); `filename` (a full path) for a
+  `<output_dir>/<prefix><layer name>.tif` (today); `filename` (a full path) for a
   one-layer `x`, or for all layers with `multiband = TRUE` (the toolkit's
   choice); `multiband = TRUE` without `filename` names the file after the
-  one file `x` is read from, `<dir>/<prefix><stem>.tif` (the toolkit's
-  names). `dir` and `prefix` are not used with `filename`.
+  one file `x` is read from, `<output_dir>/<prefix><stem>.tif` (the toolkit's
+  names). `output_dir` and `prefix` are not used with `filename`.
 - `round_int`: `TRUE` (default) rounds halves away from zero before an
   integer data type, as wtw-data-prep2 does; `FALSE` keeps terra's
   truncation. Float types are never rounded. Other repos do not round, so
@@ -461,7 +461,7 @@ multiband = FALSE, filename = NULL, overwrite = TRUE)`
 - Returns the paths written, invisibly.
 - As built (#20, ADR 0014): every output path is checked before anything is
   written, and a write that still fails removes the files the call created.
-  Errors only where the request cannot be met or is ambiguous: no `dir` (or
+  Errors only where the request cannot be met or is ambiguous: no `output_dir` (or
   `filename`); `filename` with several layers and `multiband = FALSE`;
   `multiband = TRUE` with no `filename` and no single source file to name
   it after; `datatype = NULL` with an in-memory layer, or with different
@@ -473,12 +473,13 @@ multiband = FALSE, filename = NULL, overwrite = TRUE)`
   with `align_raster()`. On the fixtures and the mb_prairie AOI with
   NAT_DATA_20261009 it writes the same files as `rij_to_raster()`.
 
-`extract_layers(layers, aoi_raster, template, dir = NULL, prefix = "",
+`extract_layers(layers, aoi_raster, template, output_dir = NULL,
+prefix = "",
 datatype = NULL, round_int = TRUE, multiband = FALSE, drop_empty = TRUE,
 overwrite = TRUE, progress = NULL, path_column = "path")`
 
 - The wrapper: `read_rij_matrix()`, `clip_rij_matrix()`, `rij_matrix_to_raster()`, then
-  `write_rasters()` when `dir` is given (else returns the rasters).
+  `write_rasters()` when `output_dir` is given (else returns the rasters).
 - `layers`: file paths, or a table with a column of file paths, named by
   `path_column` (default `"path"`), and optional `prefix`, `datatype`,
   `subdir` (output subfolder) and `format` (`"auto"`, `"raster"`, `"rij"`)

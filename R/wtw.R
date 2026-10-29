@@ -475,7 +475,7 @@ extract_wtw_natdata <- function(natdata_dir, project_dir,
 
   paths <- extract_layers(
     layers, aoi_raster, template,
-    dir = file.path(project_dir, tifs_dir), round_int = round_int,
+    output_dir = file.path(project_dir, tifs_dir), round_int = round_int,
     multiband = multiband, drop_empty = drop_empty, overwrite = overwrite,
     progress = progress, path_column = "file"
   )

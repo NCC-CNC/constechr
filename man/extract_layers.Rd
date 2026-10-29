@@ -8,7 +8,7 @@ extract_layers(
   layers,
   aoi_raster,
   template,
-  dir = NULL,
+  output_dir = NULL,
   prefix = "",
   datatype = NULL,
   round_int = TRUE,
@@ -32,8 +32,8 @@ uses the argument):
 \itemize{
 \item \code{prefix}: put before the layer's file names (\code{""} for none);
 \item \code{datatype}: the data type of the layer's files;
-\item \code{subdir}: the subfolder of \code{dir} the layer's files go in (\code{NA} or
-\code{""} for \code{dir} itself); it may hold path separators;
+\item \code{subdir}: the subfolder of \code{output_dir} the layer's files go in
+(\code{NA} or \code{""} for \code{output_dir} itself); it may hold path separators;
 \item \code{format}: what the file holds, \code{"auto"}, \code{"raster"} or \code{"rij"}, as
 in \code{\link[=read_rij_matrix]{read_rij_matrix()}}'s \code{type}; \code{NA} is \code{"auto"}, which decides by
 extension (\code{.tif} and \code{.tiff} are rasters, \code{.rds} an rij matrix).
@@ -57,10 +57,10 @@ template).}
 with one layer and a CRS, or a path to a raster file. Only which of its
 cells have data (are not \code{NA}) is used, not its values.}
 
-\item{dir}{\code{NULL} (the default) returns the rasters in memory and writes
-nothing; a single folder path writes them to files there (created if
-needed) instead. The arguments below \code{dir}, except \code{drop_empty} and
-\code{progress}, are used only when writing.}
+\item{output_dir}{\code{NULL} (the default) returns the rasters in memory and
+writes nothing; a single folder path writes them to files there (created
+if needed) instead. The arguments below \code{output_dir}, except \code{drop_empty}
+and \code{progress}, are used only when writing.}
 
 \item{prefix}{A single string put before each file name, for layers with
 no \code{prefix} in \code{layers}. \code{""} (the default) adds none. A path separator
@@ -81,9 +81,9 @@ decimals off. Float types are never rounded.}
 
 \item{multiband}{A single logical: \code{FALSE} (the default) writes one file
 per feature (row of the layer's rij matrix),
-\verb{<dir>/<subdir>/<prefix><feature>.tif}; \code{TRUE} writes one multi-band
+\verb{<output_dir>/<subdir>/<prefix><feature>.tif}; \code{TRUE} writes one multi-band
 file per layer, one band per feature, named after the layer's file:
-\verb{<dir>/<subdir>/<prefix><file name without extension>.tif} (as the
+\verb{<output_dir>/<subdir>/<prefix><file name without extension>.tif} (as the
 opportunity-screening-toolkit names them).}
 
 \item{drop_empty}{A single logical: \code{TRUE} (the default) drops the
@@ -108,14 +108,14 @@ catalogue from \code{\link[=read_natdata_metadata]{read_natdata_metadata()}}, wh
 layer's folder. Not used when \code{layers} is a vector of paths.}
 }
 \value{
-Without \code{dir}, a list of \code{SpatRaster}s held in memory, one per
+Without \code{output_dir}, a list of \code{SpatRaster}s held in memory, one per
 layer with features left after clipping, in the order of \code{layers}, named
 after the layer's file name without its extension, with repeated names
 made unique by \code{\link[=make.unique]{make.unique()}} (\code{rij}, \code{rij.1}; see Method); each has
 one layer per feature, named after it. Layers that were skipped are left
 out, so the list can be empty.
 
-With \code{dir}, the paths of the files written, invisibly: a character
+With \code{output_dir}, the paths of the files written, invisibly: a character
 vector in the order written, named after the feature for one file per
 feature, or after the layer's file name without its extension for a
 multi-band file.
@@ -125,7 +125,7 @@ Extracts data layers on a template raster (such as NAT_DATA's national
 layers on the national 1 km template) for an area of interest (AOI): each
 layer is read as an rij matrix (\code{\link[=read_rij_matrix]{read_rij_matrix()}}), clipped to the AOI
 (\code{\link[=clip_rij_matrix]{clip_rij_matrix()}}) and rebuilt as rasters on the AOI raster's extent
-(\code{\link[=rij_matrix_to_raster]{rij_matrix_to_raster()}}), then returned or, with \code{dir}, written to
+(\code{\link[=rij_matrix_to_raster]{rij_matrix_to_raster()}}), then returned or, with \code{output_dir}, written to
 GeoTIFF files (\code{\link[=write_rasters]{write_rasters()}}). The AOI's cells are worked out once
 for all layers, and everything that can be checked without extracting is
 checked before the first layer is read.
@@ -153,16 +153,16 @@ template's grid cropped to \code{aoi_raster}'s extent (cut to the template
 where it reaches past its edge): the feature's values in the AOI cells
 with template data, 0 where it has none, \code{NA} elsewhere. Values are
 kept as they are (doubles, not rounded, no areas).
-\item \strong{Names in memory}: without \code{dir}, each raster is named after its
+\item \strong{Names in memory}: without \code{output_dir}, each raster is named after its
 layer's file name without its extension. Repeated names (layers with
 the same file name in different folders, or a layer given twice) are
 made unique with \code{\link[=make.unique]{make.unique()}}, in the order of \code{layers}, among the
 layers that are not skipped: the first keeps the name and later ones
 get \code{.1}, \code{.2} and so on (\code{rij}, \code{rij.1}). Names that do not repeat are
 unchanged. Written files are named by feature, not by these names.
-\item \strong{Writing} (\code{\link[=write_rasters]{write_rasters()}}), with \code{dir}: to
-\verb{<dir>/<subdir>/<prefix><feature>.tif}, or with \code{multiband = TRUE}
-\verb{<dir>/<subdir>/<prefix><file name without extension>.tif}. Each
+\item \strong{Writing} (\code{\link[=write_rasters]{write_rasters()}}), with \code{output_dir}: to
+\verb{<output_dir>/<subdir>/<prefix><feature>.tif}, or with \code{multiband = TRUE}
+\verb{<output_dir>/<subdir>/<prefix><file name without extension>.tif}. Each
 layer's \code{prefix}, \code{datatype} and \code{subdir} come from \code{layers}, else from
 the arguments; the data type, else, from the layer's raster file. With
 \code{round_int = TRUE}, values are rounded halves away from zero before an
@@ -184,7 +184,7 @@ large.
 
 Method choices are recorded in ADRs 0015 and 0016, and those of the
 functions it calls in ADRs 0011 to 0014. With \code{layers} from
-\code{\link[=read_natdata_metadata]{read_natdata_metadata()}}, \code{path_column = "file"} and \code{dir} as
+\code{\link[=read_natdata_metadata]{read_natdata_metadata()}}, \code{path_column = "file"} and \code{output_dir} as
 \verb{<project>/tifs}, it writes the same files as wtw-data-prep2's
 \code{natdata()}. Intended changes from that code: everything
 that can be checked is checked before extracting, dropped features and
@@ -211,15 +211,18 @@ x$rij
 layers <- data.frame(
   path = rij, prefix = "T_", datatype = "INT1U", subdir = "species"
 )
-dir <- file.path(tempdir(), "extracted")
-paths <- extract_layers(layers, aoi_raster, template, dir = dir)
+output_dir <- file.path(tempdir(), "extracted")
+paths <- extract_layers(
+  layers, aoi_raster, template,
+  output_dir = output_dir
+)
 basename(paths)
 terra::values(terra::rast(paths[["cover"]]), mat = FALSE)
 
 # One multi-band file per layer instead, named after the layer's file
 paths <- extract_layers(
   rij, aoi_raster, template,
-  dir = dir, datatype = "FLT4S", multiband = TRUE
+  output_dir = output_dir, datatype = "FLT4S", multiband = TRUE
 )
 basename(paths)
 
@@ -239,7 +242,7 @@ if (requireNamespace("prioritizr", quietly = TRUE)) {
 layers <- data.frame(folder = "species", file = rij, datatype = "INT1U")
 paths <- extract_layers(
   layers, aoi_raster, template,
-  dir = dir, path_column = "file"
+  output_dir = output_dir, path_column = "file"
 )
 basename(paths)
 }
