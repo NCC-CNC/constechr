@@ -272,7 +272,7 @@ the conventions.
 ### AOI rasters
 
 `rasterize_aoi(aoi, template = NULL, resolution = NULL, crs = NULL,
-cells, value = "index", drop_na = TRUE, crop = TRUE)`
+cells = "centre", value = "index", drop_na = TRUE, crop = TRUE)`
 
 - From `create_1km_grid()`, minus AOI reading (now `read_aoi()`) and vector
   output (now `polygonize_raster()`).
@@ -287,9 +287,10 @@ cells, value = "index", drop_na = TRUE, crop = TRUE)`
   template must be the same CRS, or the function errors.
 - `cells`: `"touches"` (every cell the AOI touches; wtw-data-prep2 today,
   through a 1 km buffer) or `"centre"` (cell centre inside; toolkit and
-  erap-deer-code). No default in this building block: it changes which
-  cells an AOI gets, so callers choose. Replaces the hidden buffer. Bounds
-  follow the same rule as polygons.
+  erap-deer-code). Defaults to `"centre"`, terra's and GDAL's own default,
+  as the generic building block (#106, ADR 0008); the NAT_DATA and WTW
+  use-case functions default to `"touches"` and pass it explicitly.
+  Replaces the hidden buffer. Bounds follow the same rule as polygons.
 - `value`: what AOI cells hold (ADR 0008). `"index"` (default): the terra
   cell number (row by row from the top-left) in the template, so cells link
   back to the template and to rij matrix columns; at a coarser resolution,

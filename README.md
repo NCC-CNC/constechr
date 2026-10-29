@@ -72,7 +72,7 @@ The building blocks work on any template, not only NAT_DATA's:
 template <- terra::rast(
   system.file("extdata", "template.tif", package = "constechr")
 )
-aoi_raster <- constechr::rasterize_aoi(aoi, template, cells = "centre")
+aoi_raster <- constechr::rasterize_aoi(aoi, template)
 rij <- constechr::read_rij_matrix(
   system.file("extdata", "rij.rds", package = "constechr"), template
 )
