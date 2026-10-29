@@ -1,5 +1,19 @@
 <!-- markdownlint-disable-file MD025 -->
 
+# constechr 0.1.0.9001
+
+- New `read_layer()` reads one layer of a vector file or folder as `sf`,
+  as stored (#104): by name or position with `layer`, or the first layer
+  by default, with a message naming it when the source has others. `...`
+  is passed to `sf::st_read()` (for example `query`). Nothing is
+  reprojected or changed. Missing files, sources GDAL cannot open,
+  missing layers, layer positions out of range and layers with no
+  geometries are clear errors. It is in a new "Vector layers" family.
+- `read_aoi()` reads files through `read_layer()`. A path to a source
+  with more than one layer and no `<path>/<layer>` now reads its first
+  layer, with a message, instead of being an error. Other files read as
+  before.
+
 # constechr 0.1.0
 
 First release (#28). It has functions for what wtw-data-prep2 does to

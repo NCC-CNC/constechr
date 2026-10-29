@@ -12,9 +12,10 @@
 #'   - a terra `SpatVector` of polygons;
 #'   - a file path (a single string) to a vector file that GDAL can read,
 #'     such as a shapefile (`.shp`), GeoPackage (`.gpkg`) or GeoJSON
-#'     (`.geojson`). For a file or folder with more than one layer, such as a
-#'     file geodatabase, name the layer as `<path>/<layer>`, for example
-#'     `"data.gdb/aoi"`;
+#'     (`.geojson`), read with [read_layer()]. To read a layer other than
+#'     the first, such as one layer of a file geodatabase, name it as
+#'     `<path>/<layer>`, for example `"data.gdb/aoi"`. Without a layer, the
+#'     first layer is read, with a message naming it if there are others;
 #'   - bounds: a numeric vector `c(xmin, ymin, xmax, ymax)` (named, in any
 #'     order, or unnamed in that order), an `sf` `bbox` (from
 #'     [sf::st_bbox()]) or a terra `SpatExtent`.
@@ -29,8 +30,8 @@
 #'   features and their attributes as they are.
 #'
 #' @section Method:
-#' - **Reading**: files are read with [sf::st_read()] (GDAL), from the layer
-#'   named in the path, or from the file's only layer.
+#' - **Reading**: files are read with [read_layer()] ([sf::st_read()],
+#'   GDAL), from the layer named in the path, or from the first layer.
 #' - **Bounds**: become one rectangle with its corners at the bounds
 #'   ([sf::st_as_sfc()] of an [sf::st_bbox()]).
 #' - **Geometry**: Z and M coordinates are dropped ([sf::st_zm()]), so the
@@ -52,6 +53,8 @@
 #'   attributes. Nothing is written.
 #'
 #' @family aoi
+#' @seealso [read_layer()] to read a vector layer's features and attributes
+#'   as stored.
 #' @export
 #'
 #' @examples
@@ -260,11 +263,14 @@ aoi_from_polygons <- function(x, call) {
   x
 }
 
-#' Read a vector file as sf
+#' Read an AOI file as sf
+#'
+#' Splits `<path>/<layer>` and reads the layer with `read_vector_layer()`,
+#' the reader behind [read_layer()], so errors name `x`.
 #'
 #' @param path A single string: a file or folder GDAL can open, or
-#'   `<path>/<layer>` to name a layer in it. Without a layer, the source
-#'   must have exactly one.
+#'   `<path>/<layer>` to name a layer in it. Without a layer, the first
+#'   layer is read, with a message if there are others.
 #' @param call The environment that errors name.
 #' @return An `sf` data frame.
 #' @noRd
@@ -282,48 +288,11 @@ read_aoi_file <- function(path, call) {
       )
     }
   }
-
-  layers <- tryCatch(
-    sf::st_layers(dsn)$name,
-    error = function(e) NULL
+  read_vector_layer(
+    dsn,
+    layer = layer,
+    read_args = list(),
+    hint = "Name one as {.code <path>/<layer>}.",
+    call = call
   )
-  if (is.null(layers)) {
-    cli::cli_abort(
-      "{.arg x} could not be opened as vector data.",
-      call = call
-    )
-  }
-  if (length(layers) == 0) {
-    cli::cli_abort("{.arg x} has no layers.", call = call)
-  }
-  if (is.null(layer)) {
-    if (length(layers) > 1) {
-      cli::cli_abort(
-        c(
-          "{.arg x} must have one layer, or name one as
-          {.code <path>/<layer>}.",
-          "x" = "It has {length(layers)} layers: {.val {layers}}."
-        ),
-        call = call
-      )
-    }
-    layer <- layers
-  } else if (!(layer %in% layers)) {
-    cli::cli_abort(
-      c(
-        "{.arg x} names layer {.val {layer}}, which does not exist.",
-        "i" = "Its layers are {.val {layers}}."
-      ),
-      call = call
-    )
-  }
-
-  out <- sf::st_read(dsn, layer = layer, quiet = TRUE, stringsAsFactors = FALSE)
-  if (!inherits(out, "sf")) {
-    cli::cli_abort(
-      "{.arg x} names layer {.val {layer}}, which has no geometries.",
-      call = call
-    )
-  }
-  out
 }

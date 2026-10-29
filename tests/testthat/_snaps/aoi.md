@@ -93,3 +93,12 @@
       Error in `read_aoi()`:
       ! `x` must be an existing file; 'no-such-folder/aoi.shp' does not exist.
 
+# a multi-layer source without a layer reads its first layer
+
+    Code
+      x <- read_aoi(gpkg)
+    Message
+      Reading layer "a", the first of 2 layers in `x`.
+      i Its other layer is "b".
+      i Name one as `<path>/<layer>`.
+
