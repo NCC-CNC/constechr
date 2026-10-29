@@ -1,5 +1,65 @@
 <!-- markdownlint-disable-file MD025 -->
 
+# constechr 0.2.0
+
+Second release (#105). It refactors and extends v0.1.0's functions: a
+public vector reader, an AOI that is always one area, clearer names, and
+simpler writing and template arguments. Tools install it with
+`pak::pak("NCC-CNC/constechr@v0.2.0")`. The entries for the development
+versions below give the detail, and the ADRs in `docs/decisions/` the
+reasons.
+
+## Breaking changes
+
+Removed or renamed outright, without a deprecation period, by the owner's
+decision while constechr is 0.x (ADR 0026). Passing a removed argument is
+R's "unused argument" error.
+
+- `read_aoi()` no longer has `union`: an AOI is always dissolved into one
+  area, with no attributes (#102). To read features with their
+  attributes, use `read_layer()`.
+- `create_wtw_planning_units()` no longer has `aoi_union`, and its AOI
+  must be one feature; dissolve several first, for example with
+  `read_aoi()` (#102). With a one-feature AOI and the defaults, its
+  outputs are unchanged.
+- `extract_layers()` and `write_rasters()`: the output folder argument
+  `dir` is now `output_dir` (#109).
+
+## New functions
+
+- `read_layer()` reads one layer of a vector file or folder as `sf`, as
+  stored (#104). `read_aoi()` reads files through it.
+- `write_raster_file()` writes a raster to one file at a given path, one
+  layer or several as bands (#108, ADR 0027).
+
+## New arguments and defaults
+
+- `rasterize_aoi()`'s `cells` defaults to `"centre"` instead of being
+  required (#106, ADR 0008). `create_1km_grid()` and
+  `create_wtw_planning_units()` keep `"touches"`.
+- `polygonize_raster(dissolve = TRUE)` merges cells into one feature per
+  value, with values kept exact (#107).
+- `create_1km_grid()`, `create_wtw_planning_units()` and
+  `extract_wtw_natdata()` gain `template_file`, the national template's
+  path within `natdata_dir`, defaulting to `"_1km/idx.tif"` as before
+  (#110).
+
+## Other changes
+
+- `read_aoi()` stops with a clear error naming invalid geometries, instead
+  of failing inside GEOS or passing a single invalid feature on; it does
+  not repair them (#103). It accepts geometry
+  collections that hold only polygons (#103), and a multi-layer source
+  given without a layer reads its first layer, with a message (#104).
+- With `datatype = NULL`, a raster with no stored data type, such as one
+  held in memory, is written in a type inferred from its values, with a
+  message, instead of being an error (#108, ADR 0027). Where a type was
+  found before, it is still used.
+- `extract_layers()` keeps layers with the same file name apart in memory
+  (`rij`, `rij.1`) (#96, ADR 0015).
+- Argument checks shared between files are in one place (#53); no change
+  to results or messages.
+
 # constechr 0.1.0.9009
 
 - `create_1km_grid()`, `create_wtw_planning_units()` and

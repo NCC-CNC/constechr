@@ -12,9 +12,10 @@ answers hold that method in place.
 
 ## Status
 
-The current release is v0.1.0: reading, rasterizing and aligning AOIs, rij
-matrix helpers, extracting and writing layers, and the NAT_DATA and Where
-To Work (WTW) functions for wtw-data-prep2's steps. The function reference
+The current release is v0.2.0: reading vector layers, reading,
+rasterizing and aligning AOIs, polygonizing rasters, rij matrix helpers,
+extracting and writing layers, and the NAT_DATA and Where To Work (WTW)
+functions for wtw-data-prep2's steps. The function reference
 for the latest release is at <https://ncc-cnc.github.io/constechr/>. See
 `NEWS.md` for
 what each release changed, `docs/design/00_project_brief.md` for the scope
@@ -29,7 +30,7 @@ version it was built and tested with:
 
 ```r
 # install.packages("pak")
-pak::pak("NCC-CNC/constechr@v0.1.0")
+pak::pak("NCC-CNC/constechr@v0.2.0")
 ```
 
 In a project that uses renv, run `renv::snapshot()` afterwards to record the
@@ -82,9 +83,10 @@ constechr::rij_matrix_to_raster(rij_aoi, template, aoi_raster)
 
 The functions:
 
-- Building blocks: `read_aoi()`, `rasterize_aoi()`, `align_raster()`,
-  `polygonize_raster()`, `read_rij_matrix()`, `clip_rij_matrix()`,
-  `rij_matrix_to_raster()`, `write_rasters()`, `extract_layers()`.
+- Building blocks: `read_layer()`, `read_aoi()`, `rasterize_aoi()`,
+  `align_raster()`, `polygonize_raster()`, `read_rij_matrix()`,
+  `clip_rij_matrix()`, `rij_matrix_to_raster()`, `write_raster_file()`,
+  `write_rasters()`, `extract_layers()`.
 - NAT_DATA: `natdata_template()`, `read_natdata_metadata()`,
   `create_1km_grid()`.
 - Where To Work: `create_wtw_project_folder()`, `wtw_project_folders()`,
