@@ -596,6 +596,45 @@ test_that("the raster clips rij matrices as rasterize_aoi()'s does", {
   )
 })
 
+test_that("create_1km_grid() opens template_file in natdata_dir", {
+  skip_if_not_installed("sf")
+  aoi <- fixture_aoi("inside")
+  default <- create_1km_grid(aoi, fixture_natdata_idx_dir())
+
+  # The same template at another path gives the same result
+  natdata <- move_natdata_template(
+    fixture_natdata_idx_dir(), "grids/v2/template.tif"
+  )
+  expect_false(file.exists(file.path(natdata, "_1km", "idx.tif")))
+  grid <- create_1km_grid(
+    aoi, natdata,
+    template_file = "grids/v2/template.tif"
+  )
+  expect_identical(grid$polygons, default$polygons)
+  expect_identical(grid$aoi, default$aoi)
+  expect_identical(extent_of(grid$aoi_raster), extent_of(default$aoi_raster))
+  expect_identical(
+    terra::values(grid$aoi_raster, mat = FALSE),
+    terra::values(default$aoi_raster, mat = FALSE)
+  )
+  # Known answer: the inside AOI's nine cells, numbered from the bottom-left
+  expect_identical(
+    grid$polygons$NCCID,
+    c(44L, 45L, 46L, 54L, 55L, 56L, 64L, 65L, 66L)
+  )
+
+  # Another template in the folder is used, not _1km/idx.tif: here one whose
+  # values are 1000 more
+  natdata <- fixture_natdata_idx_dir()
+  terra::writeRaster(
+    fixture_template_bottom_left() + 1000,
+    file.path(natdata, "other.tif"),
+    datatype = "INT4S"
+  )
+  grid <- create_1km_grid(aoi, natdata, template_file = "other.tif")
+  expect_identical(grid$polygons$NCCID, default$polygons$NCCID + 1000L)
+})
+
 test_that("create_1km_grid() gives clear errors", {
   skip_if_not_installed("sf")
   dir <- tempfile("grid_errors")
@@ -612,6 +651,15 @@ test_that("create_1km_grid() gives clear errors", {
 
   expect_snapshot(error = TRUE, create_1km_grid(aoi, "no_such_folder"))
   expect_snapshot(error = TRUE, create_1km_grid(aoi, "empty"))
+  expect_snapshot(error = TRUE, {
+    create_1km_grid(aoi, natdata, template_file = "_1km/missing.tif")
+  })
+  expect_snapshot(error = TRUE, {
+    create_1km_grid(aoi, natdata, template_file = NA)
+  })
+  expect_snapshot(error = TRUE, {
+    create_1km_grid(aoi, natdata, template_file = c("a.tif", "b.tif"))
+  })
   expect_snapshot(error = TRUE, create_1km_grid(aoi, natdata, cells = "all"))
   expect_snapshot(error = TRUE, create_1km_grid(aoi, natdata, value = ""))
   expect_snapshot(error = TRUE, create_1km_grid(aoi, natdata, id = 1))

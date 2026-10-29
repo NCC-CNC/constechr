@@ -493,6 +493,16 @@ fixture_natdata_idx_dir <- function(template = fixture_template_bottom_left(),
   dir
 }
 
+# Moves a NAT_DATA-like folder's `_1km/idx.tif` to `template_file`, a path
+# relative to the folder (its folders are created), so the folder has no
+# `_1km/idx.tif`. Returns `natdata_dir`, invisibly.
+move_natdata_template <- function(natdata_dir, template_file) {
+  to <- file.path(natdata_dir, template_file)
+  dir.create(dirname(to), recursive = TRUE, showWarnings = FALSE)
+  stopifnot(file.rename(file.path(natdata_dir, "_1km", "idx.tif"), to))
+  invisible(natdata_dir)
+}
+
 # Each polygon's lower-left corner, as a two-column matrix. Needs sf.
 lower_left <- function(x) {
   b <- t(sapply(sf::st_geometry(x), sf::st_bbox))

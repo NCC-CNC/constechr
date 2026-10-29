@@ -20,7 +20,8 @@ create_wtw_planning_units(
   raster_value = 1,
   raster_datatype = "INT1U",
   raster_name = "layer",
-  overwrite = TRUE
+  overwrite = TRUE,
+  template_file = "_1km/idx.tif"
 )
 }
 \arguments{
@@ -35,9 +36,10 @@ the first layer. The AOI is read once into memory before anything is
 written, so it can be the \code{aoi_file} this call overwrites.}
 
 \item{natdata_dir}{The NAT_DATA folder: a single path to an existing
-folder, such as a dated release (\code{NAT_DATA_20261009}). Its template is
-opened with \code{\link[=natdata_template]{natdata_template()}} (\verb{_1km/idx.tif}). Where NAT_DATA lives
-is each tool's own setting; this function only reads from it.}
+folder, such as a dated release (\code{NAT_DATA_20261009}). Its template,
+the file \code{template_file}, is opened with \code{\link[=natdata_template]{natdata_template()}}. Where
+NAT_DATA lives is each tool's own setting; this function only reads
+from it.}
 
 \item{project_dir}{The WTW project folder: \code{NULL} (the default) writes
 nothing, or a single folder path, under which the files named by
@@ -128,6 +130,12 @@ default, \code{"layer"}, is wtw-data-prep2's. Ignored without \code{raster_file}
 \item{overwrite}{A single logical. \code{TRUE} (the default) replaces existing
 files, as wtw-data-prep2 does; \code{FALSE} is an error if any of the files
 exists, checked before any file is written.}
+
+\item{template_file}{The template's file within \code{natdata_dir}, as a path
+relative to it, passed to \code{\link[=natdata_template]{natdata_template()}} as its \code{file}. The
+default, \code{"_1km/idx.tif"}, is NAT_DATA's national template. Another
+path opens a template kept elsewhere in the folder, such as another
+version or resolution of the grid.}
 }
 \value{
 The list \code{\link[=create_1km_grid]{create_1km_grid()}} returns, differing from it only in
@@ -161,12 +169,13 @@ defaults write the files that step writes.
 \item \strong{AOI}: read once, with \code{\link[=read_aoi]{read_aoi()}}'s input handling and checks
 (polygons or multipolygons only, with a CRS), files with
 \code{\link[=read_layer]{read_layer()}}; Z and M dropped; reprojected to the template's CRS
-(\verb{_1km/idx.tif}, Canada_Albers_WGS_1984) with \code{\link[sf:st_transform]{sf::st_transform()}}
-(PROJ), which moves each vertex. It must be one feature, or the
-function stops before anything is written; nothing is dissolved
-silently.
+(\code{template_file} in \code{natdata_dir}, by default \verb{_1km/idx.tif}, in
+Canada_Albers_WGS_1984) with \code{\link[sf:st_transform]{sf::st_transform()}} (PROJ), which moves
+each vertex. It must be one feature, or the function stops before
+anything is written; nothing is dissolved silently.
 \item \strong{Planning units}: \code{\link[=create_1km_grid]{create_1km_grid()}} on that feature, with
-\code{cells}, \code{value}, \code{id}, \code{index} and \code{order} (its Method section has
+\code{cells}, \code{value}, \code{id}, \code{index}, \code{order} and \code{template_file} (its
+Method section has
 the details): the AOI dissolved by \code{\link[=read_aoi]{read_aoi()}} (one feature, so the
 same area); its cells on the template by
 raster intersection (\code{"touches"} is GDAL's all-touched rule), without
