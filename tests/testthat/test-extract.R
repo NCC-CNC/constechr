@@ -575,6 +575,14 @@ test_that("a layer with no data type is written in one inferred from values", {
   expect_identical(types, c(sp_a = "INT1U", cover = "FLT4S"))
   expect_setequal(stats::na.omit(file_values(paths[["sp_a"]])), c(0, 1))
   expect_true(1.6 %in% round(file_values(paths[["cover"]]), 5))
+})
+
+test_that("a raster layer is written in its stored data type", {
+  skip_if_not_installed("prioritizr")
+  old <- setwd(fixture_layers_dir())
+  on.exit(setwd(old), add = TRUE)
+  template <- fixture_template()
+  pu <- fixture_pu("inside")
 
   # A raster layer keeps its stored type, with no message
   expect_no_message(
