@@ -1026,7 +1026,7 @@ test_that("layers, tifs_dir and extract_layers()'s arguments are passed on", {
           layers = if (is.null(a$layers)) catalogue else a$layers,
           aoi_raster = file.path(project, "aoi", "pu_1km.tif"),
           template = natdata_template(natdata),
-          dir = reference, path_column = "file"
+          output_dir = reference, path_column = "file"
         ),
         a[names(a) != "layers"]
       )

@@ -8,30 +8,30 @@
 #'
 #' Where the layers go:
 #' - Neither `filename` nor `multiband = TRUE` (the defaults): one file per
-#'   layer in `dir`, `<prefix><layer name>.tif`.
+#'   layer in `output_dir`, `<prefix><layer name>.tif`.
 #' - `filename` and a one-layer `x`: that layer, to `filename`, whatever
 #'   `multiband` is.
 #' - `filename` and `multiband = TRUE`: all layers, one band each, to
 #'   `filename`.
 #' - `multiband = TRUE` without `filename`: all layers to
-#'   `<dir>/<prefix><stem>.tif`, where `<stem>` is the name, without its
+#'   `<output_dir>/<prefix><stem>.tif`, where `<stem>` is the name, without its
 #'   extension, of the one file `x` is read from (as the
 #'   opportunity-screening-toolkit names its files). An `x` held in memory or
 #'   read from several files has no such name, so it needs `filename`.
 #' - `filename`, several layers and `multiband = FALSE` is an error: one file
 #'   name cannot name several files.
 #'
-#' `dir` and `prefix` are not used when `filename` is given.
+#' `output_dir` and `prefix` are not used when `filename` is given.
 #'
 #' @param x The raster to write: a `SpatRaster` with one or more layers, or a
 #'   path to a raster file. With one file per layer, its layer names name the
 #'   files.
-#' @param dir The folder to write to: a single path. It is created, with any
-#'   missing parent folders, if it does not exist. Required unless `filename`
-#'   is given, which takes its place.
+#' @param output_dir The folder to write to: a single path. It is created,
+#'   with any missing parent folders, if it does not exist. Required unless
+#'   `filename` is given, which takes its place.
 #' @param prefix A single string put before each file name (`""`, the
 #'   default, adds none), such as `"T_"` for `T_<layer name>.tif`. A path
-#'   separator in it puts the files in a subfolder of `dir`, which is
+#'   separator in it puts the files in a subfolder of `output_dir`, which is
 #'   created. Not used when `filename` is given.
 #' @param datatype The data type of the written files, one of terra's types:
 #'   `"INT1U"`, `"INT2U"`, `"INT2S"`, `"INT4U"`, `"INT4S"`, `"INT8U"`,
@@ -60,9 +60,9 @@
 #'
 #' @section Method:
 #' - **Files**: each layer is written with [terra::writeRaster()] to
-#'   `<dir>/<prefix><layer name>.tif`, a GeoTIFF; or all layers to one file
-#'   as bands in layer order, each band named after its layer. Cells, extent,
-#'   resolution and CRS are written as they are: no resampling or
+#'   `<output_dir>/<prefix><layer name>.tif`, a GeoTIFF; or all layers to one
+#'   file as bands in layer order, each band named after its layer. Cells,
+#'   extent, resolution and CRS are written as they are: no resampling or
 #'   reprojection.
 #' - **Data type**: `datatype`, or with `NULL` each layer's stored data type
 #'   (in one file, the one type all layers share).
@@ -115,15 +115,15 @@
 #'
 #' # One file per layer: sp_a and cover, as T_sp_a.tif and T_cover.tif.
 #' # r is in memory, so datatype is required.
-#' dir <- file.path(tempdir(), "layers")
-#' paths <- write_rasters(r, dir, prefix = "T_", datatype = "INT1U")
+#' output_dir <- file.path(tempdir(), "layers")
+#' paths <- write_rasters(r, output_dir, prefix = "T_", datatype = "INT1U")
 #' basename(paths)
 #'
 #' # cover's 1.6 is rounded to 2 before it is written as an integer
 #' terra::values(terra::rast(paths[["cover"]]), mat = FALSE)
 #'
 #' # With round_int = FALSE it is cut off to 1, as terra does
-#' paths <- write_rasters(r, dir, datatype = "INT1U", round_int = FALSE)
+#' paths <- write_rasters(r, output_dir, datatype = "INT1U", round_int = FALSE)
 #' terra::values(terra::rast(paths[["cover"]]), mat = FALSE)
 #'
 #' # One multi-band file instead
@@ -134,15 +134,15 @@
 #' )
 #'
 #' # A raster read from one file can be copied without a filename: here to
-#' # <dir>/layers.tif, as integers
-#' write_rasters(f, dir, datatype = "INT2S", multiband = TRUE)
+#' # <output_dir>/layers.tif, as integers
+#' write_rasters(f, output_dir, datatype = "INT2S", multiband = TRUE)
 #'
 #' # One layer to a named file
 #' write_rasters(
 #'   r[["cover"]],
 #'   datatype = "FLT4S", filename = file.path(tempdir(), "cover.tif")
 #' )
-write_rasters <- function(x, dir, prefix = "", datatype = NULL,
+write_rasters <- function(x, output_dir, prefix = "", datatype = NULL,
                           round_int = TRUE, multiband = FALSE,
                           filename = NULL, overwrite = TRUE) {
   call <- environment()
@@ -163,7 +163,7 @@ write_rasters <- function(x, dir, prefix = "", datatype = NULL,
           "{.arg filename} names one file, but {.arg x} has
           {terra::nlyr(x)} layers.",
           "i" = "Use {.code multiband = TRUE} to write them all to
-          {.arg filename}, or {.arg dir} and {.arg prefix} (without
+          {.arg filename}, or {.arg output_dir} and {.arg prefix} (without
           {.arg filename}) for one file per layer."
         ),
         call = call
@@ -175,18 +175,18 @@ write_rasters <- function(x, dir, prefix = "", datatype = NULL,
     return(invisible(filename))
   }
 
-  if (missing(dir)) {
+  if (missing(output_dir)) {
     cli::cli_abort(
       c(
-        "{.arg dir} is required when {.arg filename} is not given.",
+        "{.arg output_dir} is required when {.arg filename} is not given.",
         "i" = "Give the folder to write to, or {.arg filename}."
       ),
       call = call
     )
   }
-  check_dir(dir, call)
+  check_dir(output_dir, call)
   check_prefix(prefix, call)
-  dir <- sub("^(.*[^/\\\\:])[/\\\\]+$", "\\1", dir)
+  output_dir <- sub("^(.*[^/\\\\:])[/\\\\]+$", "\\1", output_dir)
 
   if (multiband) {
     stem <- source_stem(x)
@@ -201,7 +201,7 @@ write_rasters <- function(x, dir, prefix = "", datatype = NULL,
         call = call
       )
     }
-    filename <- file.path(dir, paste0(prefix, stem, ".tif"))
+    filename <- file.path(output_dir, paste0(prefix, stem, ".tif"))
     datatype <- multiband_datatype(x, datatype, call)
     check_output_files(filename, sources, overwrite, call)
     write_files(list(x), filename, datatype, round_int, overwrite, call)
@@ -210,7 +210,7 @@ write_rasters <- function(x, dir, prefix = "", datatype = NULL,
 
   check_layer_names(names(x), call)
   datatypes <- layer_datatypes(x, datatype, call)
-  paths <- file.path(dir, paste0(prefix, names(x), ".tif"))
+  paths <- file.path(output_dir, paste0(prefix, names(x), ".tif"))
   check_output_files(paths, sources, overwrite, call)
   layers <- lapply(seq_along(paths), function(i) x[[i]])
   write_files(layers, paths, datatypes, round_int, overwrite, call)
@@ -392,29 +392,29 @@ check_filename <- function(filename, call) {
   invisible(filename)
 }
 
-#' Check the `dir` argument
+#' Check the `output_dir` argument
 #'
-#' @param dir The value given.
+#' @param path The value given.
 #' @param call The environment that errors name.
-#' @return `dir`, invisibly; an error if it is not a single, non-empty string,
-#'   or is an existing file.
+#' @return `path`, invisibly; an error if it is not a single, non-empty
+#'   string, or is an existing file.
 #' @noRd
-check_dir <- function(dir, call) {
-  ok <- assertthat::is.string(dir) && !is.na(dir) && nzchar(dir)
+check_dir <- function(path, call) {
+  ok <- assertthat::is.string(path) && !is.na(path) && nzchar(path)
   if (!ok) {
     cli::cli_abort(
-      "{.arg dir} must be a single folder path, not
-      {.obj_type_friendly {dir}}.",
+      "{.arg output_dir} must be a single folder path, not
+      {.obj_type_friendly {path}}.",
       call = call
     )
   }
-  if (file.exists(dir) && !dir.exists(dir)) {
+  if (file.exists(path) && !dir.exists(path)) {
     cli::cli_abort(
-      "{.arg dir} must be a folder; {.file {dir}} is a file.",
+      "{.arg output_dir} must be a folder; {.file {path}} is a file.",
       call = call
     )
   }
-  invisible(dir)
+  invisible(path)
 }
 
 #' Characters not allowed in file names on Windows
@@ -436,7 +436,7 @@ bad_file_name_chars <- function(separators = TRUE) {
 #' @param call The environment that errors name.
 #' @return `prefix`, invisibly; an error if it is not a single string or
 #'   holds characters not allowed in file names. Path separators are allowed:
-#'   they put the files in a subfolder of `dir`.
+#'   they put the files in a subfolder of `output_dir`.
 #' @noRd
 check_prefix <- function(prefix, call) {
   if (!assertthat::is.string(prefix) || is.na(prefix)) {
@@ -620,7 +620,7 @@ check_output_files <- function(paths, source, overwrite, call) {
       c(
         "The output files must not be files {.arg x} is read from.",
         "x" = "Read from: {.file {is_input}}.",
-        "i" = "Use another {.arg dir} or {.arg prefix}."
+        "i" = "Use another {.arg output_dir} or {.arg prefix}."
       ),
       call = call
     )

@@ -4,7 +4,7 @@
 #' layers on the national 1 km template) for an area of interest (AOI): each
 #' layer is read as an rij matrix ([read_rij_matrix()]), clipped to the AOI
 #' ([clip_rij_matrix()]) and rebuilt as rasters on the AOI raster's extent
-#' ([rij_matrix_to_raster()]), then returned or, with `dir`, written to
+#' ([rij_matrix_to_raster()]), then returned or, with `output_dir`, written to
 #' GeoTIFF files ([write_rasters()]). The AOI's cells are worked out once
 #' for all layers, and everything that can be checked without extracting is
 #' checked before the first layer is read.
@@ -19,8 +19,8 @@
 #'     uses the argument):
 #'     - `prefix`: put before the layer's file names (`""` for none);
 #'     - `datatype`: the data type of the layer's files;
-#'     - `subdir`: the subfolder of `dir` the layer's files go in (`NA` or
-#'       `""` for `dir` itself); it may hold path separators;
+#'     - `subdir`: the subfolder of `output_dir` the layer's files go in
+#'       (`NA` or `""` for `output_dir` itself); it may hold path separators;
 #'     - `format`: what the file holds, `"auto"`, `"raster"` or `"rij"`, as
 #'       in [read_rij_matrix()]'s `type`; `NA` is `"auto"`, which decides by
 #'       extension (`.tif` and `.tiff` are rasters, `.rds` an rij matrix).
@@ -39,10 +39,10 @@
 #' @param template The template raster the layers are on: a `SpatRaster`
 #'   with one layer and a CRS, or a path to a raster file. Only which of its
 #'   cells have data (are not `NA`) is used, not its values.
-#' @param dir `NULL` (the default) returns the rasters in memory and writes
-#'   nothing; a single folder path writes them to files there (created if
-#'   needed) instead. The arguments below `dir`, except `drop_empty` and
-#'   `progress`, are used only when writing.
+#' @param output_dir `NULL` (the default) returns the rasters in memory and
+#'   writes nothing; a single folder path writes them to files there (created
+#'   if needed) instead. The arguments below `output_dir`, except `drop_empty`
+#'   and `progress`, are used only when writing.
 #' @param prefix A single string put before each file name, for layers with
 #'   no `prefix` in `layers`. `""` (the default) adds none. A path separator
 #'   in it puts the files in a subfolder, as in [write_rasters()].
@@ -59,9 +59,9 @@
 #'   decimals off. Float types are never rounded.
 #' @param multiband A single logical: `FALSE` (the default) writes one file
 #'   per feature (row of the layer's rij matrix),
-#'   `<dir>/<subdir>/<prefix><feature>.tif`; `TRUE` writes one multi-band
+#'   `<output_dir>/<subdir>/<prefix><feature>.tif`; `TRUE` writes one multi-band
 #'   file per layer, one band per feature, named after the layer's file:
-#'   `<dir>/<subdir>/<prefix><file name without extension>.tif` (as the
+#'   `<output_dir>/<subdir>/<prefix><file name without extension>.tif` (as the
 #'   opportunity-screening-toolkit names them).
 #' @param drop_empty A single logical: `TRUE` (the default) drops the
 #'   features with no values in the AOI (every value 0 or `NA`), as
@@ -102,16 +102,16 @@
 #'   where it reaches past its edge): the feature's values in the AOI cells
 #'   with template data, 0 where it has none, `NA` elsewhere. Values are
 #'   kept as they are (doubles, not rounded, no areas).
-#' - **Names in memory**: without `dir`, each raster is named after its
+#' - **Names in memory**: without `output_dir`, each raster is named after its
 #'   layer's file name without its extension. Repeated names (layers with
 #'   the same file name in different folders, or a layer given twice) are
 #'   made unique with [make.unique()], in the order of `layers`, among the
 #'   layers that are not skipped: the first keeps the name and later ones
 #'   get `.1`, `.2` and so on (`rij`, `rij.1`). Names that do not repeat are
 #'   unchanged. Written files are named by feature, not by these names.
-#' - **Writing** ([write_rasters()]), with `dir`: to
-#'   `<dir>/<subdir>/<prefix><feature>.tif`, or with `multiband = TRUE`
-#'   `<dir>/<subdir>/<prefix><file name without extension>.tif`. Each
+#' - **Writing** ([write_rasters()]), with `output_dir`: to
+#'   `<output_dir>/<subdir>/<prefix><feature>.tif`, or with `multiband = TRUE`
+#'   `<output_dir>/<subdir>/<prefix><file name without extension>.tif`. Each
 #'   layer's `prefix`, `datatype` and `subdir` come from `layers`, else from
 #'   the arguments; the data type, else, from the layer's raster file. With
 #'   `round_int = TRUE`, values are rounded halves away from zero before an
@@ -132,20 +132,20 @@
 #'
 #' Method choices are recorded in ADRs 0015 and 0016, and those of the
 #' functions it calls in ADRs 0011 to 0014. With `layers` from
-#' [read_natdata_metadata()], `path_column = "file"` and `dir` as
+#' [read_natdata_metadata()], `path_column = "file"` and `output_dir` as
 #' `<project>/tifs`, it writes the same files as wtw-data-prep2's
 #' `natdata()`. Intended changes from that code: everything
 #' that can be checked is checked before extracting, dropped features and
 #' skipped layers are named in messages, and an error names the layer.
 #'
-#' @return Without `dir`, a list of `SpatRaster`s held in memory, one per
+#' @return Without `output_dir`, a list of `SpatRaster`s held in memory, one per
 #'   layer with features left after clipping, in the order of `layers`, named
 #'   after the layer's file name without its extension, with repeated names
 #'   made unique by [make.unique()] (`rij`, `rij.1`; see Method); each has
 #'   one layer per feature, named after it. Layers that were skipped are left
 #'   out, so the list can be empty.
 #'
-#'   With `dir`, the paths of the files written, invisibly: a character
+#'   With `output_dir`, the paths of the files written, invisibly: a character
 #'   vector in the order written, named after the feature for one file per
 #'   feature, or after the layer's file name without its extension for a
 #'   multi-band file.
@@ -175,15 +175,18 @@
 #' layers <- data.frame(
 #'   path = rij, prefix = "T_", datatype = "INT1U", subdir = "species"
 #' )
-#' dir <- file.path(tempdir(), "extracted")
-#' paths <- extract_layers(layers, aoi_raster, template, dir = dir)
+#' output_dir <- file.path(tempdir(), "extracted")
+#' paths <- extract_layers(
+#'   layers, aoi_raster, template,
+#'   output_dir = output_dir
+#' )
 #' basename(paths)
 #' terra::values(terra::rast(paths[["cover"]]), mat = FALSE)
 #'
 #' # One multi-band file per layer instead, named after the layer's file
 #' paths <- extract_layers(
 #'   rij, aoi_raster, template,
-#'   dir = dir, datatype = "FLT4S", multiband = TRUE
+#'   output_dir = output_dir, datatype = "FLT4S", multiband = TRUE
 #' )
 #' basename(paths)
 #'
@@ -203,10 +206,10 @@
 #' layers <- data.frame(folder = "species", file = rij, datatype = "INT1U")
 #' paths <- extract_layers(
 #'   layers, aoi_raster, template,
-#'   dir = dir, path_column = "file"
+#'   output_dir = output_dir, path_column = "file"
 #' )
 #' basename(paths)
-extract_layers <- function(layers, aoi_raster, template, dir = NULL,
+extract_layers <- function(layers, aoi_raster, template, output_dir = NULL,
                            prefix = "", datatype = NULL, round_int = TRUE,
                            multiband = FALSE, drop_empty = TRUE,
                            overwrite = TRUE, progress = NULL,
@@ -223,9 +226,9 @@ extract_layers <- function(layers, aoi_raster, template, dir = NULL,
       call = call
     )
   }
-  write <- !is.null(dir)
+  write <- !is.null(output_dir)
   if (write) {
-    check_dir(dir, call)
+    check_dir(output_dir, call)
     check_prefix(prefix, call)
     if (!is.null(datatype)) {
       check_datatype(datatype, call)
@@ -233,7 +236,7 @@ extract_layers <- function(layers, aoi_raster, template, dir = NULL,
     check_flag(round_int, "round_int", call)
     check_flag(multiband, "multiband", call)
     check_flag(overwrite, "overwrite", call)
-    dir <- sub("^(.*[^/\\\\:])[/\\\\]+$", "\\1", dir)
+    output_dir <- sub("^(.*[^/\\\\:])[/\\\\]+$", "\\1", output_dir)
   }
 
   layers$type <- layer_types(layers, call)
@@ -242,7 +245,9 @@ extract_layers <- function(layers, aoi_raster, template, dir = NULL,
   }
   features <- raster_layer_features(layers, template, call)
   if (write) {
-    layers <- layer_outputs(layers, features, dir, prefix, datatype, call)
+    layers <- layer_outputs(
+      layers, features, output_dir, prefix, datatype, call
+    )
     planned <- planned_outputs(layers, features, multiband)
     check_planned_outputs(planned, layers, overwrite, call)
   }
@@ -491,15 +496,16 @@ raster_layer_features <- function(layers, template, call) {
 #'
 #' @param layers The table from `as_layers()`, with its `type` column set.
 #' @param features The list from `raster_layer_features()`.
-#' @param dir,prefix,datatype The arguments of `extract_layers()`.
+#' @param folder,prefix,datatype The arguments of `extract_layers()`;
+#'   `folder` is its `output_dir`.
 #' @param call The environment that errors name.
 #' @return `layers` with `prefix` and `datatype` filled in from the
 #'   arguments (and the data type from raster files) where `NA`, and a
-#'   `folder` column, `dir` or `<dir>/<subdir>`; an error if a prefix,
-#'   subfolder or data type in `layers` is not allowed, or a layer has no
-#'   data type.
+#'   `folder` column, `output_dir` or `<output_dir>/<subdir>`; an error if a
+#'   prefix, subfolder or data type in `layers` is not allowed, or a layer has
+#'   no data type.
 #' @noRd
-layer_outputs <- function(layers, features, dir, prefix, datatype, call) {
+layer_outputs <- function(layers, features, folder, prefix, datatype, call) {
   bad_chars <- bad_file_name_chars(separators = FALSE)
   for (column in c("prefix", "subdir")) {
     bad <- unique(layers[[column]][grepl(bad_chars, layers[[column]])])
@@ -562,8 +568,8 @@ layer_outputs <- function(layers, features, dir, prefix, datatype, call) {
 
   subdir <- layers$subdir
   has_subdir <- !is.na(subdir) & nzchar(subdir)
-  layers$folder <- rep(dir, nrow(layers))
-  layers$folder[has_subdir] <- file.path(dir, subdir[has_subdir])
+  layers$folder <- rep(folder, nrow(layers))
+  layers$folder[has_subdir] <- file.path(folder, subdir[has_subdir])
   layers
 }
 
@@ -654,7 +660,7 @@ check_planned_outputs <- function(planned, layers, overwrite, call) {
       c(
         "The output files must not be layers' input files.",
         "x" = "Input file{?s}: {.file {is_input}}.",
-        "i" = "Use another {.arg dir}, {.arg prefix} or {.field subdir}."
+        "i" = "Use another {.arg output_dir}, {.arg prefix} or {.field subdir}."
       ),
       call = call
     )
@@ -702,7 +708,7 @@ check_run_outputs <- function(outputs, written, inputs, call) {
       c(
         "The output files must not be layers' input files.",
         "x" = "Input file{?s}: {.file {is_input}}.",
-        "i" = "Use another {.arg dir}, {.arg prefix} or {.field subdir}."
+        "i" = "Use another {.arg output_dir}, {.arg prefix} or {.field subdir}."
       ),
       call = call
     )

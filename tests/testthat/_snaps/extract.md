@@ -9,7 +9,8 @@
 ---
 
     Code
-      paths <- extract_layers("features.rds", pu, template, dir = dir, datatype = "INT1U")
+      paths <- extract_layers("features.rds", pu, template, output_dir = folder,
+        datatype = "INT1U")
     Message
       Skipped 'features.rds': no values in the AOI.
 
@@ -125,15 +126,15 @@
 ---
 
     Code
-      extract_layers("features.rds", pu, template, dir = 1)
+      extract_layers("features.rds", pu, template, output_dir = 1)
     Condition
       Error in `extract_layers()`:
-      ! `dir` must be a single folder path, not a number.
+      ! `output_dir` must be a single folder path, not a number.
 
 ---
 
     Code
-      extract_layers("features.rds", pu, template, dir = dir, datatype = "INT")
+      extract_layers("features.rds", pu, template, output_dir = folder, datatype = "INT")
     Condition
       Error in `extract_layers()`:
       ! `datatype` must be one of terra's data types, not a string.
@@ -142,7 +143,7 @@
 ---
 
     Code
-      extract_layers("features.rds", pu, template, dir = dir, multiband = "yes")
+      extract_layers("features.rds", pu, template, output_dir = folder, multiband = "yes")
     Condition
       Error in `extract_layers()`:
       ! `multiband` must be `TRUE` or `FALSE`, not a string.
@@ -186,7 +187,7 @@
 
     Code
       extract_layers(c("cover.tif", "features.rds", "features2.rds"), pu, template,
-      dir = dir, progress = progress)
+      output_dir = folder, progress = progress)
     Condition
       Error in `extract_layers()`:
       ! A `datatype` is needed to write layers with no stored data type (such as rij matrices in '.rds' files).
@@ -197,7 +198,7 @@
 
     Code
       extract_layers(data.frame(path = "features.rds", datatype = c("INT1U", "int")),
-      pu, template, dir = dir)
+      pu, template, output_dir = folder)
     Condition
       Error in `extract_layers()`:
       ! The datatype column of `layers` must hold terra's data types.
@@ -208,7 +209,7 @@
 
     Code
       extract_layers(data.frame(path = "features.rds", prefix = "a?", datatype = "INT1U"),
-      pu, template, dir = dir)
+      pu, template, output_dir = folder)
     Condition
       Error in `extract_layers()`:
       ! The prefix column of `layers` must not contain characters not allowed in file names.
@@ -219,7 +220,7 @@
 
     Code
       extract_layers(data.frame(path = "features.rds", subdir = "C:/x", datatype = "INT1U"),
-      pu, template, dir = dir)
+      pu, template, output_dir = folder)
     Condition
       Error in `extract_layers()`:
       ! The subdir column of `layers` must not contain characters not allowed in file names.
@@ -229,7 +230,7 @@
 ---
 
     Code
-      extract_layers(c("features.rds", "features.rds"), pu, template, dir = dir,
+      extract_layers(c("features.rds", "features.rds"), pu, template, output_dir = folder,
       datatype = "INT1U")
     Condition
       Error in `extract_layers()`:
@@ -239,7 +240,7 @@
 ---
 
     Code
-      extract_layers(c("cover.tif", "features.tif"), pu, template, dir = dir,
+      extract_layers(c("cover.tif", "features.tif"), pu, template, output_dir = folder,
       progress = progress)
     Condition
       Error in `extract_layers()`:
@@ -249,17 +250,17 @@
 ---
 
     Code
-      extract_layers("cover.tif", pu, template, dir = ".")
+      extract_layers("cover.tif", pu, template, output_dir = ".")
     Condition
       Error in `extract_layers()`:
       ! The output files must not be layers' input files.
       x Input file: './cover.tif'.
-      i Use another `dir`, `prefix` or subdir.
+      i Use another `output_dir`, `prefix` or subdir.
 
 ---
 
     Code
-      extract_layers("cover.tif", pu, template, dir = dir, overwrite = FALSE)
+      extract_layers("cover.tif", pu, template, output_dir = folder, overwrite = FALSE)
     Condition
       Error in `extract_layers()`:
       ! 1 output file already exists: 'out/cover.tif'.
@@ -269,7 +270,7 @@
 
     Code
       suppressMessages(extract_layers(c("features.rds", "bad.rds"), pu, template,
-      dir = dir, datatype = "INT1U"))
+      output_dir = folder, datatype = "INT1U"))
     Condition
       Error in `extract_layers()`:
       ! Can't extract layer 2 of 2: 'bad.rds'.
@@ -290,7 +291,7 @@
 
     Code
       suppressMessages(extract_layers(c("features.rds", "features2.rds"), pu,
-      template, dir = dir, datatype = "INT1U"))
+      template, output_dir = folder, datatype = "INT1U"))
     Condition
       Error in `extract_layers()`:
       ! Can't extract layer 2 of 2: 'features2.rds'.
@@ -301,12 +302,13 @@
 ---
 
     Code
-      suppressMessages(extract_layers(layers, pu, template, dir = ".", datatype = "INT1U"))
+      suppressMessages(extract_layers(layers, pu, template, output_dir = ".",
+        datatype = "INT1U"))
     Condition
       Error in `extract_layers()`:
       ! Can't extract layer 1 of 2: 'features.rds'.
       Caused by error in `extract_layers()`:
       ! The output files must not be layers' input files.
       x Input file: './sp_a.tif'.
-      i Use another `dir`, `prefix` or subdir.
+      i Use another `output_dir`, `prefix` or subdir.
 

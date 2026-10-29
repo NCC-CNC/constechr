@@ -9,14 +9,15 @@ skip_if_not_installed("terra")
 skip_if_not_installed("sf")
 
 test_that("one file per layer is written as <prefix><layer name>.tif", {
-  dir <- tempfile("write")
+  folder <- tempfile("write")
   x <- fixture_features()
-  paths <- write_rasters(x, dir, prefix = "T_", datatype = "FLT4S")
+  paths <- write_rasters(x, folder, prefix = "T_", datatype = "FLT4S")
 
-  expect_true(dir.exists(dir))
+  expect_true(dir.exists(folder))
   expect_identical(names(paths), c("sp_a", "sp_b", "cover"))
   expect_identical(
-    unname(paths), file.path(dir, c("T_sp_a.tif", "T_sp_b.tif", "T_cover.tif"))
+    unname(paths),
+    file.path(folder, c("T_sp_a.tif", "T_sp_b.tif", "T_cover.tif"))
   )
   expect_true(all(file.exists(paths)))
   for (layer in names(x)) {
@@ -30,36 +31,36 @@ test_that("one file per layer is written as <prefix><layer name>.tif", {
     )
   }
   # Returned invisibly
-  expect_invisible(write_rasters(x, dir, datatype = "FLT4S"))
+  expect_invisible(write_rasters(x, folder, datatype = "FLT4S"))
 })
 
 test_that("integer types are rounded halves away from zero, or truncated", {
-  dir <- tempfile("write")
+  folder <- tempfile("write")
   cover <- fixture_features()[["cover"]]
 
-  paths <- write_rasters(cover, dir, datatype = "INT1U")
+  paths <- write_rasters(cover, folder, datatype = "INT1U")
   expect_identical(terra::datatype(terra::rast(paths)), "INT1U")
   expect_equal(file_values(paths), cover_values(c(0, 2, 2, 7)))
 
-  paths <- write_rasters(cover, dir, datatype = "INT1U", round_int = FALSE)
+  paths <- write_rasters(cover, folder, datatype = "INT1U", round_int = FALSE)
   expect_equal(file_values(paths), cover_values(c(0, 1, 2, 7)))
 
   # Halves and negative values: 0.5 to 1, -0.5 to -1, 2.5 to 3, -1.5 to -2
   # when rounded; 0, 0, 2 and -1 when truncated.
   halves <- terra::rast(nrows = 1, ncols = 4, vals = c(0.5, -0.5, 2.5, -1.5))
   names(halves) <- "halves"
-  paths <- write_rasters(halves, dir, datatype = "INT2S")
+  paths <- write_rasters(halves, folder, datatype = "INT2S")
   expect_equal(file_values(paths), c(1, -1, 3, -2))
-  paths <- write_rasters(halves, dir, datatype = "INT2S", round_int = FALSE)
+  paths <- write_rasters(halves, folder, datatype = "INT2S", round_int = FALSE)
   expect_equal(file_values(paths), c(0, 0, 2, -1))
 })
 
 test_that("float types are never rounded", {
-  dir <- tempfile("write")
+  folder <- tempfile("write")
   cover <- fixture_features()[["cover"]]
   for (round_int in c(TRUE, FALSE)) {
     paths <- write_rasters(
-      cover, dir,
+      cover, folder,
       datatype = "FLT8S", round_int = round_int
     )
     expect_identical(file_values(paths), cover_values(c(0.4, 1.6, 2.2, 7.25)))
@@ -67,12 +68,12 @@ test_that("float types are never rounded", {
 })
 
 test_that("datatype = NULL uses each layer's stored data type", {
-  dir <- tempfile("write")
+  folder <- tempfile("write")
   x <- fixture_features()
   sp_a <- terra::rast(fixture_file(x[["sp_a"]], "sp_a", "INT1U"))
   cover <- terra::rast(fixture_file(x[["cover"]], "cover", "FLT4S"))
 
-  paths <- write_rasters(c(sp_a, cover), dir)
+  paths <- write_rasters(c(sp_a, cover), folder)
   expect_identical(terra::datatype(terra::rast(paths[["sp_a"]])), "INT1U")
   expect_identical(terra::datatype(terra::rast(paths[["cover"]])), "FLT4S")
   expect_equal(
@@ -81,26 +82,26 @@ test_that("datatype = NULL uses each layer's stored data type", {
   )
 
   # A path works the same as the raster read from it
-  paths <- write_rasters(terra::sources(cover), dir, prefix = "p_")
+  paths <- write_rasters(terra::sources(cover), folder, prefix = "p_")
   expect_identical(basename(paths), "p_cover.tif")
   expect_identical(terra::datatype(terra::rast(paths)), "FLT4S")
 
   # datatype overrides the stored type
-  paths <- write_rasters(c(sp_a, cover), dir, datatype = "INT2U")
+  paths <- write_rasters(c(sp_a, cover), folder, datatype = "INT2U")
   expect_identical(
     unname(terra::datatype(terra::rast(unname(paths)))), c("INT2U", "INT2U")
   )
   expect_equal(file_values(paths[["cover"]]), cover_values(c(0, 2, 2, 7)))
 
   # An in-memory layer has no stored type
-  expect_error(write_rasters(x, dir), "required to write in-memory layers")
-  expect_error(write_rasters(c(sp_a, x[["sp_b"]]), dir), "sp_b")
+  expect_error(write_rasters(x, folder), "required to write in-memory layers")
+  expect_error(write_rasters(c(sp_a, x[["sp_b"]]), folder), "sp_b")
 })
 
 test_that("multiband = TRUE writes all layers to filename", {
-  dir <- tempfile("write")
+  folder <- tempfile("write")
   x <- fixture_features()
-  out <- file.path(dir, "sub", "features.tif")
+  out <- file.path(folder, "sub", "features.tif")
   path <- write_rasters(x, datatype = "INT1U", multiband = TRUE, filename = out)
 
   expect_identical(path, out)
@@ -111,7 +112,7 @@ test_that("multiband = TRUE writes all layers to filename", {
   expect_equal(layer_values(r)$cover, cover_values(c(0, 2, 2, 7)))
   expect_equal(layer_values(r)$sp_a, layer_values(x)$sp_a)
 
-  # dir and prefix are not used with filename
+  # output_dir and prefix are not used with filename
   path <- write_rasters(
     x, "ignored",
     prefix = "ignored_",
@@ -127,36 +128,36 @@ test_that("multiband = TRUE writes all layers to filename", {
 })
 
 test_that("multiband = TRUE without filename uses the source file's name", {
-  dir <- tempfile("write")
+  folder <- tempfile("write")
   x <- fixture_features()
   src <- fixture_file(x, "features", "FLT4S")
 
-  path <- write_rasters(src, dir, prefix = "T_", multiband = TRUE)
-  expect_identical(path, file.path(dir, "T_features.tif"))
+  path <- write_rasters(src, folder, prefix = "T_", multiband = TRUE)
+  expect_identical(path, file.path(folder, "T_features.tif"))
   r <- terra::rast(path)
   expect_identical(names(r), c("sp_a", "sp_b", "cover"))
   expect_identical(unname(terra::datatype(r)), rep("FLT4S", 3))
 
   # A subset of the file's layers is still read from that one file
   path <- write_rasters(
-    terra::rast(src)[[c("sp_a", "cover")]], dir,
+    terra::rast(src)[[c("sp_a", "cover")]], folder,
     datatype = "INT1U", multiband = TRUE
   )
-  expect_identical(path, file.path(dir, "features.tif"))
+  expect_identical(path, file.path(folder, "features.tif"))
   expect_equal(
     layer_values(terra::rast(path))$cover, cover_values(c(0, 2, 2, 7))
   )
 
   # No name can be worked out for an in-memory raster
   expect_error(
-    write_rasters(x, dir, datatype = "INT1U", multiband = TRUE),
+    write_rasters(x, folder, datatype = "INT1U", multiband = TRUE),
     "not read from one file"
   )
   # nor one read from several files
   a <- terra::rast(fixture_file(x[["sp_a"]], "sp_a", "INT1U"))
   b <- terra::rast(fixture_file(x[["sp_b"]], "sp_b", "INT1U"))
   expect_error(
-    write_rasters(c(a, b), dir, multiband = TRUE),
+    write_rasters(c(a, b), folder, multiband = TRUE),
     "not read from one file"
   )
   # Mixed stored types in one file need datatype
@@ -168,9 +169,9 @@ test_that("multiband = TRUE without filename uses the source file's name", {
 })
 
 test_that("filename takes a one-layer raster whatever multiband is", {
-  dir <- tempfile("write")
+  folder <- tempfile("write")
   cover <- fixture_features()[["cover"]]
-  out <- file.path(dir, "my cover.tif")
+  out <- file.path(folder, "my cover.tif")
 
   path <- write_rasters(cover, datatype = "INT1U", filename = out)
   expect_identical(path, out)
@@ -205,15 +206,15 @@ test_that("write_rasters() matches wtw-data-prep2's rij_to_raster()", {
   pu <- fixture_pu("inside")
   rij <- suppressMessages(clip_rij_matrix(fixture_rij(), pu, template))
   r <- rij_matrix_to_raster(rij, template, pu)
-  dir <- tempfile("write")
+  folder <- tempfile("write")
 
-  paths <- write_rasters(r, dir, prefix = "T_", datatype = "INT1U")
+  paths <- write_rasters(r, folder, prefix = "T_", datatype = "INT1U")
   expect_identical(basename(paths), c("T_sp_a.tif", "T_cover.tif"))
   expect_equal(file_values(paths[["sp_a"]]), c(1, 1, 0, 0, 1, 1, 0, 0, 1))
   expect_equal(file_values(paths[["cover"]]), c(0, 0, 0, 0, 2, 0, 0, 0, 0))
   expect_identical(terra::datatype(terra::rast(paths[["cover"]])), "INT1U")
 
-  paths <- write_rasters(r, dir, prefix = "T_", datatype = "FLT4S")
+  paths <- write_rasters(r, folder, prefix = "T_", datatype = "FLT4S")
   expect_equal(
     file_values(paths[["cover"]]), c(0, 0, 0, 0, 1.6, 0, 0, 0, 0),
     tolerance = 1e-7
@@ -221,26 +222,26 @@ test_that("write_rasters() matches wtw-data-prep2's rij_to_raster()", {
 })
 
 test_that("NA cells are written as the data type's NoData value", {
-  dir <- tempfile("write")
-  path <- write_rasters(fixture_template(), dir, datatype = "INT1U")
+  folder <- tempfile("write")
+  path <- write_rasters(fixture_template(), folder, datatype = "INT1U")
   v <- file_values(path)
   expect_equal(which(is.na(v)), fixture_na_cells())
   expect_equal(v[-fixture_na_cells()], setdiff(1:100, fixture_na_cells()))
 })
 
 test_that("overwrite and the input's own files are checked first", {
-  dir <- tempfile("write")
+  folder <- tempfile("write")
   x <- fixture_features()
-  paths <- write_rasters(x, dir, datatype = "INT1U")
+  paths <- write_rasters(x, folder, datatype = "INT1U")
 
   # overwrite = TRUE (the default) replaces the files
-  paths <- write_rasters(x, dir, datatype = "INT2S")
+  paths <- write_rasters(x, folder, datatype = "INT2S")
   expect_identical(terra::datatype(terra::rast(paths[["cover"]])), "INT2S")
 
   # overwrite = FALSE writes nothing if any file exists
   unlink(paths[["sp_a"]])
   expect_error(
-    write_rasters(x, dir, datatype = "INT1U", overwrite = FALSE),
+    write_rasters(x, folder, datatype = "INT1U", overwrite = FALSE),
     "already exist"
   )
   expect_false(file.exists(paths[["sp_a"]]))
@@ -265,10 +266,10 @@ test_that("overwrite and the input's own files are checked first", {
 })
 
 test_that("files a failed call created are removed", {
-  dir <- tempfile("write")
-  dir.create(dir)
+  folder <- tempfile("write")
+  dir.create(folder)
   x <- fixture_features()
-  kept <- file.path(dir, "sp_b.tif")
+  kept <- file.path(folder, "sp_b.tif")
   writeLines("not a raster", kept)
   local_mocked_bindings(
     write_raster_file = function(x, filename, ...) {
@@ -277,45 +278,57 @@ test_that("files a failed call created are removed", {
     }
   )
   expect_error(
-    write_rasters(x, dir, datatype = "INT1U"),
+    write_rasters(x, folder, datatype = "INT1U"),
     "files this call created were removed"
   )
   # sp_a.tif was created, so removed; sp_b.tif existed, so kept
-  expect_false(file.exists(file.path(dir, "sp_a.tif")))
+  expect_false(file.exists(file.path(folder, "sp_a.tif")))
   expect_true(file.exists(kept))
-  expect_false(file.exists(file.path(dir, "cover.tif")))
+  expect_false(file.exists(file.path(folder, "cover.tif")))
 })
 
-test_that("dir and prefix make folders, including subfolders", {
-  dir <- file.path(tempfile("write"), "a", "b")
+test_that("output_dir and prefix make folders, including subfolders", {
+  folder <- file.path(tempfile("write"), "a", "b")
   cover <- fixture_features()[["cover"]]
-  path <- write_rasters(cover, paste0(dir, "/"),
+  path <- write_rasters(cover, paste0(folder, "/"),
     prefix = "sub/T_",
     datatype = "INT1U"
   )
-  expect_identical(unname(path), file.path(dir, "sub/T_cover.tif"))
+  expect_identical(unname(path), file.path(folder, "sub/T_cover.tif"))
   expect_true(file.exists(path))
 })
 
+test_that("the removed dir argument is an error (#109)", {
+  folder <- tempfile("write")
+  cover <- fixture_features()[["cover"]]
+  expect_error(
+    write_rasters(cover, dir = folder, datatype = "INT1U"),
+    "unused argument"
+  )
+  expect_false(dir.exists(folder))
+})
+
 test_that("layer names must be usable file names with one file per layer", {
-  dir <- tempfile("write")
+  folder <- tempfile("write")
   x <- fixture_features()
   names(x) <- c("a", "A", "b")
-  expect_error(write_rasters(x, dir, datatype = "INT1U"), "ignoring case")
+  expect_error(write_rasters(x, folder, datatype = "INT1U"), "ignoring case")
   names(x) <- c("a", "b/c", "d")
-  expect_error(write_rasters(x, dir, datatype = "INT1U"), "path separators")
+  expect_error(write_rasters(x, folder, datatype = "INT1U"), "path separators")
   names(x) <- c("a", "b:c", "d")
-  expect_error(write_rasters(x, dir, datatype = "INT1U"), "path separators")
+  expect_error(write_rasters(x, folder, datatype = "INT1U"), "path separators")
   names(x) <- c("a", "", "d")
-  expect_error(write_rasters(x, dir, datatype = "INT1U"), "must not be empty")
-  expect_false(dir.exists(dir))
+  expect_error(
+    write_rasters(x, folder, datatype = "INT1U"), "must not be empty"
+  )
+  expect_false(dir.exists(folder))
 })
 
 test_that("invalid arguments give clear errors", {
   x <- fixture_features()
-  dir <- tempfile("write")
+  folder <- tempfile("write")
   expect_snapshot(error = TRUE, {
-    write_rasters(1, dir)
+    write_rasters(1, folder)
   })
   expect_snapshot(error = TRUE, {
     write_rasters(x, datatype = "INT1U")
@@ -333,22 +346,22 @@ test_that("invalid arguments give clear errors", {
     transform = function(x) sub(file, "<file>", x, fixed = TRUE)
   )
   expect_snapshot(error = TRUE, {
-    write_rasters(x, dir, prefix = NA, datatype = "INT1U")
+    write_rasters(x, folder, prefix = NA, datatype = "INT1U")
   })
   expect_snapshot(error = TRUE, {
-    write_rasters(x, dir, prefix = "a?", datatype = "INT1U")
+    write_rasters(x, folder, prefix = "a?", datatype = "INT1U")
   })
   expect_snapshot(error = TRUE, {
-    write_rasters(x, dir, datatype = "INT1")
+    write_rasters(x, folder, datatype = "INT1")
   })
   expect_snapshot(error = TRUE, {
-    write_rasters(x, dir, datatype = "INT1U", round_int = NA)
+    write_rasters(x, folder, datatype = "INT1U", round_int = NA)
   })
   expect_snapshot(error = TRUE, {
-    write_rasters(x, dir, datatype = "INT1U", multiband = "yes")
+    write_rasters(x, folder, datatype = "INT1U", multiband = "yes")
   })
   expect_snapshot(error = TRUE, {
-    write_rasters(x, dir, datatype = "INT1U", overwrite = NULL)
+    write_rasters(x, folder, datatype = "INT1U", overwrite = NULL)
   })
   expect_snapshot(error = TRUE, {
     write_rasters(x, datatype = "INT1U", multiband = TRUE, filename = 1)
@@ -357,22 +370,22 @@ test_that("invalid arguments give clear errors", {
     write_rasters(x, datatype = "INT1U", filename = "x.tif")
   })
   expect_snapshot(error = TRUE, {
-    write_rasters(x, dir, datatype = "INT1U", multiband = TRUE)
+    write_rasters(x, folder, datatype = "INT1U", multiband = TRUE)
   })
   expect_snapshot(error = TRUE, {
-    write_rasters(x, dir)
+    write_rasters(x, folder)
   })
   names(x) <- c("a", "A", "b/c")
   expect_snapshot(error = TRUE, {
-    write_rasters(x, dir, datatype = "INT1U")
+    write_rasters(x, folder, datatype = "INT1U")
   })
   names(x) <- c("a", "A", "b")
   expect_snapshot(error = TRUE, {
-    write_rasters(x, dir, datatype = "INT1U")
+    write_rasters(x, folder, datatype = "INT1U")
   })
   names(x) <- c("a", "", "")
   expect_snapshot(error = TRUE, {
-    write_rasters(x, dir, datatype = "INT1U")
+    write_rasters(x, folder, datatype = "INT1U")
   })
 })
 

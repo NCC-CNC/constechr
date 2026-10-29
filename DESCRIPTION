@@ -1,6 +1,6 @@
 Package: constechr
 Title: Shared Functions for Conservation Technology Tools
-Version: 0.1.0.9006
+Version: 0.1.0.9007
 Authors@R: c(
     person("Shaun", "Astbury", , "shaun.astbury@natureconservancy.ca", role = c("aut", "cre")),
     person("Nature Conservancy of Canada", role = "cph")
