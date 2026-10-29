@@ -48,6 +48,23 @@ test_that("an AOI on the template gets the hand-worked cells", {
   }
 })
 
+test_that("cells defaults to \"centre\" (#106)", {
+  template <- fixture_template()
+  for (name in names(expected_cells$centre)) {
+    x <- rasterize_aoi(fixture_aoi(name), template)
+    expect_equal(
+      cell_values(x), expected_cells$centre[[name]],
+      label = name
+    )
+    expect_identical(
+      terra::values(x),
+      terra::values(rasterize_aoi(fixture_aoi(name), template,
+        cells = "centre"
+      ))
+    )
+  }
+})
+
 test_that("the raster is cropped to the AOI, snapped out to whole cells", {
   template <- fixture_template()
   x <- rasterize_aoi(fixture_aoi("inside"), template, cells = "centre")
@@ -426,9 +443,6 @@ test_that("an AOI that gets no cells warns and returns all NA", {
 test_that("invalid arguments give clear errors", {
   template <- fixture_template()
   aoi <- fixture_aoi("inside")
-  expect_snapshot(error = TRUE, {
-    rasterize_aoi(aoi, template)
-  })
   expect_snapshot(error = TRUE, {
     rasterize_aoi(aoi, template, cells = "center")
   })

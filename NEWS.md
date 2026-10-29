@@ -1,5 +1,13 @@
 <!-- markdownlint-disable-file MD025 -->
 
+# constechr 0.1.0.9004
+
+- `rasterize_aoi()`'s `cells` argument has a default, `"centre"` (cells
+  whose centre is inside the AOI, terra's and GDAL's own default), instead
+  of being required (#106, ADR 0008). No existing call changes its result,
+  since every call had to name `cells`. `create_1km_grid()` and
+  `create_wtw_planning_units()` keep their default, `cells = "touches"`.
+
 # constechr 0.1.0.9003
 
 - `read_aoi()` checks that the AOI's geometries are valid

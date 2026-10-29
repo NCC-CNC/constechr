@@ -28,8 +28,10 @@
 #'   bounds are in.
 #' @param cells The cell inclusion rule, one of `"touches"` (every cell the
 #'   AOI touches) or `"centre"` (every cell whose centre is inside the AOI).
-#'   Required: there is no default, because the rule changes which cells an
-#'   AOI gets. Bounds follow the same rule as polygons.
+#'   `"centre"` (the default) is terra's and GDAL's own default
+#'   (`touches = FALSE`). The NAT_DATA and WTW use-case functions,
+#'   [create_1km_grid()] and [create_wtw_planning_units()], default to
+#'   `"touches"` instead. Bounds follow the same rule as polygons.
 #' @param value What the AOI's cells hold, one of:
 #'   - `"index"` (the default): the cell number (terra's numbering, row by
 #'     row from the top-left cell, starting at 1) in the template, or, at a
@@ -117,8 +119,8 @@
 #' x <- rasterize_aoi(aoi, template, cells = "touches")
 #' terra::values(x, mat = FALSE)
 #'
-#' # Only cells whose centre is inside the AOI, holding 1
-#' rasterize_aoi(aoi, template, cells = "centre", value = 1)
+#' # The default rule, cells whose centre is inside the AOI, holding 1
+#' rasterize_aoi(aoi, template, value = 1)
 #'
 #' # Coarser cells (2 km on the 1 km template), numbered in the 2 km grid
 #' rasterize_aoi(aoi, template, resolution = 2000, cells = "touches")
@@ -130,23 +132,12 @@
 #' rasterize_aoi(
 #'   c(xmin = 1003600, ymin = 604300, xmax = 1005800, ymax = 606600),
 #'   resolution = 500,
-#'   crs = template,
-#'   cells = "centre"
+#'   crs = template
 #' )
 rasterize_aoi <- function(aoi, template = NULL, resolution = NULL, crs = NULL,
-                          cells, value = "index", drop_na = TRUE,
+                          cells = "centre", value = "index", drop_na = TRUE,
                           crop = TRUE) {
   call <- environment()
-  if (missing(cells)) {
-    cli::cli_abort(
-      c(
-        "{.arg cells} is required.",
-        "i" = "Use {.str touches} (every cell the AOI touches) or
-        {.str centre} (cells whose centre is inside the AOI)."
-      ),
-      call = call
-    )
-  }
   check_cells(cells, call)
   check_value(value, call)
   check_flag(drop_na, "drop_na", call)

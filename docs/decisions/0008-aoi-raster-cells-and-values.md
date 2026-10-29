@@ -5,7 +5,8 @@
 Accepted; the `NCCID` left open in decision 1 is settled by
 0017-natdata-1km-grid-ids-and-order.md, and the type of the values
 (integers for cell numbers and integer templates) by
-0019-raster-values-keep-their-type.md
+0019-raster-values-keep-their-type.md; amended 2026-10-29 (#106): `cells`
+now has a default, `"centre"` (decisions 4 and 7)
 
 ## Context
 
@@ -45,11 +46,23 @@ holds 15,390,287 in `idx.tif`. wtw-data-prep2 uses both: `NCCID` is the
    - a coarse cell has template data if at least one of its template cells
      has data, and `drop_na` applies on that basis.
 4. **Bounds** become a rectangle with `read_aoi()`, and the same `cells`
-   rule applies as for polygons; `cells` is still required.
+   rule applies as for polygons, including its default (decision 7).
+   Before #106, `cells` was required.
 5. **`crs` with a template** must be the template's CRS, or the function
    stops with an error. `NULL` uses the template's.
 6. **`crop = FALSE`** returns the template's full grid, or the full coarse
    grid at a coarser resolution.
+7. **`cells` defaults to `"centre"`** (cells whose centre is inside the
+   AOI), the owner's decision on #106 (2026-10-29). `cells` was first
+   required, so that no caller got a rule by accident. But
+   `rasterize_aoi()` is the generic AOI building block, not a use-case
+   function, so a generic default fits CLAUDE.md's "favour flexible
+   functions" rule, and `"centre"` is the generic one: it is terra's and
+   GDAL's own default (`touches = FALSE`). The ConsTech convention,
+   `"touches"`, stays in the use-case functions, per the two-layer rule:
+   `create_1km_grid()` and `create_wtw_planning_units()` default to
+   `cells = "touches"` and pass it to `rasterize_aoi()` explicitly. No
+   existing call changes its result, since every call had to name `cells`.
 
 Settled while building it, as the narrower choices that can be relaxed
 later without changing any result:
