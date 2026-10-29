@@ -14,9 +14,10 @@ multipolygons;
 \item a terra \code{SpatVector} of polygons;
 \item a file path (a single string) to a vector file that GDAL can read,
 such as a shapefile (\code{.shp}), GeoPackage (\code{.gpkg}) or GeoJSON
-(\code{.geojson}). For a file or folder with more than one layer, such as a
-file geodatabase, name the layer as \verb{<path>/<layer>}, for example
-\code{"data.gdb/aoi"};
+(\code{.geojson}), read with \code{\link[=read_layer]{read_layer()}}. To read a layer other than
+the first, such as one layer of a file geodatabase, name it as
+\verb{<path>/<layer>}, for example \code{"data.gdb/aoi"}. Without a layer, the
+first layer is read, with a message naming it if there are others;
 \item bounds: a numeric vector \code{c(xmin, ymin, xmax, ymax)} (named, in any
 order, or unnamed in that order), an \code{sf} \code{bbox} (from
 \code{\link[sf:st_bbox]{sf::st_bbox()}}) or a terra \code{SpatExtent}.
@@ -50,8 +51,8 @@ for it.
 \section{Method}{
 
 \itemize{
-\item \strong{Reading}: files are read with \code{\link[sf:st_read]{sf::st_read()}} (GDAL), from the layer
-named in the path, or from the file's only layer.
+\item \strong{Reading}: files are read with \code{\link[=read_layer]{read_layer()}} (\code{\link[sf:st_read]{sf::st_read()}},
+GDAL), from the layer named in the path, or from the first layer.
 \item \strong{Bounds}: become one rectangle with its corners at the bounds
 (\code{\link[sf:st_as_sfc]{sf::st_as_sfc()}} of an \code{\link[sf:st_bbox]{sf::st_bbox()}}).
 \item \strong{Geometry}: Z and M coordinates are dropped (\code{\link[sf:st_zm]{sf::st_zm()}}), so the
@@ -90,6 +91,9 @@ read_aoi(
 )
 }
 \seealso{
+\code{\link[=read_layer]{read_layer()}} to read a vector layer's features and attributes
+as stored.
+
 Other aoi:
 \code{\link[=rasterize_aoi]{rasterize_aoi()}}
 }

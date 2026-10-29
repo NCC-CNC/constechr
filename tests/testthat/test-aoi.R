@@ -117,7 +117,10 @@ test_that("geodatabase layers read as <gdb>/<layer>", {
   x <- read_aoi(file.path(gdb, "single"), union = FALSE)
   expect_equal(x$name, "single")
   expect_equal(bbox_of(x), expected_bbox("single"))
-  expect_error(read_aoi(gdb), "must have one layer")
+  # Without a layer, the first layer is read, with a message.
+  first <- sf::st_layers(gdb)$name[[1]]
+  expect_message(x <- read_aoi(gdb, union = FALSE), "first of 2 layers")
+  expect_equal(x$name, first)
   expect_error(read_aoi(file.path(gdb, "nope")), "does not exist")
 })
 
@@ -295,9 +298,16 @@ test_that("unreadable files and missing layers give errors", {
   gpkg <- file.path(dir, "two.gpkg")
   sf::st_write(fixture_aoi("inside"), gpkg, layer = "a", quiet = TRUE)
   sf::st_write(fixture_aoi("single"), gpkg, layer = "b", quiet = TRUE)
-  expect_error(read_aoi(gpkg), "must have one layer")
   expect_equal(
     bbox_of(read_aoi(file.path(gpkg, "b"))),
     expected_bbox("single")
   )
+})
+
+test_that("a multi-layer source without a layer reads its first layer", {
+  gpkg <- file.path(new_tempdir(), "two.gpkg")
+  sf::st_write(fixture_aoi("inside"), gpkg, layer = "a", quiet = TRUE)
+  sf::st_write(fixture_aoi("single"), gpkg, layer = "b", quiet = TRUE)
+  expect_snapshot(x <- read_aoi(gpkg))
+  expect_equal(bbox_of(x), expected_bbox("inside"))
 })
