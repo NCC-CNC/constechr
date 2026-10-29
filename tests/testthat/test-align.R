@@ -221,6 +221,32 @@ test_that("filename, datatype and overwrite are used when writing", {
   expect_identical(terra::datatype(x), "INT4S")
   expect_equal(non_na_cells(x)$cells, c(34, 35, 36, 44, 45, 46, 54, 55, 56))
 
+  # Without datatype, an in-memory input's type is inferred from the aligned
+  # values (1 and NA): INT1U, with a message. Also when terra puts the
+  # result in a temporary file, whose stored type (FLT4S) is not used.
+  expect_message(
+    x <- align_raster(pu, fixture_template(), filename = out),
+    "INT1U"
+  )
+  expect_identical(terra::datatype(x), "INT1U")
+  expect_equal(non_na_cells(x)$cells, c(34, 35, 36, 44, 45, 46, 54, 55, 56))
+  old <- terra::terraOptions(print = FALSE)$todisk
+  terra::terraOptions(todisk = TRUE)
+  expect_message(
+    x <- align_raster(pu, fixture_template(), filename = out),
+    "INT1U"
+  )
+  terra::terraOptions(todisk = old)
+  expect_identical(terra::datatype(x), "INT1U")
+
+  # A file input keeps its stored type, with no message
+  expect_no_message(
+    x <- align_raster(
+      fixture_file(pu, "pu_int2s", "INT2S"), fixture_template()
+    )
+  )
+  expect_identical(terra::datatype(x), "INT2S")
+
   # datatype overrides a file input's own data type
   path <- fixture_file(pu, "pu")
   x <- align_raster(path, fixture_template(), datatype = "FLT4S")
@@ -293,9 +319,6 @@ test_that("invalid arguments give clear errors", {
   })
   expect_snapshot(error = TRUE, {
     align_raster(pu, template, filename = c("a.tif", "b.tif"))
-  })
-  expect_snapshot(error = TRUE, {
-    align_raster(pu, template, filename = "pu.tif")
   })
   expect_snapshot(error = TRUE, {
     align_raster(terra::shift(pu, 50000, 0), template)

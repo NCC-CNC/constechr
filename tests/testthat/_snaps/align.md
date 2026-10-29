@@ -75,15 +75,6 @@
 ---
 
     Code
-      align_raster(pu, template, filename = "pu.tif")
-    Condition
-      Error in `align_raster()`:
-      ! `datatype` is required to write an in-memory `x`.
-      i An in-memory raster has no stored data type; give one, such as "INT1U", "INT4S" or "FLT4S".
-
----
-
-    Code
       align_raster(terra::shift(pu, 50000, 0), template)
     Condition
       Error in `align_raster()`:

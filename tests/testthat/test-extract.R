@@ -555,6 +555,42 @@ test_that("the removed dir argument is an error (#109)", {
   expect_false(dir.exists("out"))
 })
 
+test_that("a layer with no data type is written in one inferred from values", {
+  old <- setwd(fixture_layers_dir())
+  on.exit(setwd(old), add = TRUE)
+  template <- fixture_template()
+  pu <- fixture_pu("inside")
+  local_mocked_bindings(prioritizr_installed = function() TRUE)
+
+  # features.rds has no stored type: in the AOI sp_a is 0 and 1 (whole
+  # numbers, INT1U) and cover is 0 and 1.6 (decimals, FLT4S); sp_b, empty in
+  # the AOI, is dropped. Each file's type is named in a message.
+  expect_snapshot(
+    paths <- extract_layers("features.rds", pu, template, output_dir = "out")
+  )
+  expect_identical(names(paths), c("sp_a", "cover"))
+  types <- vapply(
+    paths, function(p) terra::datatype(terra::rast(p)), character(1)
+  )
+  expect_identical(types, c(sp_a = "INT1U", cover = "FLT4S"))
+  expect_setequal(stats::na.omit(file_values(paths[["sp_a"]])), c(0, 1))
+  expect_true(1.6 %in% round(file_values(paths[["cover"]]), 5))
+})
+
+test_that("a raster layer is written in its stored data type", {
+  skip_if_not_installed("prioritizr")
+  old <- setwd(fixture_layers_dir())
+  on.exit(setwd(old), add = TRUE)
+  template <- fixture_template()
+  pu <- fixture_pu("inside")
+
+  # A raster layer keeps its stored type, with no message
+  expect_no_message(
+    path <- extract_layers("cover.tif", pu, template, output_dir = "out2")
+  )
+  expect_identical(terra::datatype(terra::rast(path)), "FLT4S")
+})
+
 test_that("output problems are found before extracting where possible", {
   old <- setwd(fixture_layers_dir())
   on.exit(setwd(old), add = TRUE)
@@ -566,13 +602,6 @@ test_that("output problems are found before extracting where possible", {
   calls <- 0
   progress <- function(i, n, layer) calls <<- calls + 1
 
-  # No data type for an .rds layer
-  expect_snapshot(error = TRUE, {
-    extract_layers(
-      c("cover.tif", "features.rds", "features2.rds"), pu, template,
-      output_dir = folder, progress = progress
-    )
-  })
   # Data types, prefixes and subfolders in the table
   expect_snapshot(error = TRUE, {
     extract_layers(

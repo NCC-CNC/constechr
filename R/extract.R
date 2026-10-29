@@ -50,9 +50,10 @@
 #'   `datatype` in `layers`: one of terra's types (`"INT1U"`, `"INT2U"`,
 #'   `"INT2S"`, `"INT4U"`, `"INT4S"`, `"INT8U"`, `"INT8S"`, `"FLT4S"` or
 #'   `"FLT8S"`). `NULL` (the default) uses the data type of the layer's
-#'   raster file. An `.rds` rij matrix has no stored data type, so a layer
-#'   read from one needs a `datatype`, in `layers` or here; without one the
-#'   function stops before extracting anything.
+#'   raster file. A layer with none of these (such as an `.rds` rij matrix,
+#'   which has no stored data type) has its type inferred from each file's
+#'   extracted values when it is written, as [write_raster_file()] does,
+#'   with a message naming it.
 #' @param round_int A single logical, passed to [write_rasters()]: `TRUE`
 #'   (the default) rounds values to whole numbers, halves away from zero,
 #'   before writing them as an integer type; `FALSE` lets terra cut the
@@ -113,14 +114,17 @@
 #'   `<output_dir>/<subdir>/<prefix><feature>.tif`, or with `multiband = TRUE`
 #'   `<output_dir>/<subdir>/<prefix><file name without extension>.tif`. Each
 #'   layer's `prefix`, `datatype` and `subdir` come from `layers`, else from
-#'   the arguments; the data type, else, from the layer's raster file. With
-#'   `round_int = TRUE`, values are rounded halves away from zero before an
-#'   integer type.
+#'   the arguments; the data type, else, from the layer's raster file, else
+#'   (such as for an `.rds` rij matrix) it is inferred from each file's
+#'   extracted values as in [write_raster_file()] (ADR 0027): the smallest
+#'   integer type that holds whole numbers without its NoData value, else
+#'   `"FLT4S"`, with a message naming it. With `round_int = TRUE`, values
+#'   are rounded halves away from zero before an integer type.
 #' - **Checks first**: before any layer is read, the layer files must exist,
 #'   their type must be known, raster layers must open on the template's
-#'   grid, and, when writing, every layer must have a valid data type,
-#'   prefix and subfolder, and the files that can be named without reading
-#'   the layers (raster layers' features, and multi-band files) must be
+#'   grid, and, when writing, every data type given must be valid, every
+#'   prefix and subfolder allowed, and the files that can be named without
+#'   reading the layers (raster layers' features, and multi-band files) must be
 #'   distinct (ignoring case), must not be a layer's input file and, with
 #'   `overwrite = FALSE`, must not exist. The files of an `.rds` layer's
 #'   features are checked the same way when it is written. If a layer still
@@ -170,8 +174,8 @@
 #' x$rij
 #'
 #' # Written: one file per feature, T_sp_a.tif and T_cover.tif, in a
-#' # "species" subfolder. An .rds layer needs a datatype; cover's 1.6 is
-#' # rounded to 2.
+#' # "species" subfolder, as INT1U (without a datatype, it would be inferred
+#' # from the values, with a message); cover's 1.6 is rounded to 2.
 #' layers <- data.frame(
 #'   path = rij, prefix = "T_", datatype = "INT1U", subdir = "species"
 #' )
@@ -502,8 +506,9 @@ raster_layer_features <- function(layers, template, call) {
 #' @return `layers` with `prefix` and `datatype` filled in from the
 #'   arguments (and the data type from raster files) where `NA`, and a
 #'   `folder` column, `output_dir` or `<output_dir>/<subdir>`; an error if a
-#'   prefix, subfolder or data type in `layers` is not allowed, or a layer has
-#'   no data type.
+#'   prefix, subfolder or data type in `layers` is not allowed. A layer with
+#'   no data type from any of these keeps `NA`, so its type is inferred when
+#'   it is written.
 #' @noRd
 layer_outputs <- function(layers, features, folder, prefix, datatype, call) {
   bad_chars <- bad_file_name_chars(separators = FALSE)
@@ -526,10 +531,7 @@ layer_outputs <- function(layers, features, folder, prefix, datatype, call) {
 
   types <- layers$datatype
   types[!is.na(types) & !nzchar(types)] <- NA
-  known <- c(
-    "INT1U", "INT2U", "INT2S", "INT4U", "INT4S", "INT8U", "INT8S",
-    "FLT4S", "FLT8S"
-  )
+  known <- terra_datatypes()
   bad <- unique(types[!is.na(types) & !types %in% known])
   if (length(bad) > 0) {
     cli::cli_abort(
@@ -551,19 +553,8 @@ layer_outputs <- function(layers, features, folder, prefix, datatype, call) {
       types[i] <- stored
     }
   }
-  untyped <- unique(layers$path[is.na(types)])
-  if (length(untyped) > 0) {
-    cli::cli_abort(
-      c(
-        "A {.arg datatype} is needed to write layers with no stored data
-        type (such as rij matrices in {.file .rds} files).",
-        "x" = "No data type: {.file {untyped}}.",
-        "i" = "Give it in a {.field datatype} column of {.arg layers}, or
-        as {.arg datatype}."
-      ),
-      call = call
-    )
-  }
+  # A layer still without a type (such as an .rds rij matrix) keeps NA: its
+  # type is inferred from the extracted values when it is written.
   layers$datatype <- types
 
   subdir <- layers$subdir
@@ -762,17 +753,18 @@ extract_layer <- function(path, type, template, columns, aoi_grid,
 #' @noRd
 write_layer <- function(x, layer, outputs, stem, round_int, multiband,
                         overwrite) {
+  datatype <- if (is.na(layer$datatype)) NULL else layer$datatype
   if (multiband) {
     paths <- write_rasters(
       x,
-      datatype = layer$datatype, round_int = round_int, multiband = TRUE,
+      datatype = datatype, round_int = round_int, multiband = TRUE,
       filename = outputs, overwrite = overwrite
     )
     return(stats::setNames(paths, stem))
   }
   write_rasters(
     x, layer$folder,
-    prefix = layer$prefix, datatype = layer$datatype,
+    prefix = layer$prefix, datatype = datatype,
     round_int = round_int, overwrite = overwrite
   )
 }

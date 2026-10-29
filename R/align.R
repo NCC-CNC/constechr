@@ -27,7 +27,8 @@
 #'   `"INT1U"`, `"INT2U"`, `"INT2S"`, `"INT4U"`, `"INT4S"`, `"INT8U"`,
 #'   `"INT8S"`, `"FLT4S"` or `"FLT8S"`. `NULL` (the default) uses the data
 #'   type of the file `x` was read from, as `gdalwarp` does; an in-memory `x`
-#'   has none, so `datatype` is then required to write it. Ignored when
+#'   has none, so the type is then inferred from the aligned values, as
+#'   [write_raster_file()] does, with a message naming it. Ignored when
 #'   nothing is written.
 #' @param overwrite A single logical: `TRUE` (the default) replaces an
 #'   existing `filename`; `FALSE` stops with an error if it exists.
@@ -48,16 +49,20 @@
 #'   `x` has no NoData value. The warp runs without writing (to memory, or to
 #'   a temporary file for large rasters) and the result is then written with
 #'   [terra::writeRaster()], so cells outside `x` are never filled with 0.
-#' - **Writing**: in `datatype`. For an integer type the values are first
+#' - **Writing**: with [write_raster_file()]'s writer, in `datatype`; with
+#'   `NULL`, in the data type of `x`'s file, or for an in-memory `x` the
+#'   smallest integer type that holds the aligned values if they are whole
+#'   numbers, else `"FLT4S"` (`"FLT8S"` beyond its range), `"INT1U"` if all
+#'   are `NA` (ADR 0027). For an integer type the values are first
 #'   rounded to the nearest whole number, halves away from zero
 #'   (`terra::round()`), because GDAL truncates decimals when it writes them
 #'   as integers; with `"near"` on an integer input nothing changes. `NA` is
 #'   written as terra's NoData value for the type (for example 255 for
 #'   `"INT1U"`). A result kept in memory is not rounded.
 #'
-#' Method choices are recorded in ADR 0007 and ADR 0010. Compared with
-#' wtw-data-prep2's `align_pu()` (`gdalwarp`), the cells and values are the
-#' same, except that cells outside an input with no NoData value are `NA`
+#' Method choices are recorded in ADR 0007, ADR 0010 and ADR 0027. Compared
+#' with wtw-data-prep2's `align_pu()` (`gdalwarp`), the cells and values are
+#' the same, except that cells outside an input with no NoData value are `NA`
 #' rather than 0, a few edge cells can differ when reprojecting (`gdalwarp`
 #' uses an approximate transformation by default), and the stored CRS and
 #' grid are the template's exactly.
@@ -124,8 +129,12 @@ align_raster <- function(x, template, filename = NULL, resample = "near",
     filename <- align_filename(if (is.null(input_path)) source else input_path)
   }
   if (!is.null(filename)) {
-    if (is.null(datatype)) {
-      datatype <- input_datatype(x, call)
+    # A file input keeps its stored type, as gdalwarp does; an in-memory
+    # one has none, and write_raster() infers it.
+    stored <- terra::datatype(x)
+    has_stored <- !is.null(source) && !is.na(stored) && nzchar(stored)
+    if (is.null(datatype) && has_stored) {
+      datatype <- stored
     }
     check_output_file(filename, source, overwrite, call)
   }
@@ -142,7 +151,13 @@ align_raster <- function(x, template, filename = NULL, resample = "near",
   if (is.null(filename)) {
     return(out)
   }
-  write_raster_file(out, filename, datatype, overwrite = overwrite)
+  # An in-memory x has no stored type to keep; the result may be in a
+  # temporary file whose type is terra's default, so its type is inferred
+  # from the aligned values (ADR 0027).
+  write_raster(
+    out, filename, datatype,
+    overwrite = overwrite, stored = FALSE
+  )
   terra::rast(filename)
 }
 
@@ -192,28 +207,6 @@ raster_source <- function(x) {
 #' @noRd
 align_filename <- function(path) {
   paste0(sub("\\.[^./\\\\]*$", "", path), "_align.tif")
-}
-
-#' The data type of the file a raster was read from
-#'
-#' @param x A one-layer `SpatRaster`.
-#' @param call The environment that errors name.
-#' @return The data type, such as `"INT1U"`; an error if `x` is in memory and
-#'   so has none.
-#' @noRd
-input_datatype <- function(x, call) {
-  datatype <- terra::datatype(x)
-  if (is.null(raster_source(x)) || is.na(datatype) || !nzchar(datatype)) {
-    cli::cli_abort(
-      c(
-        "{.arg datatype} is required to write an in-memory {.arg x}.",
-        "i" = "An in-memory raster has no stored data type; give one, such as
-        {.str INT1U}, {.str INT4S} or {.str FLT4S}."
-      ),
-      call = call
-    )
-  }
-  datatype
 }
 
 #' Whether a raster's extent overlaps a template's, in the template's CRS

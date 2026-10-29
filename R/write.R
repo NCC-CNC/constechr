@@ -36,10 +36,11 @@
 #' @param datatype The data type of the written files, one of terra's types:
 #'   `"INT1U"`, `"INT2U"`, `"INT2S"`, `"INT4U"`, `"INT4S"`, `"INT8U"`,
 #'   `"INT8S"`, `"FLT4S"` or `"FLT8S"`, used for every layer. `NULL` (the
-#'   default) uses each layer's data type in the file it was read from
-#'   ([terra::datatype()]). A layer held in memory (made or changed in R, such
-#'   as by [rij_matrix_to_raster()]) has none, so `datatype` is then required.
-#'   Written to one file with `NULL`, the layers must share one stored type.
+#'   default) decides each file's type as [write_raster_file()] does: the
+#'   data type stored with its layers' file ([terra::datatype()]) if they
+#'   share one; otherwise, such as for a layer held in memory (made or
+#'   changed in R, such as by [rij_matrix_to_raster()]), the smallest type
+#'   that holds its values, with a message naming it.
 #' @param round_int A single logical. `TRUE` (the default) rounds values to
 #'   the nearest whole number, halves away from zero, before writing them as
 #'   an integer type (`"INT..."`); `FALSE` writes them as they are, so the
@@ -59,13 +60,18 @@
 #'   output file exists.
 #'
 #' @section Method:
-#' - **Files**: each layer is written with [terra::writeRaster()] to
+#' - **Files**: each file is written with [write_raster_file()]'s writer
+#'   ([terra::writeRaster()]): each layer to
 #'   `<output_dir>/<prefix><layer name>.tif`, a GeoTIFF; or all layers to one
 #'   file as bands in layer order, each band named after its layer. Cells,
 #'   extent, resolution and CRS are written as they are: no resampling or
 #'   reprojection.
-#' - **Data type**: `datatype`, or with `NULL` each layer's stored data type
-#'   (in one file, the one type all layers share).
+#' - **Data type**: `datatype`, or with `NULL`, decided for each file from
+#'   the layers written to it as in [write_raster_file()]: the stored type
+#'   they all share, else inferred from their values (all values are read):
+#'   the smallest integer type that holds whole numbers without its NoData
+#'   value, else `"FLT4S"` (or `"FLT8S"` beyond its range), `"INT1U"` if all
+#'   are `NA`, with a message naming the type and why.
 #' - **Rounding**: with `round_int = TRUE` and an integer data type, values
 #'   are first rounded to the nearest whole number, halves away from zero
 #'   (`terra::round()`: 0.5 becomes 1, -1.5 becomes -2, 0.75 becomes 1),
@@ -86,18 +92,19 @@
 #'   file that `x` is read from is an error, as is an existing file with
 #'   `overwrite = FALSE`.
 #'
-#' Method choices are recorded in ADR 0014, and the rounding follows ADR 0010
-#' for [align_raster()]. Compared with wtw-data-prep2's `rij_to_raster()`,
-#' which wrote each layer to `<prefix><name>.tif` after rounding unless the
-#' data type was a float, the files and values are the same with the default
-#' `round_int = TRUE`.
+#' Method choices are recorded in ADR 0014 and ADR 0027 (data types), and
+#' the rounding follows ADR 0010 for [align_raster()]. Compared with
+#' wtw-data-prep2's `rij_to_raster()`, which wrote each layer to
+#' `<prefix><name>.tif` after rounding unless the data type was a float, the
+#' files and values are the same with the default `round_int = TRUE`.
 #'
 #' @return The paths of the files written, invisibly: a character vector
 #'   named by layer with one file per layer, or the one file's path, unnamed.
 #'
 #' @family raster
 #' @seealso [rij_matrix_to_raster()] for the in-memory layers this writes in
-#'   national data extraction.
+#'   national data extraction; [write_raster_file()] to write a raster to one
+#'   named file.
 #' @export
 #'
 #' @examples
@@ -114,7 +121,8 @@
 #' names(r)
 #'
 #' # One file per layer: sp_a and cover, as T_sp_a.tif and T_cover.tif.
-#' # r is in memory, so datatype is required.
+#' # r is in memory, so without datatype each file's type would be inferred
+#' # from its values.
 #' output_dir <- file.path(tempdir(), "layers")
 #' paths <- write_rasters(r, output_dir, prefix = "T_", datatype = "INT1U")
 #' basename(paths)
@@ -137,7 +145,7 @@
 #' # <output_dir>/layers.tif, as integers
 #' write_rasters(f, output_dir, datatype = "INT2S", multiband = TRUE)
 #'
-#' # One layer to a named file
+#' # One layer to a named file (or use write_raster_file())
 #' write_rasters(
 #'   r[["cover"]],
 #'   datatype = "FLT4S", filename = file.path(tempdir(), "cover.tif")
@@ -169,7 +177,6 @@ write_rasters <- function(x, output_dir, prefix = "", datatype = NULL,
         call = call
       )
     }
-    datatype <- multiband_datatype(x, datatype, call)
     check_output_file(filename, sources, overwrite, call)
     write_files(list(x), filename, datatype, round_int, overwrite, call)
     return(invisible(filename))
@@ -202,18 +209,16 @@ write_rasters <- function(x, output_dir, prefix = "", datatype = NULL,
       )
     }
     filename <- file.path(output_dir, paste0(prefix, stem, ".tif"))
-    datatype <- multiband_datatype(x, datatype, call)
     check_output_files(filename, sources, overwrite, call)
     write_files(list(x), filename, datatype, round_int, overwrite, call)
     return(invisible(filename))
   }
 
   check_layer_names(names(x), call)
-  datatypes <- layer_datatypes(x, datatype, call)
   paths <- file.path(output_dir, paste0(prefix, names(x), ".tif"))
   check_output_files(paths, sources, overwrite, call)
   layers <- lapply(seq_along(paths), function(i) x[[i]])
-  write_files(layers, paths, datatypes, round_int, overwrite, call)
+  write_files(layers, paths, datatype, round_int, overwrite, call)
   invisible(stats::setNames(paths, names(x)))
 }
 
@@ -221,7 +226,8 @@ write_rasters <- function(x, output_dir, prefix = "", datatype = NULL,
 #'
 #' @param rasters A list of `SpatRaster`s, one per path.
 #' @param paths The output paths.
-#' @param datatypes The data type of each file.
+#' @param datatype The data type of every file, or `NULL` to decide each
+#'   file's type from its raster (`resolve_datatype()`).
 #' @param round_int,overwrite As in [write_rasters()].
 #' @param call The environment that errors name.
 #' @return `paths`, invisibly. If writing a file fails, the files this call
@@ -229,16 +235,14 @@ write_rasters <- function(x, output_dir, prefix = "", datatype = NULL,
 #'   passed on, so a failed call leaves no new files. Files that existed are
 #'   never removed.
 #' @noRd
-write_files <- function(rasters, paths, datatypes, round_int, overwrite,
+write_files <- function(rasters, paths, datatype, round_int, overwrite,
                         call) {
   existed <- file.exists(paths)
   i <- 0
   tryCatch(
     for (i in seq_along(paths)) {
       create_dir(dirname(paths[i]))
-      write_raster_file(
-        rasters[[i]], paths[i], datatypes[i], round_int, overwrite
-      )
+      write_raster(rasters[[i]], paths[i], datatype, round_int, overwrite)
     },
     error = function(e) {
       unlink(paths[seq_len(i)][!existed[seq_len(i)]])
@@ -279,26 +283,283 @@ file_stem <- function(path) {
   sub("\\.[^.]*$", "", basename(path))
 }
 
-#' Write a raster to a file, rounding before an integer data type
+#' Write a raster to one file
 #'
-#' The one place constechr writes raster files, so [align_raster()] and
-#' [write_rasters()] round the same way (ADR 0010, ADR 0014).
+#' Writes a raster to one file at a given path: one layer, or several layers
+#' as the bands of one file. Use it to save a raster made or changed in R,
+#' or to copy a raster file to another path or data type. Without
+#' `datatype`, the data type is the one stored with `x`'s file, or, for a
+#' raster held in memory, the smallest type that holds its values. To write
+#' one file per layer in a folder, use [write_rasters()].
+#'
+#' @param x The raster to write: a `SpatRaster` with one or more layers, or a
+#'   path to a raster file. Several layers are written as the bands of the
+#'   one file, in layer order, each band named after its layer.
+#' @param filename The file to write: a single path. Its extension sets the
+#'   format (GeoTIFF for `.tif`). Its parent folder is created, with any
+#'   missing parents, if it does not exist.
+#' @param datatype The data type of the file, one of terra's types:
+#'   `"INT1U"`, `"INT2U"`, `"INT2S"`, `"INT4U"`, `"INT4S"`, `"INT8U"`,
+#'   `"INT8S"`, `"FLT4S"` or `"FLT8S"`. `NULL` (the default) takes it from
+#'   `x`: the data type stored with its file, if every layer has one and
+#'   they are the same; otherwise (a layer is held in memory, such as one
+#'   made or changed in R, or the layers' stored types differ) the type
+#'   inferred from the values, with a message naming it (see Method).
+#' @param round_int A single logical. `TRUE` (the default) rounds values to
+#'   the nearest whole number, halves away from zero, before writing them as
+#'   an integer type (`"INT..."`); `FALSE` writes them as they are, so the
+#'   decimals are cut off (towards zero). Values written as a float type
+#'   (`"FLT4S"`, `"FLT8S"`) are never rounded, whatever `round_int` is.
+#' @param overwrite A single logical: `TRUE` (the default) replaces an
+#'   existing `filename`; `FALSE` stops with an error, before anything is
+#'   written, if it exists.
+#'
+#' @section Method:
+#' - **File**: `x` is written with [terra::writeRaster()] to `filename`, in
+#'   the format its extension sets (a GeoTIFF for `.tif`). Several layers
+#'   become bands in layer order, each band named after its layer. Cells,
+#'   extent, resolution and CRS are written as they are: no resampling or
+#'   reprojection.
+#' - **Data type**: `datatype`, if given. With `NULL`, the type stored with
+#'   `x`'s file ([terra::datatype()]) if every layer has one and they are
+#'   all the same. Otherwise it is inferred from the values of all layers,
+#'   which are all read (in blocks, for a large raster held in a file): if
+#'   every value that is not `NA` is a whole number, the smallest integer
+#'   type that holds their range without using its NoData value, unsigned
+#'   when the smallest value is 0 or more (`"INT1U"` for 0 to 254,
+#'   `"INT2U"` for 0 to 65,534, `"INT4U"` for 0 to 4,294,967,294; `"INT2S"`
+#'   for -32,767 to 32,767, `"INT4S"` for -2,147,483,647 to
+#'   2,147,483,647); otherwise, or if the range needs more than 32 bits,
+#'   `"FLT4S"` when every value is within `"FLT4S"`'s range (about
+#'   +/-3.4e38) and `"FLT8S"` beyond it. A raster whose values are all `NA`
+#'   gets `"INT1U"`. A message ([cli::cli_inform()]) names the type chosen
+#'   and why; give `datatype` to choose another. The type is decided from `x`
+#'   as given, before rounding.
+#' - **Rounding**: with `round_int = TRUE` and an integer data type, values
+#'   are first rounded to the nearest whole number, halves away from zero
+#'   (`terra::round()`: 0.5 becomes 1, -1.5 becomes -2, 0.75 becomes 1),
+#'   because terra cuts decimals off when it writes them as integers (0.75
+#'   would be written as 0). With `round_int = FALSE`, terra's truncation
+#'   towards zero is kept. Float data types are never rounded. A `"FLT4S"`
+#'   file keeps about 7 significant digits.
+#' - **No data**: `NA` is written as terra's NoData value for the data type
+#'   (for example 255 for `"INT1U"`). Values outside the data type's range
+#'   are written as NoData, and terra warns.
+#' - **Folders**: `filename`'s parent folder is created, with any missing
+#'   parents, if it does not exist.
+#' - **Checks first**: before anything is written, `filename` must be a
+#'   single, non-empty path whose parent is not an existing file, must not
+#'   be a file `x` is read from (also with `overwrite = TRUE`), and must not
+#'   exist with `overwrite = FALSE`.
+#'
+#' This is the one writer constechr uses: [write_rasters()] writes each of
+#' its files with it, and [align_raster()] and [extract_layers()] write
+#' through it, so they all round, write NoData and decide data types the
+#' same way. Method choices are recorded in ADR 0014 and ADR 0027, and the
+#' rounding follows ADR 0010.
+#'
+#' @return `filename`, invisibly.
+#'
+#' @family raster
+#' @seealso [write_rasters()] to write one file per layer in a folder, or a
+#'   multi-band file named after its source.
+#' @export
+#'
+#' @examples
+#' template <- system.file("extdata", "template.tif", package = "constechr")
+#' aoi <- system.file("extdata", "aoi.gpkg", package = "constechr")
+#'
+#' # One layer, held in memory: the data type is inferred from its values,
+#' # 1 and NA, as INT1U, with a message
+#' pu <- rasterize_aoi(aoi, template, value = 1)
+#' f <- write_raster_file(pu, file.path(tempdir(), "pu.tif"))
+#' terra::datatype(terra::rast(f))
+#'
+#' # Or give the data type
+#' write_raster_file(pu, f, datatype = "INT2S")
+#' terra::datatype(terra::rast(f))
+#'
+#' # A raster read from a file keeps its stored data type
+#' write_raster_file(template, file.path(tempdir(), "copy", "template.tif"))
+#'
+#' # Several layers as the bands of one file, each band named after its
+#' # layer. cover has decimals, so with datatype = NULL the file would be
+#' # FLT4S; as INT1U, 1.5 is rounded to 2.
+#' x <- c(pu, pu * 1.5)
+#' names(x) <- c("pu", "cover")
+#' f <- write_raster_file(
+#'   x, file.path(tempdir(), "bands.tif"),
+#'   datatype = "INT1U"
+#' )
+#' names(terra::rast(f))
+#' terra::minmax(terra::rast(f))
+write_raster_file <- function(x, filename, datatype = NULL, round_int = TRUE,
+                              overwrite = TRUE) {
+  call <- environment()
+  x <- as_raster_layer(x, "x", call, one_layer = FALSE)
+  check_filename(filename, call, null_ok = FALSE)
+  if (!is.null(datatype)) {
+    check_datatype(datatype, call)
+  }
+  check_flag(round_int, "round_int", call)
+  check_flag(overwrite, "overwrite", call)
+  parent <- dirname(filename)
+  if (file.exists(parent) && !dir.exists(parent)) {
+    cli::cli_abort(
+      "The folder of {.arg filename} must be a folder; {.file {parent}} is a
+      file.",
+      call = call
+    )
+  }
+  check_output_file(filename, terra::sources(x), overwrite, call)
+  create_dir(parent)
+  write_raster(x, filename, datatype, round_int, overwrite)
+  invisible(filename)
+}
+
+#' Write a raster to a file, deciding its data type and rounding
+#'
+#' The one place constechr writes raster files and decides their data type
+#' (ADR 0027), so [write_raster_file()], [write_rasters()],
+#' [align_raster()] and [extract_layers()] round and choose types the same
+#' way (ADR 0010, ADR 0014). Arguments are not checked here.
 #'
 #' @param x A `SpatRaster`.
-#' @param filename The output path.
-#' @param datatype One of terra's data types.
+#' @param filename The output path, in an existing folder.
+#' @param datatype One of terra's data types, or `NULL` to decide it with
+#'   `resolve_datatype()`.
 #' @param round_int `TRUE` rounds values (halves away from zero) before an
 #'   integer data type; `FALSE` leaves terra's truncation.
 #' @param overwrite Passed to [terra::writeRaster()].
+#' @param stored `TRUE` (the default) to use a data type stored with `x`'s
+#'   file; `FALSE` to ignore it and infer the type from the values, for a
+#'   result made from an in-memory raster that terra may have put in a
+#'   temporary file (as in [align_raster()]), whose stored type is terra's
+#'   default rather than the data's.
 #' @return The written `SpatRaster`, invisibly.
 #' @noRd
-write_raster_file <- function(x, filename, datatype, round_int = TRUE,
-                              overwrite = TRUE) {
+write_raster <- function(x, filename, datatype = NULL, round_int = TRUE,
+                         overwrite = TRUE, stored = TRUE) {
+  if (is.null(datatype)) {
+    datatype <- resolve_datatype(x, filename, stored)
+  }
   if (round_int && startsWith(datatype, "INT")) {
     x <- round(x)
   }
   invisible(
     terra::writeRaster(x, filename, datatype = datatype, overwrite = overwrite)
+  )
+}
+
+#' The data type to write a raster in, when none is given
+#'
+#' @param x A `SpatRaster`, before any rounding.
+#' @param filename The output path, for the message.
+#' @param stored `FALSE` to treat `x` as held in memory, ignoring any stored
+#'   type (see `write_raster()`).
+#' @return The one stored data type all layers of `x` share; otherwise the
+#'   type `infer_datatype()` gives, with a message naming it and why.
+#' @noRd
+resolve_datatype <- function(x, filename, stored = TRUE) {
+  types <- terra::datatype(x)
+  types[is.na(types) | !stored] <- ""
+  unique_types <- unique(types)
+  if (length(unique_types) == 1 && nzchar(unique_types)) {
+    return(unique_types)
+  }
+  why <- if (any(!nzchar(types))) {
+    if (terra::nlyr(x) == 1) {
+      "the raster is held in memory, with no stored data type"
+    } else {
+      "a layer is held in memory, with no stored data type"
+    }
+  } else {
+    "the layers have different stored data types
+    ({.str {unique_types}})"
+  }
+  inferred <- infer_datatype(x)
+  cli::cli_inform(
+    c(
+      paste0(
+        "Writing {.file {filename}} as {.str {inferred$datatype}}, inferred
+        from its values ({inferred$values}), because ", why, "."
+      ),
+      "i" = "Give {.arg datatype} to choose another type."
+    )
+  )
+  inferred$datatype
+}
+
+#' Infer a data type from a raster's values
+#'
+#' @param x A `SpatRaster`.
+#' @return A list of `datatype`, the smallest integer type that holds the
+#'   values without its NoData value if they are all whole numbers (unsigned
+#'   when the smallest is 0 or more), else `"FLT4S"` or `"FLT8S"` by range,
+#'   and `"INT1U"` if every value is `NA`; and `values`, a short description
+#'   of the values for the message.
+#' @noRd
+infer_datatype <- function(x) {
+  range <- terra::global(x, c("min", "max"), na.rm = TRUE)
+  if (all(is.na(range$min))) {
+    return(list(datatype = "INT1U", values = "all NA"))
+  }
+  lo <- min(range$min, na.rm = TRUE)
+  hi <- max(range$max, na.rm = TRUE)
+  fraction <- terra::global(x != round(x), "max", na.rm = TRUE)$max
+  whole <- !any(fraction > 0, na.rm = TRUE)
+  values <- paste(
+    if (whole) "whole numbers" else "numbers with decimals",
+    "from", format(lo, big.mark = ","), "to", format(hi, big.mark = ",")
+  )
+  if (whole) {
+    candidates <- if (lo >= 0) {
+      c("INT1U", "INT2U", "INT4U")
+    } else {
+      c("INT2S", "INT4S")
+    }
+    for (type in candidates) {
+      limits <- datatype_limits(type)
+      if (lo >= limits[1] && hi <= limits[2]) {
+        return(list(datatype = type, values = values))
+      }
+    }
+  }
+  limits <- datatype_limits("FLT4S")
+  type <- if (lo >= limits[1] && hi <= limits[2]) "FLT4S" else "FLT8S"
+  list(datatype = type, values = values)
+}
+
+#' The values a data type can hold without using its NoData value
+#'
+#' terra's NoData values are the largest value of an unsigned integer type
+#' and the smallest of a signed one, so those are left out.
+#'
+#' @param datatype One of terra's data types.
+#' @return The smallest and largest value, a numeric vector of length 2.
+#' @noRd
+datatype_limits <- function(datatype) {
+  switch(datatype,
+    INT1U = c(0, 2^8 - 2),
+    INT2U = c(0, 2^16 - 2),
+    INT2S = c(-2^15 + 1, 2^15 - 1),
+    INT4U = c(0, 2^32 - 2),
+    INT4S = c(-2^31 + 1, 2^31 - 1),
+    INT8U = c(0, 2^64 - 2),
+    INT8S = c(-2^63 + 1, 2^63 - 1),
+    FLT4S = c(-3.4028234663852886e38, 3.4028234663852886e38),
+    FLT8S = c(-Inf, Inf)
+  )
+}
+
+#' terra's data types
+#'
+#' @return The data types constechr accepts, as terra names them.
+#' @noRd
+terra_datatypes <- function() {
+  c(
+    "INT1U", "INT2U", "INT2S", "INT4U", "INT4S", "INT8U", "INT8S",
+    "FLT4S", "FLT8S"
   )
 }
 
@@ -311,10 +572,7 @@ write_raster_file <- function(x, filename, datatype, round_int = TRUE,
 #'   types.
 #' @noRd
 check_datatype <- function(datatype, call, arg = "datatype") {
-  types <- c(
-    "INT1U", "INT2U", "INT2S", "INT4U", "INT4S", "INT8U", "INT8S",
-    "FLT4S", "FLT8S"
-  )
+  types <- terra_datatypes()
   if (!assertthat::is.string(datatype) || !(datatype %in% types)) {
     cli::cli_abort(
       c(
@@ -333,7 +591,7 @@ check_datatype <- function(datatype, call, arg = "datatype") {
 #' A value outside a data type's range, or equal to its NoData value (terra's
 #' NoData values: the largest value of an unsigned integer type, the smallest
 #' of a signed one), is written as NoData. Integer types are checked after
-#' rounding halves away from zero, as `write_raster_file()` rounds.
+#' rounding halves away from zero, as [write_raster_file()] rounds.
 #'
 #' @param x A single finite number.
 #' @param datatype One of terra's data types.
@@ -342,17 +600,7 @@ check_datatype <- function(datatype, call, arg = "datatype") {
 #' @return `x`, invisibly; an error if it would be written as NoData.
 #' @noRd
 check_value_fits_datatype <- function(x, datatype, arg, datatype_arg, call) {
-  limits <- switch(datatype,
-    INT1U = c(0, 2^8 - 2),
-    INT2U = c(0, 2^16 - 2),
-    INT2S = c(-2^15 + 1, 2^15 - 1),
-    INT4U = c(0, 2^32 - 2),
-    INT4S = c(-2^31 + 1, 2^31 - 1),
-    INT8U = c(0, 2^64 - 2),
-    INT8S = c(-2^63 + 1, 2^63 - 1),
-    FLT4S = c(-3.4028234663852886e38, 3.4028234663852886e38),
-    FLT8S = c(-Inf, Inf)
-  )
+  limits <- datatype_limits(datatype)
   stored <- if (startsWith(datatype, "INT")) {
     sign(x) * floor(abs(x) + 0.5)
   } else {
@@ -374,18 +622,27 @@ check_value_fits_datatype <- function(x, datatype, arg, datatype_arg, call) {
 
 #' Check the `filename` argument
 #'
-#' @param filename The value given (not `NULL`).
+#' @param filename The value given (not `NULL`, unless `null_ok` is `FALSE`).
 #' @param call The environment that errors name.
+#' @param null_ok `TRUE` (the default) if the argument also takes `NULL`, as
+#'   the error then says.
 #' @return `filename`, invisibly; an error if it is not a single, non-empty
 #'   string.
 #' @noRd
-check_filename <- function(filename, call) {
+check_filename <- function(filename, call, null_ok = TRUE) {
   ok <- assertthat::is.string(filename) && !is.na(filename) &&
     nzchar(filename)
   if (!ok) {
+    expected <- if (null_ok) {
+      "{.code NULL} or a single file path"
+    } else {
+      "a single file path"
+    }
     cli::cli_abort(
-      "{.arg filename} must be {.code NULL} or a single file path, not
-      {.obj_type_friendly {filename}}.",
+      paste0(
+        "{.arg filename} must be ", expected,
+        ", not {.obj_type_friendly {filename}}."
+      ),
       call = call
     )
   }
@@ -509,56 +766,6 @@ check_layer_names <- function(layers, call) {
     )
   }
   invisible(layers)
-}
-
-#' The data type of each layer to write
-#'
-#' @param x A `SpatRaster`.
-#' @param datatype `NULL` or one of terra's data types.
-#' @param call The environment that errors name.
-#' @return A character vector, one data type per layer: `datatype` for every
-#'   layer, or each layer's stored type; an error if `datatype` is `NULL` and
-#'   any layer is in memory.
-#' @noRd
-layer_datatypes <- function(x, datatype, call) {
-  if (!is.null(datatype)) {
-    return(rep(datatype, terra::nlyr(x)))
-  }
-  types <- terra::datatype(x)
-  in_memory <- names(x)[is.na(types) | !nzchar(types)]
-  if (length(in_memory) > 0) {
-    cli::cli_abort(
-      c(
-        "{.arg datatype} is required to write in-memory layers of {.arg x}.",
-        "x" = "In memory, with no stored data type: {.str {in_memory}}.",
-        "i" = "Give one, such as {.str INT1U}, {.str INT4S} or {.str FLT4S}."
-      ),
-      call = call
-    )
-  }
-  types
-}
-
-#' The one data type of a multi-band file
-#'
-#' @inheritParams layer_datatypes
-#' @return `datatype`, or the stored type all layers share; an error if
-#'   `datatype` is `NULL` and a layer is in memory or the layers' stored types
-#'   differ.
-#' @noRd
-multiband_datatype <- function(x, datatype, call) {
-  types <- unique(layer_datatypes(x, datatype, call))
-  if (length(types) > 1) {
-    cli::cli_abort(
-      c(
-        "{.arg datatype} is required to write layers of {.arg x} with
-        different stored data types to one file.",
-        "x" = "Stored types: {.str {types}}."
-      ),
-      call = call
-    )
-  }
-  types
 }
 
 #' Whether output paths are among a raster's source files
