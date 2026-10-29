@@ -197,7 +197,7 @@ read_natdata_metadata <- function(natdata_dir,
 #'
 #' @param aoi The AOI: anything [read_aoi()] accepts (`sf`, `sfc` or
 #'   `SpatVector` polygons, a file path, or bounds with their CRS in an sf
-#'   `bbox`). Several polygons are dissolved into one.
+#'   `bbox`), dissolved into one area.
 #' @param natdata_dir The NAT_DATA folder: a single path to an existing
 #'   folder, such as a dated release (`NAT_DATA_20261009`). Its template is
 #'   opened with [natdata_template()] (`_1km/idx.tif`). Where NAT_DATA lives
@@ -303,20 +303,7 @@ create_1km_grid <- function(aoi, natdata_dir, cells = "touches",
                             value = "NCCID", id = "PUID",
                             index = "template", order = "value") {
   call <- environment()
-  check_natdata_dir(natdata_dir, call)
-  check_cells(cells, call)
-  check_column_name(value, "value", call)
-  if (!is.null(id)) {
-    check_column_name(id, "id", call)
-    if (identical(id, value)) {
-      cli::cli_abort(
-        "{.arg id} must differ from {.arg value}; both are {.str {id}}.",
-        call = call
-      )
-    }
-  }
-  check_choice(index, "index", c("template", "cell"), call)
-  check_choice(order, "order", c("value", "cell"), call)
+  check_1km_grid_args(natdata_dir, cells, value, id, index, order, call)
 
   template <- open_natdata_template(natdata_dir, call)
   aoi <- read_aoi(aoi, crs = template)
@@ -456,4 +443,32 @@ catalogue_files <- function(natdata_dir, folder, name) {
   files[!in_folder] <- file.path(natdata_dir, name[!in_folder])
   files[is.na(name) | !nzchar(name)] <- NA_character_
   files
+}
+
+#' Check the arguments of `create_1km_grid()` other than the AOI
+#'
+#' Shared with `create_wtw_planning_units()`, which checks them before it
+#' reads the AOI.
+#'
+#' @param natdata_dir,cells,value,id,index,order The values given.
+#' @param call The environment that errors name.
+#' @return `NULL`, invisibly; an error naming the first invalid argument.
+#' @noRd
+check_1km_grid_args <- function(natdata_dir, cells, value, id, index, order,
+                                call) {
+  check_natdata_dir(natdata_dir, call)
+  check_cells(cells, call)
+  check_column_name(value, "value", call)
+  if (!is.null(id)) {
+    check_column_name(id, "id", call)
+    if (identical(id, value)) {
+      cli::cli_abort(
+        "{.arg id} must differ from {.arg value}; both are {.str {id}}.",
+        call = call
+      )
+    }
+  }
+  check_choice(index, "index", c("template", "cell"), call)
+  check_choice(order, "order", c("value", "cell"), call)
+  invisible(NULL)
 }

@@ -243,16 +243,16 @@ the conventions.
 
 ### Areas of interest
 
-`read_aoi(x, crs = NULL, union = TRUE)`
+`read_aoi(x, crs = NULL)`
 
 - Split out of `create_1km_grid()` and `aoi_to_grid()`, which read and
   reproject the AOI inline.
 - `x`: an `sf` or `SpatVector` polygon, a file path (shapefile, GeoPackage,
   GeoJSON, geodatabase layer as `<gdb>/<layer>`), or bounds (`xmin`, `ymin`,
   `xmax`, `ymax`, with `crs` required).
-- `crs`: target CRS; `NULL` keeps the input's. `union`: dissolve to one
-  polygon (default `TRUE`).
-- Returns an `sf` polygon.
+- `crs`: target CRS; `NULL` keeps the input's.
+- Returns an `sf` data frame of one row: the AOI dissolved into one polygon
+  or multipolygon, without attributes.
 - Wider use: the toolkit reads uploads in several formats and builds AOIs from
   lines and points; conservation-profiles reads geodatabase layers. The aim
   is one entry point that the raster functions share, not every format.
@@ -264,6 +264,10 @@ the conventions.
   spatial object, such as the template raster. Z and M are dropped;
   geometries are not repaired; the union runs after reprojection, in the
   target CRS. Lines and points are rejected.
+- Since #102 (ADR 0026): the `union` argument is removed (no deprecation
+  period, owner's decision); an AOI is always dissolved into one area.
+  Features with their attributes are read with `read_layer()` (#104) and
+  reprojected with `sf::st_transform()`.
 
 ### AOI rasters
 
@@ -581,8 +585,7 @@ WTW projects (wtw-data-prep2, and other tools that build WTW projects):
 
 `create_wtw_planning_units(aoi, natdata_dir, project_dir = NULL,
 cells = "touches", value = "NCCID", id = "PUID", index = "template",
-order = "value", trim = TRUE, aoi_union = FALSE,
-aoi_file = "aoi/aoi.shp", polygons_file = "aoi/pu_1km.shp",
+order = "value", trim = TRUE, aoi_file = "aoi/aoi.shp", polygons_file = "aoi/pu_1km.shp",
 raster_file = "aoi/pu_1km.tif", raster_value = 1,
 raster_datatype = "INT1U", raster_name = "layer", overwrite = TRUE)`
 
@@ -608,6 +611,11 @@ raster_datatype = "INT1U", raster_name = "layer", overwrite = TRUE)`
   (default 1), `raster_datatype` (default `"INT1U"`, formerly `datatype`)
   and `raster_name` (default `"layer"`), so the defaults write today's
   file; a value the data type cannot store is an error.
+- Since #102 (ADR 0026): the AOI must be one feature (an error, before
+  anything is written, otherwise); `aoi_union` is removed (no deprecation
+  period), and `aoi.shp` is always that one feature with its attributes,
+  reprojected to the template's CRS, read with `read_layer()` for a path.
+  wtw-data-prep2's step 02 assumes a one-feature AOI without checking.
 
 `extract_wtw_natdata(natdata_dir, project_dir,
 aoi_raster = file.path(project_dir, "aoi", "pu_1km.tif"),

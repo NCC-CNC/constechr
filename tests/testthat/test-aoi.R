@@ -79,10 +79,7 @@ test_that("the example GeoPackage reads, with or without its layer name", {
   x <- read_aoi(path)
   expect_equal(bbox_of(x), expected_bbox("inside"))
   expect_named(x, "geometry")
-  y <- read_aoi(file.path(path, "aoi"), union = FALSE)
-  expect_named(y, c("name", "geometry"))
-  expect_equal(y$name, "inside")
-  expect_equal(bbox_of(y), expected_bbox("inside"))
+  expect_equal(read_aoi(file.path(path, "aoi")), x)
 })
 
 test_that("shapefiles and GeoJSON read", {
@@ -91,8 +88,8 @@ test_that("shapefiles and GeoJSON read", {
 
   shp <- file.path(dir, "aoi.shp")
   sf::st_write(aoi, shp, quiet = TRUE)
-  x <- read_aoi(shp, union = FALSE)
-  expect_equal(x$name, "edge")
+  x <- read_aoi(shp)
+  expect_named(x, "geometry")
   expect_equal(bbox_of(x), expected_bbox("edge"))
   # A folder of shapefiles is a source with one layer per file.
   expect_equal(bbox_of(read_aoi(file.path(dir, "aoi"))), expected_bbox("edge"))
@@ -114,17 +111,16 @@ test_that("geodatabase layers read as <gdb>/<layer>", {
   sf::st_write(fixture_aoi("inside"), gdb, layer = "inside", quiet = TRUE)
   sf::st_write(fixture_aoi("single"), gdb, layer = "single", quiet = TRUE)
 
-  x <- read_aoi(file.path(gdb, "single"), union = FALSE)
-  expect_equal(x$name, "single")
+  x <- read_aoi(file.path(gdb, "single"))
   expect_equal(bbox_of(x), expected_bbox("single"))
   # Without a layer, the first layer is read, with a message.
   first <- sf::st_layers(gdb)$name[[1]]
-  expect_message(x <- read_aoi(gdb, union = FALSE), "first of 2 layers")
-  expect_equal(x$name, first)
+  expect_message(x <- read_aoi(gdb), "first of 2 layers")
+  expect_equal(bbox_of(x), expected_bbox(first))
   expect_error(read_aoi(file.path(gdb, "nope")), "does not exist")
 })
 
-test_that("union = TRUE dissolves features; union = FALSE keeps them", {
+test_that("several features are always dissolved into one area", {
   # Disjoint: inside and single. Area 5,060,000 + 360,000 m2.
   two <- rbind(fixture_aoi("inside"), fixture_aoi("single"))
   x <- read_aoi(two)
@@ -137,11 +133,18 @@ test_that("union = TRUE dissolves features; union = FALSE keeps them", {
     c(xmin = 1003600, ymin = 602200, xmax = 1006800, ymax = 606600)
   )
 
-  y <- read_aoi(two, union = FALSE)
-  expect_equal(nrow(y), 2)
-  expect_named(y, c("name", "geometry"))
-  expect_equal(y$name, c("inside", "single"))
-  expect_equal(area_of(y), area_of(x))
+  expect_equal(area_of(x), area_of(two))
+
+  # The same from a file of two features, read with its attributes by
+  # read_layer() but dissolved by read_aoi().
+  gpkg <- file.path(new_tempdir(), "two.gpkg")
+  sf::st_write(two, gpkg, quiet = TRUE)
+  expect_equal(nrow(read_layer(gpkg)), 2)
+  from_file <- read_aoi(gpkg)
+  expect_equal(nrow(from_file), 1)
+  expect_named(from_file, "geometry")
+  expect_equal(area_of(from_file), 2200 * 2300 + 600 * 600)
+  expect_equal(bbox_of(from_file), bbox_of(x))
 
   # Overlapping: inside and a copy 1000 m to its right. The union is one
   # rectangle 3200 m x 2300 m.
@@ -213,7 +216,7 @@ test_that("Z and M coordinates are dropped", {
   expect_equal(bbox_of(x), expected_bbox("inside"))
 })
 
-test_that("empty geometries are dropped by union and kept without it", {
+test_that("empty geometries are dropped by the dissolve", {
   aoi <- fixture_aoi("inside")
   empty <- sf::st_sf(
     name = "empty",
@@ -222,14 +225,13 @@ test_that("empty geometries are dropped by union and kept without it", {
   both <- rbind(aoi, empty)
   expect_equal(nrow(read_aoi(both)), 1)
   expect_equal(area_of(read_aoi(both)), 2200 * 2300)
-  expect_equal(nrow(read_aoi(both, union = FALSE)), 2)
 })
 
 test_that("results match wtw-data-prep2's reading of the AOI", {
   # wtw-data-prep2 (aoi_to_grid() and create_1km_grid()) read the AOI with
   # sf::read_sf() and reprojected it to the template's CRS with
-  # sf::st_transform(). read_aoi() with union = FALSE gives the same
-  # features; the geometry column is renamed to "geometry". read_sf() is
+  # sf::st_transform(). read_layer() and sf::st_transform() give the same
+  # features, and read_aoi() the same area as one feature. read_sf() is
   # st_read() returning a tibble, which needs tibble (not a dependency), so
   # the original is run here with st_read(): the same reader and geometries.
   dir <- new_tempdir()
@@ -244,11 +246,16 @@ test_that("results match wtw-data-prep2's reading of the AOI", {
     sf::st_read(shp, quiet = TRUE),
     crs = sf::st_crs(template)
   )
-  x <- read_aoi(shp, crs = template, union = FALSE)
-
+  x <- sf::st_transform(read_layer(shp), sf::st_crs(template))
   expect_equal(x$name, original$name)
   expect_true(sf::st_crs(x) == sf::st_crs(original))
   expect_equal(sf::st_coordinates(x), sf::st_coordinates(original))
+
+  aoi <- read_aoi(shp, crs = template)
+  expect_equal(nrow(aoi), 1)
+  expect_true(sf::st_crs(aoi) == sf::st_crs(original))
+  expect_equal(bbox_of(aoi), bbox_of(original))
+  expect_equal(area_of(aoi), area_of(original))
   # The original's output, captured once: the hand-worked bounds.
   expect_equal(bbox_of(original), expected_bbox("inside"), tolerance = 1e-9)
 })
@@ -259,11 +266,17 @@ test_that("invalid arguments give clear errors", {
     read_aoi(1:3)
     read_aoi(list(1, 2))
     read_aoi(c("a.shp", "b.shp"))
-    read_aoi(aoi, union = NA)
-    read_aoi(aoi, union = "yes")
     read_aoi(aoi, crs = "not a crs")
     read_aoi(aoi, crs = NA)
   })
+})
+
+test_that("union is no longer an argument", {
+  # Removed in 0.1.0.9002 (#102), without deprecation: an AOI is always
+  # dissolved.
+  aoi <- fixture_aoi("inside")
+  expect_error(read_aoi(aoi, union = TRUE), "unused argument")
+  expect_error(read_aoi(aoi, union = FALSE), "unused argument")
 })
 
 test_that("bad bounds give clear errors", {

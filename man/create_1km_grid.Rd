@@ -17,7 +17,7 @@ create_1km_grid(
 \arguments{
 \item{aoi}{The AOI: anything \code{\link[=read_aoi]{read_aoi()}} accepts (\code{sf}, \code{sfc} or
 \code{SpatVector} polygons, a file path, or bounds with their CRS in an sf
-\code{bbox}). Several polygons are dissolved into one.}
+\code{bbox}), dissolved into one area.}
 
 \item{natdata_dir}{The NAT_DATA folder: a single path to an existing
 folder, such as a dated release (\code{NAT_DATA_20261009}). Its template is

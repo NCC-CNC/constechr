@@ -1,5 +1,31 @@
 <!-- markdownlint-disable-file MD025 -->
 
+# constechr 0.1.0.9002
+
+## Breaking changes
+
+Removed outright, without a deprecation period, by the owner's decision
+while constechr is 0.x (#102, ADR 0026). Passing a removed argument is an
+"unused argument" error.
+
+- `read_aoi()` no longer has a `union` argument: an AOI is always
+  dissolved into one area (one row, one polygon or multipolygon, no
+  attributes). To read features with their attributes, use `read_layer()`
+  and `sf::st_transform()`.
+- `create_wtw_planning_units()` no longer has an `aoi_union` argument, and
+  requires the AOI to be one feature: an AOI of several features, accepted
+  before, is now an error, raised before anything is written. Dissolve
+  them first, for example with `read_aoi()`. `aoi_file` is that feature
+  with its attributes, reprojected to the template's CRS; a path is read
+  with `read_layer()`'s reader. With a one-feature AOI and the defaults,
+  the outputs are unchanged.
+
+## Other changes
+
+- `create_wtw_planning_units()` checks its `create_1km_grid()` arguments
+  itself, before reading the AOI, so errors about them, and about the AOI,
+  name `create_wtw_planning_units()` and its `aoi` argument.
+
 # constechr 0.1.0.9001
 
 - New `read_layer()` reads one layer of a vector file or folder as `sf`,
