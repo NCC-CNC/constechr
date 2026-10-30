@@ -47,6 +47,13 @@ one; set `RSTUDIO_PANDOC` to its folder if pandoc is not on the path).
 <https://ncc-cnc.github.io/constechr/>, is built from release tags only
 (ADR 0025): pushing a `vX.Y.Z` tag publishes it.
 
+A release takes two manual steps (ADR 0028): bump the version in a PR into
+`dev` (`usethis::use_version("patch")`, `"minor"` or `"major"`, with its
+`NEWS.md` entry), then open and merge the promotion PR from `dev` into
+`main`. On the merge, `release.yml` tags the merge commit `vX.Y.Z` to match
+`DESCRIPTION`, and the tag deploys the site. A promotion that leaves the
+version unchanged tags nothing.
+
 CI runs the same checks on every pull request and weekly:
 `styler::style_pkg(dry = "fail")`, the lint, the pkgdown config check,
 and R CMD check (which runs the

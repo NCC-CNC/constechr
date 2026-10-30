@@ -39,7 +39,8 @@ while its API settles, and it is used only by ConsTech tools.
 - A release is a Git tag (`vX.Y.Z`) on `main`, matching the `DESCRIPTION`
   version. Since ADR 0024, work lands on `dev` and reaches `main` through a
   promotion PR from `dev`; the tag goes on that PR's merge commit.
-  Pushing the tag publishes the reference site for it (ADR 0025).
+  Pushing the tag publishes the reference site for it (ADR 0025). Since
+  ADR 0028, `release.yml` makes the tag when the promotion merges.
 - Before each release, check that the pinned CI image is current (ADR
   0022): the `rocker/geospatial` tag in `.github/workflows/ci.yml` is on
   the current R minor version. If not, bump it in its own PR first.
