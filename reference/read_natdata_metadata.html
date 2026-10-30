@@ -17,7 +17,7 @@ with path_column = &quot;file&quot;, after choosing the rows (layers) wanted."><
 
     <a class="navbar-brand me-2" href="../index.html">constechr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +39,7 @@ with path_column = &quot;file&quot;, after choosing the rows (layers) wanted."><
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Read the NAT_DATA layer catalogue</h1>
-      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/dev/R/natdata.R" class="external-link"><code>R/natdata.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.2.0/R/natdata.R" class="external-link"><code>R/natdata.R</code></a></small>
       <div class="d-none name"><code>read_natdata_metadata.Rd</code></div>
     </div>
 
@@ -156,7 +156,7 @@ not checked here; <code><a href="extract_layers.html">extract_layers()</a></code
 <span class="r-in"><span>  <span class="va">aoi_raster</span> <span class="op">&lt;-</span> <span class="fu"><a href="rasterize_aoi.html">rasterize_aoi</a></span><span class="op">(</span><span class="va">aoi</span>, <span class="va">template</span>, cells <span class="op">=</span> <span class="st">"touches"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">paths</span> <span class="op">&lt;-</span> <span class="fu"><a href="extract_layers.html">extract_layers</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    <span class="va">layers</span>, <span class="va">aoi_raster</span>, <span class="va">template</span>,</span></span>
-<span class="r-in"><span>    dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"tifs"</span><span class="op">)</span>, path_column <span class="op">=</span> <span class="st">"file"</span></span></span>
+<span class="r-in"><span>    output_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"tifs"</span><span class="op">)</span>, path_column <span class="op">=</span> <span class="st">"file"</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">basename</a></span><span class="op">(</span><span class="va">paths</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>

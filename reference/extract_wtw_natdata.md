@@ -33,7 +33,8 @@ extract_wtw_natdata(
   progress = function(i, n, layer) {
     
     cli::cli_inform("Layer {i} of {n}: {basename(layer)}")
- }
+ },
+  template_file = "_1km/idx.tif"
 )
 ```
 
@@ -42,9 +43,10 @@ extract_wtw_natdata(
 - natdata_dir:
 
   The NAT_DATA folder: a single path to an existing folder, such as a
-  dated release (`NAT_DATA_20261009`). Its template is opened with
+  dated release (`NAT_DATA_20261009`). Its template, the file
+  `template_file`, is opened with
   [`natdata_template()`](https://ncc-cnc.github.io/constechr/reference/natdata_template.md)
-  (`_1km/idx.tif`) and, by default, its catalogue read with
+  and, by default, its catalogue read with
   [`read_natdata_metadata()`](https://ncc-cnc.github.io/constechr/reference/read_natdata_metadata.md).
   Where NAT_DATA lives is each tool's own setting; this function only
   reads from it.
@@ -152,6 +154,15 @@ extract_wtw_natdata(
   default prints a short message naming the layer, since a national
   extraction can take a while.
 
+- template_file:
+
+  The template's file within `natdata_dir`, as a path relative to it,
+  passed to
+  [`natdata_template()`](https://ncc-cnc.github.io/constechr/reference/natdata_template.md)
+  as its `file`. The default, `"_1km/idx.tif"`, is NAT_DATA's national
+  template. Another path opens a template kept elsewhere in the folder,
+  such as another version or resolution of the grid.
+
 ## Value
 
 The paths of the layer files written, invisibly: a character vector in
@@ -163,9 +174,9 @@ written, is not among them.
 
 1.  **Template**:
     [`natdata_template()`](https://ncc-cnc.github.io/constechr/reference/natdata_template.md)
-    opens `natdata_dir`'s `_1km/idx.tif`, the national grid of 1 km
-    cells in Canada_Albers_WGS_1984; only which of its cells have data
-    is used.
+    opens `template_file` in `natdata_dir`, by default `_1km/idx.tif`,
+    the national grid of 1 km cells in Canada_Albers_WGS_1984; only
+    which of its cells have data is used.
 
 2.  **Layers**:
     [`extract_layers()`](https://ncc-cnc.github.io/constechr/reference/extract_layers.md)

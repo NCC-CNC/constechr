@@ -12,12 +12,15 @@ rules), and tests with known answers hold that method in place.
 
 ## Status
 
-The current release is v0.1.0: reading, rasterizing and aligning AOIs,
-rij matrix helpers, extracting and writing layers, and the NAT_DATA and
-Where To Work (WTW) functions for wtw-data-prep2’s steps. See `NEWS.md`
-for what each release changed, `docs/design/00_project_brief.md` for the
-scope and `docs/design/01_wtw-data-prep2_inventory.md` for how the
-functions map to wtw-data-prep2.
+The current release is v0.2.0: reading vector layers, reading,
+rasterizing and aligning AOIs, polygonizing rasters, rij matrix helpers,
+extracting and writing layers, and the NAT_DATA and Where To Work (WTW)
+functions for wtw-data-prep2’s steps. The function reference for the
+latest release is at <https://ncc-cnc.github.io/constechr/>. See
+`NEWS.md` for what each release changed,
+`docs/design/00_project_brief.md` for the scope and
+`docs/design/01_wtw-data-prep2_inventory.md` for how the functions map
+to wtw-data-prep2.
 
 ## Installation
 
@@ -26,7 +29,7 @@ pins the version it was built and tested with:
 
 \
 `# install.packages("pak")`\
-`pak``::`[`pak`](https://pak.r-lib.org/reference/pak.html)`(``"NCC-CNC/constechr@v0.1.0"``)`
+`pak``::`[`pak`](https://pak.r-lib.org/reference/pak.html)`(``"NCC-CNC/constechr@v0.2.0"``)`
 
 In a project that uses renv, run `renv::snapshot()` afterwards to record
 the version in `renv.lock`.
@@ -66,7 +69,7 @@ The building blocks work on any template, not only NAT_DATA’s:
 `template`` ``<-`` ``terra``::`[`rast`](https://rspatial.github.io/terra/reference/rast.html)`(`\
 `  `[`system.file`](https://rdrr.io/r/base/system.file.html)`(``"extdata"``, ``"template.tif"``, package ``=`` ``"constechr"``)`\
 `)`\
-`aoi_raster`` ``<-`` ``constechr``::`[`rasterize_aoi`](https://ncc-cnc.github.io/constechr/reference/rasterize_aoi.md)`(``aoi``, ``template``, cells ``=`` ``"centre"``)`\
+`aoi_raster`` ``<-`` ``constechr``::`[`rasterize_aoi`](https://ncc-cnc.github.io/constechr/reference/rasterize_aoi.md)`(``aoi``, ``template``)`\
 `rij`` ``<-`` ``constechr``::`[`read_rij_matrix`](https://ncc-cnc.github.io/constechr/reference/read_rij_matrix.md)`(`\
 `  `[`system.file`](https://rdrr.io/r/base/system.file.html)`(``"extdata"``, ``"rij.rds"``, package ``=`` ``"constechr"``)``, ``template`\
 `)`\
@@ -76,6 +79,7 @@ The building blocks work on any template, not only NAT_DATA’s:
 The functions:
 
 - Building blocks:
+  [`read_layer()`](https://ncc-cnc.github.io/constechr/reference/read_layer.md),
   [`read_aoi()`](https://ncc-cnc.github.io/constechr/reference/read_aoi.md),
   [`rasterize_aoi()`](https://ncc-cnc.github.io/constechr/reference/rasterize_aoi.md),
   [`align_raster()`](https://ncc-cnc.github.io/constechr/reference/align_raster.md),
@@ -83,6 +87,7 @@ The functions:
   [`read_rij_matrix()`](https://ncc-cnc.github.io/constechr/reference/read_rij_matrix.md),
   [`clip_rij_matrix()`](https://ncc-cnc.github.io/constechr/reference/clip_rij_matrix.md),
   [`rij_matrix_to_raster()`](https://ncc-cnc.github.io/constechr/reference/rij_matrix_to_raster.md),
+  [`write_raster_file()`](https://ncc-cnc.github.io/constechr/reference/write_raster_file.md),
   [`write_rasters()`](https://ncc-cnc.github.io/constechr/reference/write_rasters.md),
   [`extract_layers()`](https://ncc-cnc.github.io/constechr/reference/extract_layers.md).
 - NAT_DATA:
@@ -99,7 +104,7 @@ The functions:
 
 The reference for each function, including the method it uses, is in the
 package help:
-[`help(package = "constechr")`](https://rdrr.io/pkg/constechr/man).
+[`help(package = "constechr")`](https://ncc-cnc.github.io/constechr/reference).
 
 ## Contributing
 

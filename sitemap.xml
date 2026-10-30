@@ -21,9 +21,11 @@
 <url><loc>https://ncc-cnc.github.io/constechr/reference/polygonize_raster.html</loc></url>
 <url><loc>https://ncc-cnc.github.io/constechr/reference/rasterize_aoi.html</loc></url>
 <url><loc>https://ncc-cnc.github.io/constechr/reference/read_aoi.html</loc></url>
+<url><loc>https://ncc-cnc.github.io/constechr/reference/read_layer.html</loc></url>
 <url><loc>https://ncc-cnc.github.io/constechr/reference/read_natdata_metadata.html</loc></url>
 <url><loc>https://ncc-cnc.github.io/constechr/reference/read_rij_matrix.html</loc></url>
 <url><loc>https://ncc-cnc.github.io/constechr/reference/rij_matrix_to_raster.html</loc></url>
+<url><loc>https://ncc-cnc.github.io/constechr/reference/write_raster_file.html</loc></url>
 <url><loc>https://ncc-cnc.github.io/constechr/reference/write_rasters.html</loc></url>
 <url><loc>https://ncc-cnc.github.io/constechr/reference/wtw_project_folders.html</loc></url>
 </urlset>

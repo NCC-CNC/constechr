@@ -4,14 +4,20 @@ Feedback, bug reports, and ideas are welcome through GitHub issues.
 
 The workflow is:
 
-1.  Branch from `main` (one short-lived branch per change).
+1.  Branch from `dev`, the integration branch (one short-lived branch
+    per change). `main`, the default branch, holds the latest release.
 2.  Keep changes small and focused.
 3.  Run the package checks locally before pushing (see Setup below).
-4.  Open a pull request into `main`. CI must pass before merge. A PR
-    from a branch in this repo merges itself (squash) once CI passes,
-    and is kept up to date with `main` while it waits; this is done by
-    the NCC ConsTech Automation app (`.github/workflows/auto-merge.yml`
-    and `update-branches.yml`). Open it as a draft to hold it back.
+4.  Open a pull request into `dev` (choose `dev` as the base; GitHub
+    offers `main` by default). CI must pass before merge. A PR into
+    `dev` from a branch in this repo merges itself (squash) once CI
+    passes, and is kept up to date with `dev` while it waits; this is
+    done by the NCC ConsTech Automation app
+    (`.github/workflows/auto-merge.yml` and `update-branches.yml`). Open
+    it as a draft to hold it back.
+5.  Do not open pull requests into `main`. `main` changes only by a
+    promotion PR from `dev`, opened when the owner asks, usually for a
+    release (ADR 0024).
 
 ## Setup
 
@@ -31,19 +37,27 @@ Rscript -e "lintr::lint_package()"   # lint
 Rscript -e "devtools::document()"    # regenerate man/ and NAMESPACE; commit them
 Rscript -e "devtools::test()"        # run the tests
 Rscript -e "devtools::check()"       # full R CMD check (build, tests, examples)
+Rscript -e "pkgdown::check_pkgdown()" # site config lists every exported topic
 ```
 
+The pkgdown check needs the pkgdown package and pandoc (RStudio bundles
+one; set `RSTUDIO_PANDOC` to its folder if pandoc is not on the path).
+`Rscript -e "pkgdown::build_site()"` previews the reference site in
+`site/`, which is not committed. The published site,
+<https://ncc-cnc.github.io/constechr/>, is built from release tags only
+(ADR 0025): pushing a `vX.Y.Z` tag publishes it.
+
 CI runs the same checks on every pull request and weekly:
-`styler::style_pkg(dry = "fail")`, the lint, and R CMD check (which runs
-the tests) on Windows with all dependencies and without Suggests, and on
-Ubuntu in a pinned `rocker/geospatial` container. Every job uses the
-current CRAN version of each dependency, including the recommended
-packages R ships with, such as Matrix (ADR 0022). Any formatting change,
-lint, or check error or warning fails it, so if these pass locally CI
-should too. The Ubuntu check job also runs the formatting check and the
-lint, and reports test coverage (`covr::package_coverage()`) in its log.
-To try the working copy from another repo, install it with
-`Rscript -e "devtools::install()"`.
+`styler::style_pkg(dry = "fail")`, the lint, the pkgdown config check,
+and R CMD check (which runs the tests) on Windows with all dependencies
+and without Suggests, and on Ubuntu in a pinned `rocker/geospatial`
+container. Every job uses the current CRAN version of each dependency,
+including the recommended packages R ships with, such as Matrix (ADR
+0022). Any formatting change, lint, or check error or warning fails it,
+so if these pass locally CI should too. The Ubuntu check job also runs
+the formatting check and the lint, and reports test coverage
+(`covr::package_coverage()`) in its log. To try the working copy from
+another repo, install it with `Rscript -e "devtools::install()"`.
 
 See `CLAUDE.md` for the package’s stack, scope and working rules.
 

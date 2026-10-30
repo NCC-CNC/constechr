@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">constechr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -29,17 +29,18 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Contributing</h1>
-      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/dev/CONTRIBUTING.md" class="external-link"><code>CONTRIBUTING.md</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.2.0/CONTRIBUTING.md" class="external-link"><code>CONTRIBUTING.md</code></a></small>
     </div>
 
 <div id="contributing" class="section level1">
 
 <p>Feedback, bug reports, and ideas are welcome through GitHub issues.</p>
 <p>The workflow is:</p>
-<ol style="list-style-type: decimal"><li>Branch from <code>main</code> (one short-lived branch per change).</li>
+<ol style="list-style-type: decimal"><li>Branch from <code>dev</code>, the integration branch (one short-lived branch per change). <code>main</code>, the default branch, holds the latest release.</li>
 <li>Keep changes small and focused.</li>
 <li>Run the package checks locally before pushing (see Setup below).</li>
-<li>Open a pull request into <code>main</code>. CI must pass before merge. A PR from a branch in this repo merges itself (squash) once CI passes, and is kept up to date with <code>main</code> while it waits; this is done by the NCC ConsTech Automation app (<code>.github/workflows/auto-merge.yml</code> and <code>update-branches.yml</code>). Open it as a draft to hold it back.</li>
+<li>Open a pull request into <code>dev</code> (choose <code>dev</code> as the base; GitHub offers <code>main</code> by default). CI must pass before merge. A PR into <code>dev</code> from a branch in this repo merges itself (squash) once CI passes, and is kept up to date with <code>dev</code> while it waits; this is done by the NCC ConsTech Automation app (<code>.github/workflows/auto-merge.yml</code> and <code>update-branches.yml</code>). Open it as a draft to hold it back.</li>
+<li>Do not open pull requests into <code>main</code>. <code>main</code> changes only by a promotion PR from <code>dev</code>, opened when the owner asks, usually for a release (ADR 0024).</li>
 </ol><div class="section level2">
 <h2 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a></h2>
 <p>Prerequisites:</p>
@@ -51,8 +52,10 @@
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"lintr::lint_package()"</span>   <span class="co"># lint</span></span>
 <span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::document()"</span>    <span class="co"># regenerate man/ and NAMESPACE; commit them</span></span>
 <span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::test()"</span>        <span class="co"># run the tests</span></span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span>       <span class="co"># full R CMD check (build, tests, examples)</span></span></code></pre></div>
-<p>CI runs the same checks on every pull request and weekly: <code>styler::style_pkg(dry = "fail")</code>, the lint, and R CMD check (which runs the tests) on Windows with all dependencies and without Suggests, and on Ubuntu in a pinned <code>rocker/geospatial</code> container. Every job uses the current CRAN version of each dependency, including the recommended packages R ships with, such as Matrix (ADR 0022). Any formatting change, lint, or check error or warning fails it, so if these pass locally CI should too. The Ubuntu check job also runs the formatting check and the lint, and reports test coverage (<code>covr::package_coverage()</code>) in its log. To try the working copy from another repo, install it with <code>Rscript -e "devtools::install()"</code>.</p>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span>       <span class="co"># full R CMD check (build, tests, examples)</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"pkgdown::check_pkgdown()"</span> <span class="co"># site config lists every exported topic</span></span></code></pre></div>
+<p>The pkgdown check needs the pkgdown package and pandoc (RStudio bundles one; set <code>RSTUDIO_PANDOC</code> to its folder if pandoc is not on the path). <code>Rscript -e "pkgdown::build_site()"</code> previews the reference site in <code>site/</code>, which is not committed. The published site, <a href="https://ncc-cnc.github.io/constechr/" class="uri">https://ncc-cnc.github.io/constechr/</a>, is built from release tags only (ADR 0025): pushing a <code>vX.Y.Z</code> tag publishes it.</p>
+<p>CI runs the same checks on every pull request and weekly: <code>styler::style_pkg(dry = "fail")</code>, the lint, the pkgdown config check, and R CMD check (which runs the tests) on Windows with all dependencies and without Suggests, and on Ubuntu in a pinned <code>rocker/geospatial</code> container. Every job uses the current CRAN version of each dependency, including the recommended packages R ships with, such as Matrix (ADR 0022). Any formatting change, lint, or check error or warning fails it, so if these pass locally CI should too. The Ubuntu check job also runs the formatting check and the lint, and reports test coverage (<code>covr::package_coverage()</code>) in its log. To try the working copy from another repo, install it with <code>Rscript -e "devtools::install()"</code>.</p>
 <p>See <code>CLAUDE.md</code> for the package’s stack, scope and working rules.</p>
 </div>
 <div class="section level2">

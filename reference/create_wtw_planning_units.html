@@ -17,7 +17,7 @@ defaults write the files that step writes."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">constechr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +39,7 @@ defaults write the files that step writes."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Where To Work planning units for an area of interest</h1>
-      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/dev/R/wtw.R" class="external-link"><code>R/wtw.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.2.0/R/wtw.R" class="external-link"><code>R/wtw.R</code></a></small>
       <div class="d-none name"><code>create_wtw_planning_units.Rd</code></div>
     </div>
 
@@ -64,14 +64,14 @@ defaults write the files that step writes.</p>
 <span>  index <span class="op">=</span> <span class="st">"template"</span>,</span>
 <span>  order <span class="op">=</span> <span class="st">"value"</span>,</span>
 <span>  trim <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  aoi_union <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  aoi_file <span class="op">=</span> <span class="st">"aoi/aoi.shp"</span>,</span>
 <span>  polygons_file <span class="op">=</span> <span class="st">"aoi/pu_1km.shp"</span>,</span>
 <span>  raster_file <span class="op">=</span> <span class="st">"aoi/pu_1km.tif"</span>,</span>
 <span>  raster_value <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  raster_datatype <span class="op">=</span> <span class="st">"INT1U"</span>,</span>
 <span>  raster_name <span class="op">=</span> <span class="st">"layer"</span>,</span>
-<span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  overwrite <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  template_file <span class="op">=</span> <span class="st">"_1km/idx.tif"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -80,17 +80,23 @@ defaults write the files that step writes.</p>
 
 
 <dl><dt id="arg-aoi">aoi<a class="anchor" aria-label="anchor" href="#arg-aoi"></a></dt>
-<dd><p>The AOI: anything <code><a href="read_aoi.html">read_aoi()</a></code> accepts (<code>sf</code>, <code>sfc</code> or
-<code>SpatVector</code> polygons, a file path, or bounds with their CRS in an sf
-<code>bbox</code>). It is read once into memory before anything is written, so it
-can be the <code>aoi_file</code> this call overwrites.</p></dd>
+<dd><p>The AOI, one feature: anything <code><a href="read_aoi.html">read_aoi()</a></code> accepts (<code>sf</code>,
+<code>sfc</code> or <code>SpatVector</code> polygons, a file path, or bounds with their CRS
+in an sf <code>bbox</code>), holding exactly one feature (one row, a polygon or
+multipolygon). An AOI of several features is an error, raised before
+anything is written; dissolve them first, for example with
+<code><a href="read_aoi.html">read_aoi()</a></code>. Bounds are one feature, their rectangle. A file path is
+read with <code><a href="read_layer.html">read_layer()</a></code>, from the layer named as <code>&lt;path&gt;/&lt;layer&gt;</code> or
+the first layer. The AOI is read once into memory before anything is
+written, so it can be the <code>aoi_file</code> this call overwrites.</p></dd>
 
 
 <dt id="arg-natdata-dir">natdata_dir<a class="anchor" aria-label="anchor" href="#arg-natdata-dir"></a></dt>
 <dd><p>The NAT_DATA folder: a single path to an existing
-folder, such as a dated release (<code>NAT_DATA_20261009</code>). Its template is
-opened with <code><a href="natdata_template.html">natdata_template()</a></code> (<code>_1km/idx.tif</code>). Where NAT_DATA lives
-is each tool's own setting; this function only reads from it.</p></dd>
+folder, such as a dated release (<code>NAT_DATA_20261009</code>). Its template,
+the file <code>template_file</code>, is opened with <code><a href="natdata_template.html">natdata_template()</a></code>. Where
+NAT_DATA lives is each tool's own setting; this function only reads
+from it.</p></dd>
 
 
 <dt id="arg-project-dir">project_dir<a class="anchor" aria-label="anchor" href="#arg-project-dir"></a></dt>
@@ -151,19 +157,11 @@ template data, for example on a coast or at the edge of the national
 data.</p></dd>
 
 
-<dt id="arg-aoi-union">aoi_union<a class="anchor" aria-label="anchor" href="#arg-aoi-union"></a></dt>
-<dd><p>A single logical, the AOI written to <code>aoi_file</code>:</p><ul><li><p><code>FALSE</code> (the default): the input AOI's features and attributes as
-they are, reprojected to the template's CRS
-(<code>read_aoi(aoi, crs = template, union = FALSE)</code>), as wtw-data-prep2
-writes <code>aoi.shp</code>.</p></li>
-<li><p><code>TRUE</code>: the AOI dissolved into one polygon without attributes, as
-returned in <code>aoi</code>.</p></li>
-</ul><p>It does not change the returned <code>aoi</code>, which is always dissolved.</p></dd>
-
-
 <dt id="arg-aoi-file-polygons-file-raster-file">aoi_file, polygons_file, raster_file<a class="anchor" aria-label="anchor" href="#arg-aoi-file-polygons-file-raster-file"></a></dt>
 <dd><p>The files to write, as paths
-relative to <code>project_dir</code>, or <code>NULL</code> to not write that file:</p><ul><li><p><code>aoi_file</code>: the AOI (see <code>aoi_union</code>). Default <code>"aoi/aoi.shp"</code>.</p></li>
+relative to <code>project_dir</code>, or <code>NULL</code> to not write that file:</p><ul><li><p><code>aoi_file</code>: the AOI's one feature with its attributes, reprojected
+to the template's CRS, as wtw-data-prep2 writes <code>aoi.shp</code>. Default
+<code>"aoi/aoi.shp"</code>.</p></li>
 <li><p><code>polygons_file</code>: the planning-unit polygons. Default
 <code>"aoi/pu_1km.shp"</code>.</p></li>
 <li><p><code>raster_file</code>: the planning-unit raster, <code>raster_value</code> in every
@@ -200,12 +198,20 @@ default, <code>"layer"</code>, is wtw-data-prep2's. Ignored without <code>raster
 files, as wtw-data-prep2 does; <code>FALSE</code> is an error if any of the files
 exists, checked before any file is written.</p></dd>
 
+
+<dt id="arg-template-file">template_file<a class="anchor" aria-label="anchor" href="#arg-template-file"></a></dt>
+<dd><p>The template's file within <code>natdata_dir</code>, as a path
+relative to it, passed to <code><a href="natdata_template.html">natdata_template()</a></code> as its <code>file</code>. The
+default, <code>"_1km/idx.tif"</code>, is NAT_DATA's national template. Another
+path opens a template kept elsewhere in the folder, such as another
+version or resolution of the grid.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>The list <code><a href="create_1km_grid.html">create_1km_grid()</a></code> returns, differing from it only in
 the raster's extent (see <code>trim</code>):</p><ul><li><p><code>aoi</code>: the AOI dissolved into one polygon, an <code>sf</code> data frame without
-attributes, in the template's CRS (whatever <code>aoi_union</code> is);</p></li>
+attributes, in the template's CRS;</p></li>
 <li><p><code>aoi_raster</code>: a <code>SpatRaster</code> with one layer named <code>value</code>, on the
 template's grid: the national ID in the planning units and <code>NA</code>
 elsewhere. It can be passed as the <code>aoi_raster</code> of <code><a href="extract_layers.html">extract_layers()</a></code>
@@ -220,10 +226,18 @@ unit, with the columns <code>value</code>, <code>id</code> (unless <code>id = NU
     <h2 id="method">Method<a class="anchor" aria-label="anchor" href="#method"></a></h2>
 
 
-<ol><li><p><strong>Planning units</strong>: <code><a href="create_1km_grid.html">create_1km_grid()</a></code> with <code>cells</code>, <code>value</code>, <code>id</code>,
-<code>index</code> and <code>order</code> (its Method section has the details): the AOI read
-with <code><a href="read_aoi.html">read_aoi()</a></code> in the template's CRS (<code>_1km/idx.tif</code>,
-Canada_Albers_WGS_1984) and dissolved; its cells on the template by
+<ol><li><p><strong>AOI</strong>: read once, with <code><a href="read_aoi.html">read_aoi()</a></code>'s input handling and checks
+(polygons or multipolygons only, with a CRS), files with
+<code><a href="read_layer.html">read_layer()</a></code>; Z and M dropped; reprojected to the template's CRS
+(<code>template_file</code> in <code>natdata_dir</code>, by default <code>_1km/idx.tif</code>, in
+Canada_Albers_WGS_1984) with <code><a href="https://r-spatial.github.io/sf/reference/st_transform.html" class="external-link">sf::st_transform()</a></code> (PROJ), which moves
+each vertex. It must be one feature, or the function stops before
+anything is written; nothing is dissolved silently.</p></li>
+<li><p><strong>Planning units</strong>: <code><a href="create_1km_grid.html">create_1km_grid()</a></code> on that feature, with
+<code>cells</code>, <code>value</code>, <code>id</code>, <code>index</code>, <code>order</code> and <code>template_file</code> (its
+Method section has
+the details): the AOI dissolved by <code><a href="read_aoi.html">read_aoi()</a></code> (one feature, so the
+same area); its cells on the template by
 raster intersection (<code>"touches"</code> is GDAL's all-touched rule), without
 the cells where the template is <code>NA</code>; one 1 km square polygon per cell,
 holding its national ID (<code>NCCID</code>) and planning-unit number (<code>PUID</code>).</p></li>
@@ -231,17 +245,14 @@ holding its national ID (<code>NCCID</code>) and planning-unit number (<code>PUI
 <code><a href="https://rspatial.github.io/terra/reference/trim.html" class="external-link">terra::trim()</a></code> to the smallest box of whole cells holding every
 planning unit. If the AOI gets no cells, it is not trimmed (and
 <code><a href="create_1km_grid.html">create_1km_grid()</a></code> warns).</p></li>
-<li><p><strong>AOI file</strong>: with <code>aoi_union = FALSE</code>, the AOI is read again with
-<code><a href="read_aoi.html">read_aoi()</a></code> in the template's CRS without dissolving, so its features
-and attributes are kept; reprojection moves each vertex with PROJ.</p></li>
 <li><p><strong>Writing</strong> (only with <code>project_dir</code>), in this order, with
 <code><a href="https://r-spatial.github.io/sf/reference/st_write.html" class="external-link">sf::st_write()</a></code> for the vector files (an existing file's layer is
-replaced) and <code><a href="write_rasters.html">write_rasters()</a></code> for the raster:</p><ul><li><p><code>aoi_file</code>: the AOI from step 3, or the dissolved AOI;</p></li>
+replaced) and <code><a href="write_rasters.html">write_rasters()</a></code> for the raster:</p><ul><li><p><code>aoi_file</code>: the AOI's one feature from step 1, with its attributes;</p></li>
 <li><p><code>polygons_file</code>: the polygons, with the columns <code>value</code>, <code>id</code> and
 their geometry. <code>value</code> keeps the type it has in the polygons, so
 with NAT_DATA's <code>idx.tif</code> (an <code>INT*</code> data type) <code>NCCID</code> is an
 integer field (ADR 0019);</p></li>
-<li><p><code>raster_file</code>: the raster of step 2 with <code>raster_value</code> in every
+<li><p><code>raster_file</code>: the raster of step 3 with <code>raster_value</code> in every
 planning unit and <code>NA</code> elsewhere, one layer named <code>raster_name</code>, in
 <code>raster_datatype</code>, <code>NA</code> as terra's NoData value for it (rounded
 halves away from zero before an integer type). The defaults, 1 as
@@ -250,10 +261,10 @@ halves away from zero before an integer type). The defaults, 1 as
 </ul></li>
 </ol><p>No areas are computed and no values are rounded. With the defaults, the
 files are those of wtw-data-prep2's step 02 (<code>aoi_to_grid()</code>): the same
-AOI features and attributes, the same planning units (<code>NCCID</code>, <code>PUID</code> and
+AOI feature and attributes, the same planning units (<code>NCCID</code>, <code>PUID</code> and
 polygons, with <code>NCCID</code> and <code>PUID</code> as integer fields), and the same
 <code>pu_1km.tif</code> extent, values and data type. Decisions are recorded in
-ADR 0017, ADR 0018 and ADR 0019.</p>
+ADR 0017, ADR 0018, ADR 0019 and ADR 0026.</p>
 <p>Arguments are checked before the AOI is read; the AOI is read before
 anything is written. If writing fails partway, the files already written
 are kept.</p>
@@ -312,11 +323,19 @@ are kept.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> min value   :     1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> max value   :     1</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># The dissolved AOI as a GeoPackage, and no raster file</span></span></span>
+<span class="r-in"><span><span class="co"># The AOI as a GeoPackage, and no raster file</span></span></span>
 <span class="r-in"><span><span class="va">pu</span> <span class="op">&lt;-</span> <span class="fu">create_wtw_planning_units</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">aoi</span>, <span class="va">natdata_dir</span>, <span class="va">project_dir</span>,</span></span>
-<span class="r-in"><span>  aoi_union <span class="op">=</span> <span class="cn">TRUE</span>, aoi_file <span class="op">=</span> <span class="st">"aoi/aoi.gpkg"</span>, raster_file <span class="op">=</span> <span class="cn">NULL</span></span></span>
+<span class="r-in"><span>  aoi_file <span class="op">=</span> <span class="st">"aoi/aoi.gpkg"</span>, raster_file <span class="op">=</span> <span class="cn">NULL</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># An AOI of several features is an error: dissolve them first</span></span></span>
+<span class="r-in"><span><span class="va">two</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="fu"><a href="read_layer.html">read_layer</a></span><span class="op">(</span><span class="va">aoi</span><span class="op">)</span>, <span class="fu"><a href="read_layer.html">read_layer</a></span><span class="op">(</span><span class="va">aoi</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/try.html" class="external-link">try</a></span><span class="op">(</span><span class="fu">create_wtw_planning_units</span><span class="op">(</span><span class="va">two</span>, <span class="va">natdata_dir</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Error in create_wtw_planning_units(two, natdata_dir) : </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   `aoi` must be one feature, not 2.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Dissolve the features into one first, for example with `read_aoi()`.</span>
+<span class="r-in"><span><span class="va">pu</span> <span class="op">&lt;-</span> <span class="fu">create_wtw_planning_units</span><span class="op">(</span><span class="fu"><a href="read_aoi.html">read_aoi</a></span><span class="op">(</span><span class="va">two</span><span class="op">)</span>, <span class="va">natdata_dir</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The planning units as 0s in a signed data type, in a band named "pu"</span></span></span>
 <span class="r-in"><span><span class="va">pu</span> <span class="op">&lt;-</span> <span class="fu">create_wtw_planning_units</span><span class="op">(</span></span></span>

@@ -10,6 +10,8 @@ consistent and repeatable across tools.
 
 Useful links:
 
+- <https://ncc-cnc.github.io/constechr/>
+
 - <https://github.com/NCC-CNC/constechr>
 
 - Report bugs at <https://github.com/NCC-CNC/constechr/issues>

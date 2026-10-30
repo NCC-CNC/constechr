@@ -9,6 +9,13 @@ Read an AOI and rasterize it onto a template or a new grid.
 - [`read_aoi()`](https://ncc-cnc.github.io/constechr/reference/read_aoi.md)
   : Read an area of interest
 
+## Vector layers
+
+Read one layer of a vector file as stored.
+
+- [`read_layer()`](https://ncc-cnc.github.io/constechr/reference/read_layer.md)
+  : Read one layer of a vector file
+
 ## Rasters
 
 Align, polygonize and write rasters.
@@ -16,7 +23,9 @@ Align, polygonize and write rasters.
 - [`align_raster()`](https://ncc-cnc.github.io/constechr/reference/align_raster.md)
   : Align a raster to a template
 - [`polygonize_raster()`](https://ncc-cnc.github.io/constechr/reference/polygonize_raster.md)
-  : Polygonize a raster, one polygon per cell
+  : Polygonize a raster, by cell or by value
+- [`write_raster_file()`](https://ncc-cnc.github.io/constechr/reference/write_raster_file.md)
+  : Write a raster to one file
 - [`write_rasters()`](https://ncc-cnc.github.io/constechr/reference/write_rasters.md)
   : Write rasters to files
 

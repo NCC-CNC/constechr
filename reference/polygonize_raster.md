@@ -1,16 +1,18 @@
-# Polygonize a raster, one polygon per cell
+# Polygonize a raster, by cell or by value
 
-Turns each cell of a one-layer raster that has a value into a square
-polygon holding that value, such as the planning-unit polygons of an AOI
-raster from
-[`rasterize_aoi()`](https://ncc-cnc.github.io/constechr/reference/rasterize_aoi.md).
-Neighbouring cells with the same value stay separate polygons, so every
-cell keeps its own row.
+Turns the cells of a one-layer raster that have a value into polygons
+holding that value. By default each cell becomes its own square polygon,
+such as the planning-unit polygons of an AOI raster from
+[`rasterize_aoi()`](https://ncc-cnc.github.io/constechr/reference/rasterize_aoi.md):
+neighbouring cells with the same value stay separate polygons, so every
+cell keeps its own row. With `dissolve = TRUE`, all cells with the same
+value are merged into one feature, such as one feature per class of a
+classified raster.
 
 ## Usage
 
 ``` r
-polygonize_raster(x, value = names(x), id = NULL)
+polygonize_raster(x, value = names(x), id = NULL, dissolve = FALSE)
 ```
 
 ## Arguments
@@ -22,7 +24,7 @@ polygonize_raster(x, value = names(x), id = NULL)
 
 - value:
 
-  The name of the column that holds each cell's raster value: a single,
+  The name of the column that holds the raster value: a single,
   non-empty string. Defaults to the layer's name (`"index"` for the
   default output of
   [`rasterize_aoi()`](https://ncc-cnc.github.io/constechr/reference/rasterize_aoi.md)).
@@ -31,20 +33,27 @@ polygonize_raster(x, value = names(x), id = NULL)
 - id:
 
   `NULL` (the default) or the name of a column to add that numbers the
-  polygons 1 to n in their order (see "Method"): a single, non-empty
-  string, different from `value`. wtw-data-prep2 uses `"PUID"`.
+  rows 1 to n in their order (see "Method"): a single, non-empty string,
+  different from `value`. wtw-data-prep2 uses `"PUID"`.
+
+- dissolve:
+
+  `FALSE` (the default) for one polygon per cell, or `TRUE` for one
+  feature per distinct value, merging all cells with that value (see
+  "Method").
 
 ## Value
 
-An `sf` data frame with one `POLYGON` row per cell that has a value, in
-the raster's CRS, with the columns `value` (the cell's value, an integer
-or a double as the raster stores it), then `id` (an integer, 1 to n) if
-given, then `geometry`. A raster with no values gives zero rows. Nothing
-is written.
+An `sf` data frame in the raster's CRS: with `dissolve = FALSE`, one
+`POLYGON` row per cell that has a value; with `dissolve = TRUE`, one
+`POLYGON` or `MULTIPOLYGON` row per distinct value. Its columns are
+`value` (the raster value, an integer or a double as the raster stores
+it), then `id` (an integer, 1 to n) if given, then `geometry`. A raster
+with no values gives zero rows. Nothing is written.
 
 ## Method
 
-- **Polygons**:
+- **Polygons** (`dissolve = FALSE`, the default):
   [`terra::as.polygons()`](https://rspatial.github.io/terra/reference/as.polygons.html)
   with `dissolve = FALSE`. Each cell that is not `NA` becomes one square
   polygon whose corners are the cell's corners (a ring of four corners,
@@ -52,11 +61,30 @@ is written.
   Neighbouring cells with equal values are not merged. Cells that are
   `NA` get no polygon.
 
-- **Order**: terra's cell order, row by row from the top-left cell, so
-  `id` 1 is the first cell with a value in the top row that has one. The
-  order does not depend on the values.
+- **Order** (`dissolve = FALSE`): terra's cell order, row by row from
+  the top-left cell, so `id` 1 is the first cell with a value in the top
+  row that has one. The order does not depend on the values.
 
-- **Values**: each cell's value, not rounded, in the type the raster
+- **Merged polygons** (`dissolve = TRUE`): one feature per distinct
+  value, holding every cell with that value, whether or not the cells
+  touch. The distinct values are found exactly (no rounding) and
+  numbered 1 to n in ascending order, and the raster of those numbers is
+  polygonized with
+  [`terra::as.polygons()`](https://rspatial.github.io/terra/reference/as.polygons.html)
+  (`dissolve = TRUE`). So values that differ only slightly are never
+  merged, as they could be with terra's own `dissolve = TRUE`, which
+  rounds values and compares them in single precision. Edges shared by
+  cells of the same value are removed. A value in one connected patch
+  gives a `POLYGON` (with holes where it encloses other cells); a value
+  in several separate patches gives one `MULTIPOLYGON`, so the geometry
+  column can mix the two types. Each feature's area is its number of
+  cells times the cell area. Cells that are `NA` get no polygon. One
+  feature per connected patch, rather than per value, is not offered.
+
+- **Order** (`dissolve = TRUE`): by value, ascending, so `id` numbers
+  the values 1 to n, not the cells.
+
+- **Values**: the raster's values, not rounded, in the type the raster
   stores (ADR 0019): an integer column if the raster stores integers
   ([`terra::is.int()`](https://rspatial.github.io/terra/reference/is.bool.html):
   an `INT*` data type on file, such as NAT_DATA's `idx.tif`, or integer
@@ -70,9 +98,9 @@ is written.
 - **CRS**: the raster's; nothing is reprojected and no areas are
   computed.
 
-Every cell with a value becomes a polygon, so polygonizing a large
-raster (such as the whole national template) makes millions of polygons;
-crop the raster to the area first, as
+With `dissolve = FALSE`, every cell with a value becomes a polygon, so
+polygonizing a large raster (such as the whole national template) makes
+millions of polygons; crop the raster to the area first, as
 [`rasterize_aoi()`](https://ncc-cnc.github.io/constechr/reference/rasterize_aoi.md)
 does by default.
 
@@ -83,6 +111,7 @@ makes the AOI rasters this function is used on.
 
 Other raster:
 [`align_raster()`](https://ncc-cnc.github.io/constechr/reference/align_raster.md),
+[`write_raster_file()`](https://ncc-cnc.github.io/constechr/reference/write_raster_file.md),
 [`write_rasters()`](https://ncc-cnc.github.io/constechr/reference/write_rasters.md)
 
 ## Examples
@@ -133,4 +162,26 @@ pu
 ones <- rasterize_aoi(aoi, template, cells = "touches", value = 1)
 nrow(polygonize_raster(ones))
 #> [1] 9
+
+# dissolve = TRUE merges cells by value: here, one feature per class of
+# the template's cell numbers grouped into tens
+classes <- terra::rast(template) %/% 10
+polygonize_raster(classes, value = "class", id = "id", dissolve = TRUE)
+#> Simple feature collection with 11 features and 2 fields
+#> Geometry type: GEOMETRY
+#> Dimension:     XY
+#> Bounding box:  xmin: 1e+06 ymin: 6e+05 xmax: 1010000 ymax: 610000
+#> Projected CRS: Canada_Albers_WGS_1984
+#> First 10 features:
+#>    class id                       geometry
+#> 1      0  1 POLYGON ((1002000 610000, 1...
+#> 2      1  2 MULTIPOLYGON (((1009000 610...
+#> 3      2  3 MULTIPOLYGON (((1009000 609...
+#> 4      3  4 MULTIPOLYGON (((1009000 608...
+#> 5      4  5 MULTIPOLYGON (((1009000 607...
+#> 6      5  6 MULTIPOLYGON (((1009000 606...
+#> 7      6  7 MULTIPOLYGON (((1009000 605...
+#> 8      7  8 MULTIPOLYGON (((1009000 604...
+#> 9      8  9 MULTIPOLYGON (((1009000 603...
+#> 10     9 10 MULTIPOLYGON (((1009000 602...
 ```

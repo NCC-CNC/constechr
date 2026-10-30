@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">constechr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,7 +54,7 @@
 <div class="section level2">
 <h2 id="status">Status<a class="anchor" aria-label="anchor" href="#status"></a>
 </h2>
-<p>The current release is v0.1.0: reading, rasterizing and aligning AOIs, rij matrix helpers, extracting and writing layers, and the NAT_DATA and Where To Work (WTW) functions for wtw-data-prep2’s steps. See <code>NEWS.md</code> for what each release changed, <code>docs/design/00_project_brief.md</code> for the scope and <code>docs/design/01_wtw-data-prep2_inventory.md</code> for how the functions map to wtw-data-prep2.</p>
+<p>The current release is v0.2.0: reading vector layers, reading, rasterizing and aligning AOIs, polygonizing rasters, rij matrix helpers, extracting and writing layers, and the NAT_DATA and Where To Work (WTW) functions for wtw-data-prep2’s steps. The function reference for the latest release is at <a href="https://ncc-cnc.github.io/constechr/" class="uri">https://ncc-cnc.github.io/constechr/</a>. See <code>NEWS.md</code> for what each release changed, <code>docs/design/00_project_brief.md</code> for the scope and <code>docs/design/01_wtw-data-prep2_inventory.md</code> for how the functions map to wtw-data-prep2.</p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -62,7 +62,7 @@
 <p>constechr is installed from GitHub at a tagged version, so each tool pins the version it was built and tested with:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
-<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"NCC-CNC/constechr@v0.1.0"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"NCC-CNC/constechr@v0.2.0"</span><span class="op">)</span></span></code></pre></div>
 <p>In a project that uses renv, run <code>renv::snapshot()</code> afterwards to record the version in <code>renv.lock</code>.</p>
 </div>
 <div class="section level2">
@@ -92,7 +92,7 @@
 <code class="sourceCode R"><span><span class="va">template</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"template.tif"</span>, package <span class="op">=</span> <span class="st">"constechr"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">aoi_raster</span> <span class="op">&lt;-</span> <span class="fu">constechr</span><span class="fu">::</span><span class="fu"><a href="reference/rasterize_aoi.html">rasterize_aoi</a></span><span class="op">(</span><span class="va">aoi</span>, <span class="va">template</span>, cells <span class="op">=</span> <span class="st">"centre"</span><span class="op">)</span></span>
+<span><span class="va">aoi_raster</span> <span class="op">&lt;-</span> <span class="fu">constechr</span><span class="fu">::</span><span class="fu"><a href="reference/rasterize_aoi.html">rasterize_aoi</a></span><span class="op">(</span><span class="va">aoi</span>, <span class="va">template</span><span class="op">)</span></span>
 <span><span class="va">rij</span> <span class="op">&lt;-</span> <span class="fu">constechr</span><span class="fu">::</span><span class="fu"><a href="reference/read_rij_matrix.html">read_rij_matrix</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"rij.rds"</span>, package <span class="op">=</span> <span class="st">"constechr"</span><span class="op">)</span>, <span class="va">template</span></span>
 <span><span class="op">)</span></span>
@@ -100,11 +100,11 @@
 <span><span class="fu">constechr</span><span class="fu">::</span><span class="fu"><a href="reference/rij_matrix_to_raster.html">rij_matrix_to_raster</a></span><span class="op">(</span><span class="va">rij_aoi</span>, <span class="va">template</span>, <span class="va">aoi_raster</span><span class="op">)</span></span></code></pre></div>
 <p>The functions:</p>
 <ul>
-<li>Building blocks: <code><a href="reference/read_aoi.html">read_aoi()</a></code>, <code><a href="reference/rasterize_aoi.html">rasterize_aoi()</a></code>, <code><a href="reference/align_raster.html">align_raster()</a></code>, <code><a href="reference/polygonize_raster.html">polygonize_raster()</a></code>, <code><a href="reference/read_rij_matrix.html">read_rij_matrix()</a></code>, <code><a href="reference/clip_rij_matrix.html">clip_rij_matrix()</a></code>, <code><a href="reference/rij_matrix_to_raster.html">rij_matrix_to_raster()</a></code>, <code><a href="reference/write_rasters.html">write_rasters()</a></code>, <code><a href="reference/extract_layers.html">extract_layers()</a></code>.</li>
+<li>Building blocks: <code><a href="reference/read_layer.html">read_layer()</a></code>, <code><a href="reference/read_aoi.html">read_aoi()</a></code>, <code><a href="reference/rasterize_aoi.html">rasterize_aoi()</a></code>, <code><a href="reference/align_raster.html">align_raster()</a></code>, <code><a href="reference/polygonize_raster.html">polygonize_raster()</a></code>, <code><a href="reference/read_rij_matrix.html">read_rij_matrix()</a></code>, <code><a href="reference/clip_rij_matrix.html">clip_rij_matrix()</a></code>, <code><a href="reference/rij_matrix_to_raster.html">rij_matrix_to_raster()</a></code>, <code><a href="reference/write_raster_file.html">write_raster_file()</a></code>, <code><a href="reference/write_rasters.html">write_rasters()</a></code>, <code><a href="reference/extract_layers.html">extract_layers()</a></code>.</li>
 <li>NAT_DATA: <code><a href="reference/natdata_template.html">natdata_template()</a></code>, <code><a href="reference/read_natdata_metadata.html">read_natdata_metadata()</a></code>, <code><a href="reference/create_1km_grid.html">create_1km_grid()</a></code>.</li>
 <li>Where To Work: <code><a href="reference/create_wtw_project_folder.html">create_wtw_project_folder()</a></code>, <code><a href="reference/wtw_project_folders.html">wtw_project_folders()</a></code>, <code><a href="reference/create_dataprep_template.html">create_dataprep_template()</a></code>, <code><a href="reference/dataprep_columns.html">dataprep_columns()</a></code>, <code><a href="reference/create_wtw_planning_units.html">create_wtw_planning_units()</a></code>, <code><a href="reference/extract_wtw_natdata.html">extract_wtw_natdata()</a></code>.</li>
 </ul>
-<p>The reference for each function, including the method it uses, is in the package help: <code><a href="https://rdrr.io/pkg/constechr/man" class="external-link">help(package = "constechr")</a></code>.</p>
+<p>The reference for each function, including the method it uses, is in the package help: <code><a href="https://ncc-cnc.github.io/constechr/reference">help(package = "constechr")</a></code>.</p>
 </div>
 <div class="section level2">
 <h2 id="contributing">Contributing<a class="anchor" aria-label="anchor" href="#contributing"></a>

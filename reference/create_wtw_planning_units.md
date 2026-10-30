@@ -22,14 +22,14 @@ create_wtw_planning_units(
   index = "template",
   order = "value",
   trim = TRUE,
-  aoi_union = FALSE,
   aoi_file = "aoi/aoi.shp",
   polygons_file = "aoi/pu_1km.shp",
   raster_file = "aoi/pu_1km.tif",
   raster_value = 1,
   raster_datatype = "INT1U",
   raster_name = "layer",
-  overwrite = TRUE
+  overwrite = TRUE,
+  template_file = "_1km/idx.tif"
 )
 ```
 
@@ -37,19 +37,28 @@ create_wtw_planning_units(
 
 - aoi:
 
-  The AOI: anything
+  The AOI, one feature: anything
   [`read_aoi()`](https://ncc-cnc.github.io/constechr/reference/read_aoi.md)
   accepts (`sf`, `sfc` or `SpatVector` polygons, a file path, or bounds
-  with their CRS in an sf `bbox`). It is read once into memory before
-  anything is written, so it can be the `aoi_file` this call overwrites.
+  with their CRS in an sf `bbox`), holding exactly one feature (one row,
+  a polygon or multipolygon). An AOI of several features is an error,
+  raised before anything is written; dissolve them first, for example
+  with
+  [`read_aoi()`](https://ncc-cnc.github.io/constechr/reference/read_aoi.md).
+  Bounds are one feature, their rectangle. A file path is read with
+  [`read_layer()`](https://ncc-cnc.github.io/constechr/reference/read_layer.md),
+  from the layer named as `<path>/<layer>` or the first layer. The AOI
+  is read once into memory before anything is written, so it can be the
+  `aoi_file` this call overwrites.
 
 - natdata_dir:
 
   The NAT_DATA folder: a single path to an existing folder, such as a
-  dated release (`NAT_DATA_20261009`). Its template is opened with
-  [`natdata_template()`](https://ncc-cnc.github.io/constechr/reference/natdata_template.md)
-  (`_1km/idx.tif`). Where NAT_DATA lives is each tool's own setting;
-  this function only reads from it.
+  dated release (`NAT_DATA_20261009`). Its template, the file
+  `template_file`, is opened with
+  [`natdata_template()`](https://ncc-cnc.github.io/constechr/reference/natdata_template.md).
+  Where NAT_DATA lives is each tool's own setting; this function only
+  reads from it.
 
 - project_dir:
 
@@ -121,26 +130,14 @@ create_wtw_planning_units(
   template data, for example on a coast or at the edge of the national
   data.
 
-- aoi_union:
-
-  A single logical, the AOI written to `aoi_file`:
-
-  - `FALSE` (the default): the input AOI's features and attributes as
-    they are, reprojected to the template's CRS
-    (`read_aoi(aoi, crs = template, union = FALSE)`), as wtw-data-prep2
-    writes `aoi.shp`.
-
-  - `TRUE`: the AOI dissolved into one polygon without attributes, as
-    returned in `aoi`.
-
-  It does not change the returned `aoi`, which is always dissolved.
-
 - aoi_file, polygons_file, raster_file:
 
   The files to write, as paths relative to `project_dir`, or `NULL` to
   not write that file:
 
-  - `aoi_file`: the AOI (see `aoi_union`). Default `"aoi/aoi.shp"`.
+  - `aoi_file`: the AOI's one feature with its attributes, reprojected
+    to the template's CRS, as wtw-data-prep2 writes `aoi.shp`. Default
+    `"aoi/aoi.shp"`.
 
   - `polygons_file`: the planning-unit polygons. Default
     `"aoi/pu_1km.shp"`.
@@ -183,6 +180,15 @@ create_wtw_planning_units(
   wtw-data-prep2 does; `FALSE` is an error if any of the files exists,
   checked before any file is written.
 
+- template_file:
+
+  The template's file within `natdata_dir`, as a path relative to it,
+  passed to
+  [`natdata_template()`](https://ncc-cnc.github.io/constechr/reference/natdata_template.md)
+  as its `file`. The default, `"_1km/idx.tif"`, is NAT_DATA's national
+  template. Another path opens a template kept elsewhere in the folder,
+  such as another version or resolution of the grid.
+
 ## Value
 
 The list
@@ -190,7 +196,7 @@ The list
 returns, differing from it only in the raster's extent (see `trim`):
 
 - `aoi`: the AOI dissolved into one polygon, an `sf` data frame without
-  attributes, in the template's CRS (whatever `aoi_union` is);
+  attributes, in the template's CRS;
 
 - `aoi_raster`: a `SpatRaster` with one layer named `value`, on the
   template's grid: the national ID in the planning units and `NA`
@@ -208,28 +214,36 @@ With `project_dir`, the files named by `aoi_file`, `polygons_file` and
 
 ## Method
 
-1.  **Planning units**:
-    [`create_1km_grid()`](https://ncc-cnc.github.io/constechr/reference/create_1km_grid.md)
-    with `cells`, `value`, `id`, `index` and `order` (its Method section
-    has the details): the AOI read with
-    [`read_aoi()`](https://ncc-cnc.github.io/constechr/reference/read_aoi.md)
-    in the template's CRS (`_1km/idx.tif`, Canada_Albers_WGS_1984) and
-    dissolved; its cells on the template by raster intersection
-    (`"touches"` is GDAL's all-touched rule), without the cells where
-    the template is `NA`; one 1 km square polygon per cell, holding its
-    national ID (`NCCID`) and planning-unit number (`PUID`).
+1.  **AOI**: read once, with
+    [`read_aoi()`](https://ncc-cnc.github.io/constechr/reference/read_aoi.md)'s
+    input handling and checks (polygons or multipolygons only, with a
+    CRS), files with
+    [`read_layer()`](https://ncc-cnc.github.io/constechr/reference/read_layer.md);
+    Z and M dropped; reprojected to the template's CRS (`template_file`
+    in `natdata_dir`, by default `_1km/idx.tif`, in
+    Canada_Albers_WGS_1984) with
+    [`sf::st_transform()`](https://r-spatial.github.io/sf/reference/st_transform.html)
+    (PROJ), which moves each vertex. It must be one feature, or the
+    function stops before anything is written; nothing is dissolved
+    silently.
 
-2.  **Extent**: with `trim = TRUE`, the raster is trimmed with
+2.  **Planning units**:
+    [`create_1km_grid()`](https://ncc-cnc.github.io/constechr/reference/create_1km_grid.md)
+    on that feature, with `cells`, `value`, `id`, `index`, `order` and
+    `template_file` (its Method section has the details): the AOI
+    dissolved by
+    [`read_aoi()`](https://ncc-cnc.github.io/constechr/reference/read_aoi.md)
+    (one feature, so the same area); its cells on the template by raster
+    intersection (`"touches"` is GDAL's all-touched rule), without the
+    cells where the template is `NA`; one 1 km square polygon per cell,
+    holding its national ID (`NCCID`) and planning-unit number (`PUID`).
+
+3.  **Extent**: with `trim = TRUE`, the raster is trimmed with
     [`terra::trim()`](https://rspatial.github.io/terra/reference/trim.html)
     to the smallest box of whole cells holding every planning unit. If
     the AOI gets no cells, it is not trimmed (and
     [`create_1km_grid()`](https://ncc-cnc.github.io/constechr/reference/create_1km_grid.md)
     warns).
-
-3.  **AOI file**: with `aoi_union = FALSE`, the AOI is read again with
-    [`read_aoi()`](https://ncc-cnc.github.io/constechr/reference/read_aoi.md)
-    in the template's CRS without dissolving, so its features and
-    attributes are kept; reprojection moves each vertex with PROJ.
 
 4.  **Writing** (only with `project_dir`), in this order, with
     [`sf::st_write()`](https://r-spatial.github.io/sf/reference/st_write.html)
@@ -237,14 +251,15 @@ With `project_dir`, the files named by `aoi_file`, `polygons_file` and
     [`write_rasters()`](https://ncc-cnc.github.io/constechr/reference/write_rasters.md)
     for the raster:
 
-    - `aoi_file`: the AOI from step 3, or the dissolved AOI;
+    - `aoi_file`: the AOI's one feature from step 1, with its
+      attributes;
 
     - `polygons_file`: the polygons, with the columns `value`, `id` and
       their geometry. `value` keeps the type it has in the polygons, so
       with NAT_DATA's `idx.tif` (an `INT*` data type) `NCCID` is an
       integer field (ADR 0019);
 
-    - `raster_file`: the raster of step 2 with `raster_value` in every
+    - `raster_file`: the raster of step 3 with `raster_value` in every
       planning unit and `NA` elsewhere, one layer named `raster_name`,
       in `raster_datatype`, `NA` as terra's NoData value for it (rounded
       halves away from zero before an integer type). The defaults, 1 as
@@ -253,10 +268,10 @@ With `project_dir`, the files named by `aoi_file`, `polygons_file` and
 
 No areas are computed and no values are rounded. With the defaults, the
 files are those of wtw-data-prep2's step 02 (`aoi_to_grid()`): the same
-AOI features and attributes, the same planning units (`NCCID`, `PUID`
-and polygons, with `NCCID` and `PUID` as integer fields), and the same
+AOI feature and attributes, the same planning units (`NCCID`, `PUID` and
+polygons, with `NCCID` and `PUID` as integer fields), and the same
 `pu_1km.tif` extent, values and data type. Decisions are recorded in ADR
-0017, ADR 0018 and ADR 0019.
+0017, ADR 0018, ADR 0019 and ADR 0026.
 
 Arguments are checked before the AOI is read; the AOI is read before
 anything is written. If writing fails partway, the files already written
@@ -319,11 +334,19 @@ terra::rast(file.path(project_dir, "aoi", "pu_1km.tif"))
 #> min value   :     1
 #> max value   :     1
 
-# The dissolved AOI as a GeoPackage, and no raster file
+# The AOI as a GeoPackage, and no raster file
 pu <- create_wtw_planning_units(
   aoi, natdata_dir, project_dir,
-  aoi_union = TRUE, aoi_file = "aoi/aoi.gpkg", raster_file = NULL
+  aoi_file = "aoi/aoi.gpkg", raster_file = NULL
 )
+
+# An AOI of several features is an error: dissolve them first
+two <- rbind(read_layer(aoi), read_layer(aoi))
+try(create_wtw_planning_units(two, natdata_dir))
+#> Error in create_wtw_planning_units(two, natdata_dir) : 
+#>   `aoi` must be one feature, not 2.
+#> ℹ Dissolve the features into one first, for example with `read_aoi()`.
+pu <- create_wtw_planning_units(read_aoi(two), natdata_dir)
 
 # The planning units as 0s in a signed data type, in a band named "pu"
 pu <- create_wtw_planning_units(

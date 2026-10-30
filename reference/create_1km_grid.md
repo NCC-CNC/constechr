@@ -18,7 +18,8 @@ create_1km_grid(
   value = "NCCID",
   id = "PUID",
   index = "template",
-  order = "value"
+  order = "value",
+  template_file = "_1km/idx.tif"
 )
 ```
 
@@ -29,16 +30,16 @@ create_1km_grid(
   The AOI: anything
   [`read_aoi()`](https://ncc-cnc.github.io/constechr/reference/read_aoi.md)
   accepts (`sf`, `sfc` or `SpatVector` polygons, a file path, or bounds
-  with their CRS in an sf `bbox`). Several polygons are dissolved into
-  one.
+  with their CRS in an sf `bbox`), dissolved into one area.
 
 - natdata_dir:
 
   The NAT_DATA folder: a single path to an existing folder, such as a
-  dated release (`NAT_DATA_20261009`). Its template is opened with
-  [`natdata_template()`](https://ncc-cnc.github.io/constechr/reference/natdata_template.md)
-  (`_1km/idx.tif`). Where NAT_DATA lives is each tool's own setting;
-  this function only reads from it.
+  dated release (`NAT_DATA_20261009`). Its template, the file
+  `template_file`, is opened with
+  [`natdata_template()`](https://ncc-cnc.github.io/constechr/reference/natdata_template.md).
+  Where NAT_DATA lives is each tool's own setting; this function only
+  reads from it.
 
 - cells:
 
@@ -85,6 +86,15 @@ create_1km_grid(
 
   With `index = "cell"` the two orders are the same.
 
+- template_file:
+
+  The template's file within `natdata_dir`, as a path relative to it,
+  passed to
+  [`natdata_template()`](https://ncc-cnc.github.io/constechr/reference/natdata_template.md)
+  as its `file`. The default, `"_1km/idx.tif"`, is NAT_DATA's national
+  template. Another path opens a template kept elsewhere in the folder,
+  such as another version or resolution of the grid.
+
 ## Value
 
 A list, with nothing written:
@@ -112,8 +122,8 @@ A list, with nothing written:
 
 1.  **Template**:
     [`natdata_template()`](https://ncc-cnc.github.io/constechr/reference/natdata_template.md)
-    opens `natdata_dir`'s `_1km/idx.tif` (1 km cells in
-    Canada_Albers_WGS_1984); its values stay on disk.
+    opens `template_file` in `natdata_dir`, by default `_1km/idx.tif` (1
+    km cells in Canada_Albers_WGS_1984); its values stay on disk.
 
 2.  **AOI**:
     [`read_aoi()`](https://ncc-cnc.github.io/constechr/reference/read_aoi.md)
@@ -215,4 +225,23 @@ create_1km_grid(
 # numbers, so here they are the same as the default's)
 create_1km_grid(aoi, natdata_dir, index = "cell")$polygons$NCCID
 #> [1] 34 35 36 44 45 46 54 55 56
+
+# The template file named explicitly, as for a template kept elsewhere in
+# the folder (here NAT_DATA's own, the default)
+create_1km_grid(aoi, natdata_dir, template_file = "_1km/idx.tif")$polygons
+#> Simple feature collection with 9 features and 2 fields
+#> Geometry type: POLYGON
+#> Dimension:     XY
+#> Bounding box:  xmin: 1003000 ymin: 604000 xmax: 1006000 ymax: 607000
+#> Projected CRS: Canada_Albers_WGS_1984
+#>   NCCID PUID                       geometry
+#> 1    34    1 POLYGON ((1003000 606000, 1...
+#> 2    35    2 POLYGON ((1004000 606000, 1...
+#> 3    36    3 POLYGON ((1005000 606000, 1...
+#> 4    44    4 POLYGON ((1003000 605000, 1...
+#> 5    45    5 POLYGON ((1004000 605000, 1...
+#> 6    46    6 POLYGON ((1005000 605000, 1...
+#> 7    54    7 POLYGON ((1003000 604000, 1...
+#> 8    55    8 POLYGON ((1004000 604000, 1...
+#> 9    56    9 POLYGON ((1005000 604000, 1...
 ```

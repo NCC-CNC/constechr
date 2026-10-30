@@ -14,7 +14,7 @@ rasterize_aoi(
   template = NULL,
   resolution = NULL,
   crs = NULL,
-  cells,
+  cells = "centre",
   value = "index",
   drop_na = TRUE,
   crop = TRUE
@@ -61,8 +61,13 @@ rasterize_aoi(
 
   The cell inclusion rule, one of `"touches"` (every cell the AOI
   touches) or `"centre"` (every cell whose centre is inside the AOI).
-  Required: there is no default, because the rule changes which cells an
-  AOI gets. Bounds follow the same rule as polygons.
+  `"centre"` (the default) is terra's and GDAL's own default
+  (`touches = FALSE`). The NAT_DATA and WTW use-case functions,
+  [`create_1km_grid()`](https://ncc-cnc.github.io/constechr/reference/create_1km_grid.md)
+  and
+  [`create_wtw_planning_units()`](https://ncc-cnc.github.io/constechr/reference/create_wtw_planning_units.md),
+  default to `"touches"` instead. Bounds follow the same rule as
+  polygons.
 
 - value:
 
@@ -168,7 +173,9 @@ If the AOI's bounding box does not overlap the grid (the template, with
 a template), the function stops with an error. If the AOI overlaps but
 gets no cells (for example a small AOI that covers no cell centre, or
 only cells without data), it warns and returns a raster that is all
-`NA`.
+`NA`. The warning is only for an AOI that gets no cells at all: with
+`cells = "centre"`, or with `drop_na = TRUE`, a small part of an AOI in
+several parts (such as an islet) can get no cells, without a warning.
 
 ## See also
 
@@ -188,8 +195,8 @@ x <- rasterize_aoi(aoi, template, cells = "touches")
 terra::values(x, mat = FALSE)
 #> [1] 34 35 36 44 45 46 54 55 56
 
-# Only cells whose centre is inside the AOI, holding 1
-rasterize_aoi(aoi, template, cells = "centre", value = 1)
+# The default rule, cells whose centre is inside the AOI, holding 1
+rasterize_aoi(aoi, template, value = 1)
 #> class       : SpatRaster
 #> size        : 3, 3, 1  (nrow, ncol, nlyr)
 #> resolution  : 1000, 1000  (x, y)
@@ -230,8 +237,7 @@ rasterize_aoi(aoi, template, cells = "touches", crop = FALSE)
 rasterize_aoi(
   c(xmin = 1003600, ymin = 604300, xmax = 1005800, ymax = 606600),
   resolution = 500,
-  crs = template,
-  cells = "centre"
+  crs = template
 )
 #> class       : SpatRaster
 #> size        : 6, 5, 1  (nrow, ncol, nlyr)

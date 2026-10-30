@@ -3,14 +3,14 @@
 layers on the national 1 km template) for an area of interest (AOI): each
 layer is read as an rij matrix (read_rij_matrix()), clipped to the AOI
 (clip_rij_matrix()) and rebuilt as rasters on the AOI raster's extent
-(rij_matrix_to_raster()), then returned or, with dir, written to
+(rij_matrix_to_raster()), then returned or, with output_dir, written to
 GeoTIFF files (write_rasters()). The AOI's cells are worked out once
 for all layers, and everything that can be checked without extracting is
 checked before the first layer is read."><meta property="og:description" content="Extracts data layers on a template raster (such as NAT_DATA's national
 layers on the national 1 km template) for an area of interest (AOI): each
 layer is read as an rij matrix (read_rij_matrix()), clipped to the AOI
 (clip_rij_matrix()) and rebuilt as rasters on the AOI raster's extent
-(rij_matrix_to_raster()), then returned or, with dir, written to
+(rij_matrix_to_raster()), then returned or, with output_dir, written to
 GeoTIFF files (write_rasters()). The AOI's cells are worked out once
 for all layers, and everything that can be checked without extracting is
 checked before the first layer is read."></head><body>
@@ -21,7 +21,7 @@ checked before the first layer is read."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">constechr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -43,7 +43,7 @@ checked before the first layer is read."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Extract many layers for an area of interest</h1>
-      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/dev/R/extract.R" class="external-link"><code>R/extract.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.2.0/R/extract.R" class="external-link"><code>R/extract.R</code></a></small>
       <div class="d-none name"><code>extract_layers.Rd</code></div>
     </div>
 
@@ -52,7 +52,7 @@ checked before the first layer is read."></head><body>
 layers on the national 1 km template) for an area of interest (AOI): each
 layer is read as an rij matrix (<code><a href="read_rij_matrix.html">read_rij_matrix()</a></code>), clipped to the AOI
 (<code><a href="clip_rij_matrix.html">clip_rij_matrix()</a></code>) and rebuilt as rasters on the AOI raster's extent
-(<code><a href="rij_matrix_to_raster.html">rij_matrix_to_raster()</a></code>), then returned or, with <code>dir</code>, written to
+(<code><a href="rij_matrix_to_raster.html">rij_matrix_to_raster()</a></code>), then returned or, with <code>output_dir</code>, written to
 GeoTIFF files (<code><a href="write_rasters.html">write_rasters()</a></code>). The AOI's cells are worked out once
 for all layers, and everything that can be checked without extracting is
 checked before the first layer is read.</p>
@@ -64,7 +64,7 @@ checked before the first layer is read.</p>
 <span>  <span class="va">layers</span>,</span>
 <span>  <span class="va">aoi_raster</span>,</span>
 <span>  <span class="va">template</span>,</span>
-<span>  dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  output_dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  prefix <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  datatype <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  round_int <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -89,8 +89,8 @@ by <code>path_column</code> (<code>path</code> by default), and optionally any o
 columns, each overriding the matching argument for its layer (<code>NA</code>
 uses the argument):</p><ul><li><p><code>prefix</code>: put before the layer's file names (<code>""</code> for none);</p></li>
 <li><p><code>datatype</code>: the data type of the layer's files;</p></li>
-<li><p><code>subdir</code>: the subfolder of <code>dir</code> the layer's files go in (<code>NA</code> or
-<code>""</code> for <code>dir</code> itself); it may hold path separators;</p></li>
+<li><p><code>subdir</code>: the subfolder of <code>output_dir</code> the layer's files go in
+(<code>NA</code> or <code>""</code> for <code>output_dir</code> itself); it may hold path separators;</p></li>
 <li><p><code>format</code>: what the file holds, <code>"auto"</code>, <code>"raster"</code> or <code>"rij"</code>, as
 in <code><a href="read_rij_matrix.html">read_rij_matrix()</a></code>'s <code>type</code>; <code>NA</code> is <code>"auto"</code>, which decides by
 extension (<code>.tif</code> and <code>.tiff</code> are rasters, <code>.rds</code> an rij matrix).</p></li>
@@ -117,11 +117,11 @@ with one layer and a CRS, or a path to a raster file. Only which of its
 cells have data (are not <code>NA</code>) is used, not its values.</p></dd>
 
 
-<dt id="arg-dir">dir<a class="anchor" aria-label="anchor" href="#arg-dir"></a></dt>
-<dd><p><code>NULL</code> (the default) returns the rasters in memory and writes
-nothing; a single folder path writes them to files there (created if
-needed) instead. The arguments below <code>dir</code>, except <code>drop_empty</code> and
-<code>progress</code>, are used only when writing.</p></dd>
+<dt id="arg-output-dir">output_dir<a class="anchor" aria-label="anchor" href="#arg-output-dir"></a></dt>
+<dd><p><code>NULL</code> (the default) returns the rasters in memory and
+writes nothing; a single folder path writes them to files there (created
+if needed) instead. The arguments below <code>output_dir</code>, except <code>drop_empty</code>
+and <code>progress</code>, are used only when writing.</p></dd>
 
 
 <dt id="arg-prefix">prefix<a class="anchor" aria-label="anchor" href="#arg-prefix"></a></dt>
@@ -135,9 +135,10 @@ in it puts the files in a subfolder, as in <code><a href="write_rasters.html">wr
 <code>datatype</code> in <code>layers</code>: one of terra's types (<code>"INT1U"</code>, <code>"INT2U"</code>,
 <code>"INT2S"</code>, <code>"INT4U"</code>, <code>"INT4S"</code>, <code>"INT8U"</code>, <code>"INT8S"</code>, <code>"FLT4S"</code> or
 <code>"FLT8S"</code>). <code>NULL</code> (the default) uses the data type of the layer's
-raster file. An <code>.rds</code> rij matrix has no stored data type, so a layer
-read from one needs a <code>datatype</code>, in <code>layers</code> or here; without one the
-function stops before extracting anything.</p></dd>
+raster file. A layer with none of these (such as an <code>.rds</code> rij matrix,
+which has no stored data type) has its type inferred from each file's
+extracted values when it is written, as <code><a href="write_raster_file.html">write_raster_file()</a></code> does,
+with a message naming it.</p></dd>
 
 
 <dt id="arg-round-int">round_int<a class="anchor" aria-label="anchor" href="#arg-round-int"></a></dt>
@@ -150,9 +151,9 @@ decimals off. Float types are never rounded.</p></dd>
 <dt id="arg-multiband">multiband<a class="anchor" aria-label="anchor" href="#arg-multiband"></a></dt>
 <dd><p>A single logical: <code>FALSE</code> (the default) writes one file
 per feature (row of the layer's rij matrix),
-<code>&lt;dir&gt;/&lt;subdir&gt;/&lt;prefix&gt;&lt;feature&gt;.tif</code>; <code>TRUE</code> writes one multi-band
+<code>&lt;output_dir&gt;/&lt;subdir&gt;/&lt;prefix&gt;&lt;feature&gt;.tif</code>; <code>TRUE</code> writes one multi-band
 file per layer, one band per feature, named after the layer's file:
-<code>&lt;dir&gt;/&lt;subdir&gt;/&lt;prefix&gt;&lt;file name without extension&gt;.tif</code> (as the
+<code>&lt;output_dir&gt;/&lt;subdir&gt;/&lt;prefix&gt;&lt;file name without extension&gt;.tif</code> (as the
 opportunity-screening-toolkit names them).</p></dd>
 
 
@@ -187,12 +188,13 @@ layer's folder. Not used when <code>layers</code> is a vector of paths.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Without <code>dir</code>, a list of <code>SpatRaster</code>s held in memory, one per
+    <p>Without <code>output_dir</code>, a list of <code>SpatRaster</code>s held in memory, one per
 layer with features left after clipping, in the order of <code>layers</code>, named
-after the layer's file name without its extension; each has one layer
-per feature, named after it. Layers that were skipped are left out, so
-the list can be empty.</p>
-<p>With <code>dir</code>, the paths of the files written, invisibly: a character
+after the layer's file name without its extension, with repeated names
+made unique by <code><a href="https://rdrr.io/r/base/make.unique.html" class="external-link">make.unique()</a></code> (<code>rij</code>, <code>rij.1</code>; see Method); each has
+one layer per feature, named after it. Layers that were skipped are left
+out, so the list can be empty.</p>
+<p>With <code>output_dir</code>, the paths of the files written, invisibly: a character
 vector in the order written, named after the feature for one file per
 feature, or after the layer's file name without its extension for a
 multi-band file.</p>
@@ -221,18 +223,28 @@ template's grid cropped to <code>aoi_raster</code>'s extent (cut to the template
 where it reaches past its edge): the feature's values in the AOI cells
 with template data, 0 where it has none, <code>NA</code> elsewhere. Values are
 kept as they are (doubles, not rounded, no areas).</p></li>
-<li><p><strong>Writing</strong> (<code><a href="write_rasters.html">write_rasters()</a></code>), with <code>dir</code>: to
-<code>&lt;dir&gt;/&lt;subdir&gt;/&lt;prefix&gt;&lt;feature&gt;.tif</code>, or with <code>multiband = TRUE</code>
-<code>&lt;dir&gt;/&lt;subdir&gt;/&lt;prefix&gt;&lt;file name without extension&gt;.tif</code>. Each
+<li><p><strong>Names in memory</strong>: without <code>output_dir</code>, each raster is named after its
+layer's file name without its extension. Repeated names (layers with
+the same file name in different folders, or a layer given twice) are
+made unique with <code><a href="https://rdrr.io/r/base/make.unique.html" class="external-link">make.unique()</a></code>, in the order of <code>layers</code>, among the
+layers that are not skipped: the first keeps the name and later ones
+get <code>.1</code>, <code>.2</code> and so on (<code>rij</code>, <code>rij.1</code>). Names that do not repeat are
+unchanged. Written files are named by feature, not by these names.</p></li>
+<li><p><strong>Writing</strong> (<code><a href="write_rasters.html">write_rasters()</a></code>), with <code>output_dir</code>: to
+<code>&lt;output_dir&gt;/&lt;subdir&gt;/&lt;prefix&gt;&lt;feature&gt;.tif</code>, or with <code>multiband = TRUE</code>
+<code>&lt;output_dir&gt;/&lt;subdir&gt;/&lt;prefix&gt;&lt;file name without extension&gt;.tif</code>. Each
 layer's <code>prefix</code>, <code>datatype</code> and <code>subdir</code> come from <code>layers</code>, else from
-the arguments; the data type, else, from the layer's raster file. With
-<code>round_int = TRUE</code>, values are rounded halves away from zero before an
-integer type.</p></li>
+the arguments; the data type, else, from the layer's raster file, else
+(such as for an <code>.rds</code> rij matrix) it is inferred from each file's
+extracted values as in <code><a href="write_raster_file.html">write_raster_file()</a></code> (ADR 0027): the smallest
+integer type that holds whole numbers without its NoData value, else
+<code>"FLT4S"</code>, with a message naming it. With <code>round_int = TRUE</code>, values
+are rounded halves away from zero before an integer type.</p></li>
 <li><p><strong>Checks first</strong>: before any layer is read, the layer files must exist,
 their type must be known, raster layers must open on the template's
-grid, and, when writing, every layer must have a valid data type,
-prefix and subfolder, and the files that can be named without reading
-the layers (raster layers' features, and multi-band files) must be
+grid, and, when writing, every data type given must be valid, every
+prefix and subfolder allowed, and the files that can be named without
+reading the layers (raster layers' features, and multi-band files) must be
 distinct (ignoring case), must not be a layer's input file and, with
 <code>overwrite = FALSE</code>, must not exist. The files of an <code>.rds</code> layer's
 features are checked the same way when it is written. If a layer still
@@ -243,7 +255,7 @@ error names the layer, and the files of the layers before it are kept.</p></li>
 large.</p></li>
 </ul><p>Method choices are recorded in ADRs 0015 and 0016, and those of the
 functions it calls in ADRs 0011 to 0014. With <code>layers</code> from
-<code><a href="read_natdata_metadata.html">read_natdata_metadata()</a></code>, <code>path_column = "file"</code> and <code>dir</code> as
+<code><a href="read_natdata_metadata.html">read_natdata_metadata()</a></code>, <code>path_column = "file"</code> and <code>output_dir</code> as
 <code>&lt;project&gt;/tifs</code>, it writes the same files as wtw-data-prep2's
 <code>natdata()</code>. Intended changes from that code: everything
 that can be checked is checked before extracting, dropped features and
@@ -287,13 +299,16 @@ and <code><a href="natdata_template.html">natdata_template()</a></code> for NAT_
 <span class="r-out co"><span class="r-pr">#&gt;</span> max values  :    1,   1.6</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Written: one file per feature, T_sp_a.tif and T_cover.tif, in a</span></span></span>
-<span class="r-in"><span><span class="co"># "species" subfolder. An .rds layer needs a datatype; cover's 1.6 is</span></span></span>
-<span class="r-in"><span><span class="co"># rounded to 2.</span></span></span>
+<span class="r-in"><span><span class="co"># "species" subfolder, as INT1U (without a datatype, it would be inferred</span></span></span>
+<span class="r-in"><span><span class="co"># from the values, with a message); cover's 1.6 is rounded to 2.</span></span></span>
 <span class="r-in"><span><span class="va">layers</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  path <span class="op">=</span> <span class="va">rij</span>, prefix <span class="op">=</span> <span class="st">"T_"</span>, datatype <span class="op">=</span> <span class="st">"INT1U"</span>, subdir <span class="op">=</span> <span class="st">"species"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"extracted"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">paths</span> <span class="op">&lt;-</span> <span class="fu">extract_layers</span><span class="op">(</span><span class="va">layers</span>, <span class="va">aoi_raster</span>, <span class="va">template</span>, dir <span class="op">=</span> <span class="va">dir</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">output_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"extracted"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">paths</span> <span class="op">&lt;-</span> <span class="fu">extract_layers</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">layers</span>, <span class="va">aoi_raster</span>, <span class="va">template</span>,</span></span>
+<span class="r-in"><span>  output_dir <span class="op">=</span> <span class="va">output_dir</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Dropped 1 row of <span style="color: #0000BB;">/__w/_temp/Library/constechr/extdata/rij.rds</span> with no values in</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> the AOI: <span style="color: #0000BB;">"sp_b"</span>.</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">basename</a></span><span class="op">(</span><span class="va">paths</span><span class="op">)</span></span></span>
@@ -304,7 +319,7 @@ and <code><a href="natdata_template.html">natdata_template()</a></code> for NAT_
 <span class="r-in"><span><span class="co"># One multi-band file per layer instead, named after the layer's file</span></span></span>
 <span class="r-in"><span><span class="va">paths</span> <span class="op">&lt;-</span> <span class="fu">extract_layers</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">rij</span>, <span class="va">aoi_raster</span>, <span class="va">template</span>,</span></span>
-<span class="r-in"><span>  dir <span class="op">=</span> <span class="va">dir</span>, datatype <span class="op">=</span> <span class="st">"FLT4S"</span>, multiband <span class="op">=</span> <span class="cn">TRUE</span></span></span>
+<span class="r-in"><span>  output_dir <span class="op">=</span> <span class="va">output_dir</span>, datatype <span class="op">=</span> <span class="st">"FLT4S"</span>, multiband <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Dropped 1 row of <span style="color: #0000BB;">/__w/_temp/Library/constechr/extdata/rij.rds</span> with no values in</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> the AOI: <span style="color: #0000BB;">"sp_b"</span>.</span>
@@ -332,7 +347,7 @@ and <code><a href="natdata_template.html">natdata_template()</a></code> for NAT_
 <span class="r-in"><span><span class="va">layers</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>folder <span class="op">=</span> <span class="st">"species"</span>, file <span class="op">=</span> <span class="va">rij</span>, datatype <span class="op">=</span> <span class="st">"INT1U"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">paths</span> <span class="op">&lt;-</span> <span class="fu">extract_layers</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">layers</span>, <span class="va">aoi_raster</span>, <span class="va">template</span>,</span></span>
-<span class="r-in"><span>  dir <span class="op">=</span> <span class="va">dir</span>, path_column <span class="op">=</span> <span class="st">"file"</span></span></span>
+<span class="r-in"><span>  output_dir <span class="op">=</span> <span class="va">output_dir</span>, path_column <span class="op">=</span> <span class="st">"file"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Dropped 1 row of <span style="color: #0000BB;">/__w/_temp/Library/constechr/extdata/rij.rds</span> with no values in</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> the AOI: <span style="color: #0000BB;">"sp_b"</span>.</span>

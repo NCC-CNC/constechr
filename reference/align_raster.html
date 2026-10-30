@@ -15,7 +15,7 @@ smaller, shifted, finer or coarser grid, or in another CRS."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">constechr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,7 +37,7 @@ smaller, shifted, finer or coarser grid, or in another CRS."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Align a raster to a template</h1>
-      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/dev/R/align.R" class="external-link"><code>R/align.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.2.0/R/align.R" class="external-link"><code>R/align.R</code></a></small>
       <div class="d-none name"><code>align_raster.Rd</code></div>
     </div>
 
@@ -99,7 +99,8 @@ categories and cell numbers, which must not be averaged.</p></dd>
 <code>"INT1U"</code>, <code>"INT2U"</code>, <code>"INT2S"</code>, <code>"INT4U"</code>, <code>"INT4S"</code>, <code>"INT8U"</code>,
 <code>"INT8S"</code>, <code>"FLT4S"</code> or <code>"FLT8S"</code>. <code>NULL</code> (the default) uses the data
 type of the file <code>x</code> was read from, as <code>gdalwarp</code> does; an in-memory <code>x</code>
-has none, so <code>datatype</code> is then required to write it. Ignored when
+has none, so the type is then inferred from the aligned values, as
+<code><a href="write_raster_file.html">write_raster_file()</a></code> does, with a message naming it. Ignored when
 nothing is written.</p></dd>
 
 
@@ -134,15 +135,19 @@ are computed.</p></li>
 <code>x</code> has no NoData value. The warp runs without writing (to memory, or to
 a temporary file for large rasters) and the result is then written with
 <code><a href="https://rspatial.github.io/terra/reference/writeRaster.html" class="external-link">terra::writeRaster()</a></code>, so cells outside <code>x</code> are never filled with 0.</p></li>
-<li><p><strong>Writing</strong>: in <code>datatype</code>. For an integer type the values are first
+<li><p><strong>Writing</strong>: with <code><a href="write_raster_file.html">write_raster_file()</a></code>'s writer, in <code>datatype</code>; with
+<code>NULL</code>, in the data type of <code>x</code>'s file, or for an in-memory <code>x</code> the
+smallest integer type that holds the aligned values if they are whole
+numbers, else <code>"FLT4S"</code> (<code>"FLT8S"</code> beyond its range), <code>"INT1U"</code> if all
+are <code>NA</code> (ADR 0027). For an integer type the values are first
 rounded to the nearest whole number, halves away from zero
 (<code><a href="https://rspatial.github.io/terra/reference/math-generics.html" class="external-link">terra::round()</a></code>), because GDAL truncates decimals when it writes them
 as integers; with <code>"near"</code> on an integer input nothing changes. <code>NA</code> is
 written as terra's NoData value for the type (for example 255 for
 <code>"INT1U"</code>). A result kept in memory is not rounded.</p></li>
-</ul><p>Method choices are recorded in ADR 0007 and ADR 0010. Compared with
-wtw-data-prep2's <code>align_pu()</code> (<code>gdalwarp</code>), the cells and values are the
-same, except that cells outside an input with no NoData value are <code>NA</code>
+</ul><p>Method choices are recorded in ADR 0007, ADR 0010 and ADR 0027. Compared
+with wtw-data-prep2's <code>align_pu()</code> (<code>gdalwarp</code>), the cells and values are
+the same, except that cells outside an input with no NoData value are <code>NA</code>
 rather than 0, a few edge cells can differ when reprojecting (<code>gdalwarp</code>
 uses an approximate transformation by default), and the stored CRS and
 grid are the template's exactly.</p>
@@ -155,6 +160,7 @@ template's extent, the function stops with an error.</p>
 template's full grid directly.</p>
 <p>Other raster:
 <code><a href="polygonize_raster.html">polygonize_raster()</a></code>,
+<code><a href="write_raster_file.html">write_raster_file()</a></code>,
 <code><a href="write_rasters.html">write_rasters()</a></code></p></div>
     </div>
 

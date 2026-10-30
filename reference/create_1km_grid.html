@@ -19,7 +19,7 @@ wtw-data-prep2 makes. Nothing is written."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">constechr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,7 +41,7 @@ wtw-data-prep2 makes. Nothing is written."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>NAT_DATA 1 km planning units for an area of interest</h1>
-      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/dev/R/natdata.R" class="external-link"><code>R/natdata.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.2.0/R/natdata.R" class="external-link"><code>R/natdata.R</code></a></small>
       <div class="d-none name"><code>create_1km_grid.Rd</code></div>
     </div>
 
@@ -64,7 +64,8 @@ wtw-data-prep2 makes. Nothing is written.</p>
 <span>  value <span class="op">=</span> <span class="st">"NCCID"</span>,</span>
 <span>  id <span class="op">=</span> <span class="st">"PUID"</span>,</span>
 <span>  index <span class="op">=</span> <span class="st">"template"</span>,</span>
-<span>  order <span class="op">=</span> <span class="st">"value"</span></span>
+<span>  order <span class="op">=</span> <span class="st">"value"</span>,</span>
+<span>  template_file <span class="op">=</span> <span class="st">"_1km/idx.tif"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -75,14 +76,15 @@ wtw-data-prep2 makes. Nothing is written.</p>
 <dl><dt id="arg-aoi">aoi<a class="anchor" aria-label="anchor" href="#arg-aoi"></a></dt>
 <dd><p>The AOI: anything <code><a href="read_aoi.html">read_aoi()</a></code> accepts (<code>sf</code>, <code>sfc</code> or
 <code>SpatVector</code> polygons, a file path, or bounds with their CRS in an sf
-<code>bbox</code>). Several polygons are dissolved into one.</p></dd>
+<code>bbox</code>), dissolved into one area.</p></dd>
 
 
 <dt id="arg-natdata-dir">natdata_dir<a class="anchor" aria-label="anchor" href="#arg-natdata-dir"></a></dt>
 <dd><p>The NAT_DATA folder: a single path to an existing
-folder, such as a dated release (<code>NAT_DATA_20261009</code>). Its template is
-opened with <code><a href="natdata_template.html">natdata_template()</a></code> (<code>_1km/idx.tif</code>). Where NAT_DATA lives
-is each tool's own setting; this function only reads from it.</p></dd>
+folder, such as a dated release (<code>NAT_DATA_20261009</code>). Its template,
+the file <code>template_file</code>, is opened with <code><a href="natdata_template.html">natdata_template()</a></code>. Where
+NAT_DATA lives is each tool's own setting; this function only reads
+from it.</p></dd>
 
 
 <dt id="arg-cells">cells<a class="anchor" aria-label="anchor" href="#arg-cells"></a></dt>
@@ -122,6 +124,14 @@ first, as wtw-data-prep2 orders them.</p></li>
 <code><a href="polygonize_raster.html">polygonize_raster()</a></code> returns them.</p></li>
 </ul><p>With <code>index = "cell"</code> the two orders are the same.</p></dd>
 
+
+<dt id="arg-template-file">template_file<a class="anchor" aria-label="anchor" href="#arg-template-file"></a></dt>
+<dd><p>The template's file within <code>natdata_dir</code>, as a path
+relative to it, passed to <code><a href="natdata_template.html">natdata_template()</a></code> as its <code>file</code>. The
+default, <code>"_1km/idx.tif"</code>, is NAT_DATA's national template. Another
+path opens a template kept elsewhere in the folder, such as another
+version or resolution of the grid.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -142,9 +152,9 @@ the raster: an integer for NAT_DATA's <code>idx.tif</code> and for
     <h2 id="method">Method<a class="anchor" aria-label="anchor" href="#method"></a></h2>
 
 
-<ol><li><p><strong>Template</strong>: <code><a href="natdata_template.html">natdata_template()</a></code> opens <code>natdata_dir</code>'s
-<code>_1km/idx.tif</code> (1 km cells in Canada_Albers_WGS_1984); its values stay
-on disk.</p></li>
+<ol><li><p><strong>Template</strong>: <code><a href="natdata_template.html">natdata_template()</a></code> opens <code>template_file</code> in
+<code>natdata_dir</code>, by default <code>_1km/idx.tif</code> (1 km cells in
+Canada_Albers_WGS_1984); its values stay on disk.</p></li>
 <li><p><strong>AOI</strong>: <code><a href="read_aoi.html">read_aoi()</a></code> in the template's CRS, dissolved into one
 polygon; reprojection, when needed, moves each vertex with PROJ.</p></li>
 <li><p><strong>Cells</strong>: <code><a href="rasterize_aoi.html">rasterize_aoi()</a></code> on the template at its own resolution,
@@ -230,6 +240,25 @@ it calls.</p>
 <span class="r-in"><span><span class="co"># numbers, so here they are the same as the default's)</span></span></span>
 <span class="r-in"><span><span class="fu">create_1km_grid</span><span class="op">(</span><span class="va">aoi</span>, <span class="va">natdata_dir</span>, index <span class="op">=</span> <span class="st">"cell"</span><span class="op">)</span><span class="op">$</span><span class="va">polygons</span><span class="op">$</span><span class="va">NCCID</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 34 35 36 44 45 46 54 55 56</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The template file named explicitly, as for a template kept elsewhere in</span></span></span>
+<span class="r-in"><span><span class="co"># the folder (here NAT_DATA's own, the default)</span></span></span>
+<span class="r-in"><span><span class="fu">create_1km_grid</span><span class="op">(</span><span class="va">aoi</span>, <span class="va">natdata_dir</span>, template_file <span class="op">=</span> <span class="st">"_1km/idx.tif"</span><span class="op">)</span><span class="op">$</span><span class="va">polygons</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Simple feature collection with 9 features and 2 fields</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Geometry type: POLYGON</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Dimension:     XY</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Bounding box:  xmin: 1003000 ymin: 604000 xmax: 1006000 ymax: 607000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Projected CRS: Canada_Albers_WGS_1984</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   NCCID PUID                       geometry</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1    34    1 POLYGON ((1003000 606000, 1...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2    35    2 POLYGON ((1004000 606000, 1...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3    36    3 POLYGON ((1005000 606000, 1...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4    44    4 POLYGON ((1003000 605000, 1...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5    45    5 POLYGON ((1004000 605000, 1...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6    46    6 POLYGON ((1005000 605000, 1...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7    54    7 POLYGON ((1003000 604000, 1...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8    55    8 POLYGON ((1004000 604000, 1...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9    56    9 POLYGON ((1005000 604000, 1...</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

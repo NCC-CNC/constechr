@@ -8,7 +8,7 @@ clipped to the AOI
 ([`clip_rij_matrix()`](https://ncc-cnc.github.io/constechr/reference/clip_rij_matrix.md))
 and rebuilt as rasters on the AOI raster's extent
 ([`rij_matrix_to_raster()`](https://ncc-cnc.github.io/constechr/reference/rij_matrix_to_raster.md)),
-then returned or, with `dir`, written to GeoTIFF files
+then returned or, with `output_dir`, written to GeoTIFF files
 ([`write_rasters()`](https://ncc-cnc.github.io/constechr/reference/write_rasters.md)).
 The AOI's cells are worked out once for all layers, and everything that
 can be checked without extracting is checked before the first layer is
@@ -21,7 +21,7 @@ extract_layers(
   layers,
   aoi_raster,
   template,
-  dir = NULL,
+  output_dir = NULL,
   prefix = "",
   datatype = NULL,
   round_int = TRUE,
@@ -52,8 +52,9 @@ extract_layers(
 
     - `datatype`: the data type of the layer's files;
 
-    - `subdir`: the subfolder of `dir` the layer's files go in (`NA` or
-      `""` for `dir` itself); it may hold path separators;
+    - `subdir`: the subfolder of `output_dir` the layer's files go in
+      (`NA` or `""` for `output_dir` itself); it may hold path
+      separators;
 
     - `format`: what the file holds, `"auto"`, `"raster"` or `"rij"`, as
       in
@@ -85,11 +86,11 @@ extract_layers(
   and a CRS, or a path to a raster file. Only which of its cells have
   data (are not `NA`) is used, not its values.
 
-- dir:
+- output_dir:
 
   `NULL` (the default) returns the rasters in memory and writes nothing;
   a single folder path writes them to files there (created if needed)
-  instead. The arguments below `dir`, except `drop_empty` and
+  instead. The arguments below `output_dir`, except `drop_empty` and
   `progress`, are used only when writing.
 
 - prefix:
@@ -104,10 +105,12 @@ extract_layers(
   The data type of the written files, for layers with no `datatype` in
   `layers`: one of terra's types (`"INT1U"`, `"INT2U"`, `"INT2S"`,
   `"INT4U"`, `"INT4S"`, `"INT8U"`, `"INT8S"`, `"FLT4S"` or `"FLT8S"`).
-  `NULL` (the default) uses the data type of the layer's raster file. An
-  `.rds` rij matrix has no stored data type, so a layer read from one
-  needs a `datatype`, in `layers` or here; without one the function
-  stops before extracting anything.
+  `NULL` (the default) uses the data type of the layer's raster file. A
+  layer with none of these (such as an `.rds` rij matrix, which has no
+  stored data type) has its type inferred from each file's extracted
+  values when it is written, as
+  [`write_raster_file()`](https://ncc-cnc.github.io/constechr/reference/write_raster_file.md)
+  does, with a message naming it.
 
 - round_int:
 
@@ -121,10 +124,11 @@ extract_layers(
 
   A single logical: `FALSE` (the default) writes one file per feature
   (row of the layer's rij matrix),
-  `<dir>/<subdir>/<prefix><feature>.tif`; `TRUE` writes one multi-band
-  file per layer, one band per feature, named after the layer's file:
-  `<dir>/<subdir>/<prefix><file name without extension>.tif` (as the
-  opportunity-screening-toolkit names them).
+  `<output_dir>/<subdir>/<prefix><feature>.tif`; `TRUE` writes one
+  multi-band file per layer, one band per feature, named after the
+  layer's file:
+  `<output_dir>/<subdir>/<prefix><file name without extension>.tif` (as
+  the opportunity-screening-toolkit names them).
 
 - drop_empty:
 
@@ -161,16 +165,18 @@ extract_layers(
 
 ## Value
 
-Without `dir`, a list of `SpatRaster`s held in memory, one per layer
-with features left after clipping, in the order of `layers`, named after
-the layer's file name without its extension; each has one layer per
-feature, named after it. Layers that were skipped are left out, so the
-list can be empty.
+Without `output_dir`, a list of `SpatRaster`s held in memory, one per
+layer with features left after clipping, in the order of `layers`, named
+after the layer's file name without its extension, with repeated names
+made unique by
+[`make.unique()`](https://rdrr.io/r/base/make.unique.html) (`rij`,
+`rij.1`; see Method); each has one layer per feature, named after it.
+Layers that were skipped are left out, so the list can be empty.
 
-With `dir`, the paths of the files written, invisibly: a character
-vector in the order written, named after the feature for one file per
-feature, or after the layer's file name without its extension for a
-multi-band file.
+With `output_dir`, the paths of the files written, invisibly: a
+character vector in the order written, named after the feature for one
+file per feature, or after the layer's file name without its extension
+for a multi-band file.
 
 ## Method
 
@@ -206,27 +212,42 @@ multi-band file.
   where it has none, `NA` elsewhere. Values are kept as they are
   (doubles, not rounded, no areas).
 
+- **Names in memory**: without `output_dir`, each raster is named after
+  its layer's file name without its extension. Repeated names (layers
+  with the same file name in different folders, or a layer given twice)
+  are made unique with
+  [`make.unique()`](https://rdrr.io/r/base/make.unique.html), in the
+  order of `layers`, among the layers that are not skipped: the first
+  keeps the name and later ones get `.1`, `.2` and so on (`rij`,
+  `rij.1`). Names that do not repeat are unchanged. Written files are
+  named by feature, not by these names.
+
 - **Writing**
   ([`write_rasters()`](https://ncc-cnc.github.io/constechr/reference/write_rasters.md)),
-  with `dir`: to `<dir>/<subdir>/<prefix><feature>.tif`, or with
-  `multiband = TRUE`
-  `<dir>/<subdir>/<prefix><file name without extension>.tif`. Each
-  layer's `prefix`, `datatype` and `subdir` come from `layers`, else
-  from the arguments; the data type, else, from the layer's raster file.
-  With `round_int = TRUE`, values are rounded halves away from zero
-  before an integer type.
+  with `output_dir`: to `<output_dir>/<subdir>/<prefix><feature>.tif`,
+  or with `multiband = TRUE`
+  `<output_dir>/<subdir>/<prefix><file name without extension>.tif`.
+  Each layer's `prefix`, `datatype` and `subdir` come from `layers`,
+  else from the arguments; the data type, else, from the layer's raster
+  file, else (such as for an `.rds` rij matrix) it is inferred from each
+  file's extracted values as in
+  [`write_raster_file()`](https://ncc-cnc.github.io/constechr/reference/write_raster_file.md)
+  (ADR 0027): the smallest integer type that holds whole numbers without
+  its NoData value, else `"FLT4S"`, with a message naming it. With
+  `round_int = TRUE`, values are rounded halves away from zero before an
+  integer type.
 
 - **Checks first**: before any layer is read, the layer files must
   exist, their type must be known, raster layers must open on the
-  template's grid, and, when writing, every layer must have a valid data
-  type, prefix and subfolder, and the files that can be named without
-  reading the layers (raster layers' features, and multi-band files)
-  must be distinct (ignoring case), must not be a layer's input file
-  and, with `overwrite = FALSE`, must not exist. The files of an `.rds`
-  layer's features are checked the same way when it is written. If a
-  layer still fails (for example an `.rds` file that does not hold an
-  rij matrix), the error names the layer, and the files of the layers
-  before it are kept.
+  template's grid, and, when writing, every data type given must be
+  valid, every prefix and subfolder allowed, and the files that can be
+  named without reading the layers (raster layers' features, and
+  multi-band files) must be distinct (ignoring case), must not be a
+  layer's input file and, with `overwrite = FALSE`, must not exist. The
+  files of an `.rds` layer's features are checked the same way when it
+  is written. If a layer still fails (for example an `.rds` file that
+  does not hold an rij matrix), the error names the layer, and the files
+  of the layers before it are kept.
 
 - **Memory**: layers are extracted one at a time, and memory is freed
   ([`gc()`](https://rdrr.io/r/base/gc.html)) after each one, since some
@@ -235,11 +256,11 @@ multi-band file.
 Method choices are recorded in ADRs 0015 and 0016, and those of the
 functions it calls in ADRs 0011 to 0014. With `layers` from
 [`read_natdata_metadata()`](https://ncc-cnc.github.io/constechr/reference/read_natdata_metadata.md),
-`path_column = "file"` and `dir` as `<project>/tifs`, it writes the same
-files as wtw-data-prep2's `natdata()`. Intended changes from that code:
-everything that can be checked is checked before extracting, dropped
-features and skipped layers are named in messages, and an error names
-the layer.
+`path_column = "file"` and `output_dir` as `<project>/tifs`, it writes
+the same files as wtw-data-prep2's `natdata()`. Intended changes from
+that code: everything that can be checked is checked before extracting,
+dropped features and skipped layers are named in messages, and an error
+names the layer.
 
 ## See also
 
@@ -284,13 +305,16 @@ x$rij
 #> max values  :    1,   1.6
 
 # Written: one file per feature, T_sp_a.tif and T_cover.tif, in a
-# "species" subfolder. An .rds layer needs a datatype; cover's 1.6 is
-# rounded to 2.
+# "species" subfolder, as INT1U (without a datatype, it would be inferred
+# from the values, with a message); cover's 1.6 is rounded to 2.
 layers <- data.frame(
   path = rij, prefix = "T_", datatype = "INT1U", subdir = "species"
 )
-dir <- file.path(tempdir(), "extracted")
-paths <- extract_layers(layers, aoi_raster, template, dir = dir)
+output_dir <- file.path(tempdir(), "extracted")
+paths <- extract_layers(
+  layers, aoi_raster, template,
+  output_dir = output_dir
+)
 #> Dropped 1 row of /__w/_temp/Library/constechr/extdata/rij.rds with no values in
 #> the AOI: "sp_b".
 basename(paths)
@@ -301,7 +325,7 @@ terra::values(terra::rast(paths[["cover"]]), mat = FALSE)
 # One multi-band file per layer instead, named after the layer's file
 paths <- extract_layers(
   rij, aoi_raster, template,
-  dir = dir, datatype = "FLT4S", multiband = TRUE
+  output_dir = output_dir, datatype = "FLT4S", multiband = TRUE
 )
 #> Dropped 1 row of /__w/_temp/Library/constechr/extdata/rij.rds with no values in
 #> the AOI: "sp_b".
@@ -329,7 +353,7 @@ if (requireNamespace("prioritizr", quietly = TRUE)) {
 layers <- data.frame(folder = "species", file = rij, datatype = "INT1U")
 paths <- extract_layers(
   layers, aoi_raster, template,
-  dir = dir, path_column = "file"
+  output_dir = output_dir, path_column = "file"
 )
 #> Dropped 1 row of /__w/_temp/Library/constechr/extdata/rij.rds with no values in
 #> the AOI: "sp_b".

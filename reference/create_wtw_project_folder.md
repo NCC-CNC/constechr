@@ -118,6 +118,6 @@ paths <- create_wtw_project_folder(
   file.path(tempdir(), "other_layout"), c("aoi", "rasters/themes")
 )
 paths
-#> [1] "/tmp/Rtmp4oO8r8/other_layout/aoi"           
-#> [2] "/tmp/Rtmp4oO8r8/other_layout/rasters/themes"
+#> [1] "/tmp/RtmpmUy3jO/other_layout/aoi"           
+#> [2] "/tmp/RtmpmUy3jO/other_layout/rasters/themes"
 ```

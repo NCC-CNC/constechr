@@ -57,8 +57,9 @@ align_raster(
   `"INT2U"`, `"INT2S"`, `"INT4U"`, `"INT4S"`, `"INT8U"`, `"INT8S"`,
   `"FLT4S"` or `"FLT8S"`. `NULL` (the default) uses the data type of the
   file `x` was read from, as `gdalwarp` does; an in-memory `x` has none,
-  so `datatype` is then required to write it. Ignored when nothing is
-  written.
+  so the type is then inferred from the aligned values, as
+  [`write_raster_file()`](https://ncc-cnc.github.io/constechr/reference/write_raster_file.md)
+  does, with a message naming it. Ignored when nothing is written.
 
 - overwrite:
 
@@ -97,20 +98,26 @@ the format of `filename`'s extension) in `datatype`.
   [`terra::writeRaster()`](https://rspatial.github.io/terra/reference/writeRaster.html),
   so cells outside `x` are never filled with 0.
 
-- **Writing**: in `datatype`. For an integer type the values are first
-  rounded to the nearest whole number, halves away from zero
+- **Writing**: with
+  [`write_raster_file()`](https://ncc-cnc.github.io/constechr/reference/write_raster_file.md)'s
+  writer, in `datatype`; with `NULL`, in the data type of `x`'s file, or
+  for an in-memory `x` the smallest integer type that holds the aligned
+  values if they are whole numbers, else `"FLT4S"` (`"FLT8S"` beyond its
+  range), `"INT1U"` if all are `NA` (ADR 0027). For an integer type the
+  values are first rounded to the nearest whole number, halves away from
+  zero
   ([`terra::round()`](https://rspatial.github.io/terra/reference/math-generics.html)),
   because GDAL truncates decimals when it writes them as integers; with
   `"near"` on an integer input nothing changes. `NA` is written as
   terra's NoData value for the type (for example 255 for `"INT1U"`). A
   result kept in memory is not rounded.
 
-Method choices are recorded in ADR 0007 and ADR 0010. Compared with
-wtw-data-prep2's `align_pu()` (`gdalwarp`), the cells and values are the
-same, except that cells outside an input with no NoData value are `NA`
-rather than 0, a few edge cells can differ when reprojecting (`gdalwarp`
-uses an approximate transformation by default), and the stored CRS and
-grid are the template's exactly.
+Method choices are recorded in ADR 0007, ADR 0010 and ADR 0027. Compared
+with wtw-data-prep2's `align_pu()` (`gdalwarp`), the cells and values
+are the same, except that cells outside an input with no NoData value
+are `NA` rather than 0, a few edge cells can differ when reprojecting
+(`gdalwarp` uses an approximate transformation by default), and the
+stored CRS and grid are the template's exactly.
 
 If `x`'s extent, reprojected to the template's CRS, does not overlap the
 template's extent, the function stops with an error.
@@ -123,6 +130,7 @@ directly.
 
 Other raster:
 [`polygonize_raster()`](https://ncc-cnc.github.io/constechr/reference/polygonize_raster.md),
+[`write_raster_file()`](https://ncc-cnc.github.io/constechr/reference/write_raster_file.md),
 [`write_rasters()`](https://ncc-cnc.github.io/constechr/reference/write_rasters.md)
 
 ## Examples

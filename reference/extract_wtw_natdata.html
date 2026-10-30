@@ -19,7 +19,7 @@ except aoi/pu_1km_align.tif, written only when align_file asks for it."></head><
 
     <a class="navbar-brand me-2" href="../index.html">constechr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,7 +41,7 @@ except aoi/pu_1km_align.tif, written only when align_file asks for it."></head><
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Extract NAT_DATA layers into a Where To Work project</h1>
-      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/dev/R/wtw.R" class="external-link"><code>R/wtw.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.2.0/R/wtw.R" class="external-link"><code>R/wtw.R</code></a></small>
       <div class="d-none name"><code>extract_wtw_natdata.Rd</code></div>
     </div>
 
@@ -74,7 +74,8 @@ except <code>aoi/pu_1km_align.tif</code>, written only when <code>align_file</co
 <span>  progress <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">i</span>, <span class="va">n</span>, <span class="va">layer</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    </span>
 <span>    <span class="fu">cli</span><span class="fu">::</span><span class="fu"><a href="https://cli.r-lib.org/reference/cli_abort.html" class="external-link">cli_inform</a></span><span class="op">(</span><span class="st">"Layer {i} of {n}: {basename(layer)}"</span><span class="op">)</span></span>
-<span> <span class="op">}</span></span>
+<span> <span class="op">}</span>,</span>
+<span>  template_file <span class="op">=</span> <span class="st">"_1km/idx.tif"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -84,10 +85,11 @@ except <code>aoi/pu_1km_align.tif</code>, written only when <code>align_file</co
 
 <dl><dt id="arg-natdata-dir">natdata_dir<a class="anchor" aria-label="anchor" href="#arg-natdata-dir"></a></dt>
 <dd><p>The NAT_DATA folder: a single path to an existing
-folder, such as a dated release (<code>NAT_DATA_20261009</code>). Its template is
-opened with <code><a href="natdata_template.html">natdata_template()</a></code> (<code>_1km/idx.tif</code>) and, by default, its
-catalogue read with <code><a href="read_natdata_metadata.html">read_natdata_metadata()</a></code>. Where NAT_DATA lives is
-each tool's own setting; this function only reads from it.</p></dd>
+folder, such as a dated release (<code>NAT_DATA_20261009</code>). Its template,
+the file <code>template_file</code>, is opened with <code><a href="natdata_template.html">natdata_template()</a></code> and, by
+default, its catalogue read with <code><a href="read_natdata_metadata.html">read_natdata_metadata()</a></code>. Where
+NAT_DATA lives is each tool's own setting; this function only reads
+from it.</p></dd>
 
 
 <dt id="arg-project-dir">project_dir<a class="anchor" aria-label="anchor" href="#arg-project-dir"></a></dt>
@@ -184,6 +186,14 @@ layer's number <code>i</code>, the number of layers <code>n</code> and the layer
 <code>layer</code>. The default prints a short message naming the layer, since a
 national extraction can take a while.</p></dd>
 
+
+<dt id="arg-template-file">template_file<a class="anchor" aria-label="anchor" href="#arg-template-file"></a></dt>
+<dd><p>The template's file within <code>natdata_dir</code>, as a path
+relative to it, passed to <code><a href="natdata_template.html">natdata_template()</a></code> as its <code>file</code>. The
+default, <code>"_1km/idx.tif"</code>, is NAT_DATA's national template. Another
+path opens a template kept elsewhere in the folder, such as another
+version or resolution of the grid.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -196,9 +206,10 @@ vector in the order written, named after the feature (or, with
     <h2 id="method">Method<a class="anchor" aria-label="anchor" href="#method"></a></h2>
 
 
-<ol><li><p><strong>Template</strong>: <code><a href="natdata_template.html">natdata_template()</a></code> opens <code>natdata_dir</code>'s
-<code>_1km/idx.tif</code>, the national grid of 1 km cells in
-Canada_Albers_WGS_1984; only which of its cells have data is used.</p></li>
+<ol><li><p><strong>Template</strong>: <code><a href="natdata_template.html">natdata_template()</a></code> opens <code>template_file</code> in
+<code>natdata_dir</code>, by default <code>_1km/idx.tif</code>, the national grid of 1 km
+cells in Canada_Albers_WGS_1984; only which of its cells have data is
+used.</p></li>
 <li><p><strong>Layers</strong>: <code><a href="extract_layers.html">extract_layers()</a></code> with <code>path_column = "file"</code>, one layer
 at a time, in the order of <code>layers</code>: each layer is read as an rij
 matrix (a GeoTIFF on the template's grid, or an <code>.rds</code> rij matrix),
