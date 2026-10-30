@@ -124,7 +124,7 @@ natdata_template <- function(natdata_dir, file = "_1km/idx.tif") {
 #'   aoi_raster <- rasterize_aoi(aoi, template, cells = "touches")
 #'   paths <- extract_layers(
 #'     layers, aoi_raster, template,
-#'     dir = file.path(tempdir(), "tifs"), path_column = "file"
+#'     output_dir = file.path(tempdir(), "tifs"), path_column = "file"
 #'   )
 #'   basename(paths)
 #' }
@@ -197,11 +197,12 @@ read_natdata_metadata <- function(natdata_dir,
 #'
 #' @param aoi The AOI: anything [read_aoi()] accepts (`sf`, `sfc` or
 #'   `SpatVector` polygons, a file path, or bounds with their CRS in an sf
-#'   `bbox`). Several polygons are dissolved into one.
+#'   `bbox`), dissolved into one area.
 #' @param natdata_dir The NAT_DATA folder: a single path to an existing
-#'   folder, such as a dated release (`NAT_DATA_20261009`). Its template is
-#'   opened with [natdata_template()] (`_1km/idx.tif`). Where NAT_DATA lives
-#'   is each tool's own setting; this function only reads from it.
+#'   folder, such as a dated release (`NAT_DATA_20261009`). Its template,
+#'   the file `template_file`, is opened with [natdata_template()]. Where
+#'   NAT_DATA lives is each tool's own setting; this function only reads
+#'   from it.
 #' @param cells The cell inclusion rule, one of `"touches"` (every cell the
 #'   AOI touches) or `"centre"` (every cell whose centre is inside the AOI).
 #'   The default, `"touches"`, gives the cells wtw-data-prep2 gives.
@@ -227,11 +228,16 @@ read_natdata_metadata <- function(natdata_dir,
 #'     [polygonize_raster()] returns them.
 #'
 #'   With `index = "cell"` the two orders are the same.
+#' @param template_file The template's file within `natdata_dir`, as a path
+#'   relative to it, passed to [natdata_template()] as its `file`. The
+#'   default, `"_1km/idx.tif"`, is NAT_DATA's national template. Another
+#'   path opens a template kept elsewhere in the folder, such as another
+#'   version or resolution of the grid.
 #'
 #' @section Method:
-#' 1. **Template**: [natdata_template()] opens `natdata_dir`'s
-#'    `_1km/idx.tif` (1 km cells in Canada_Albers_WGS_1984); its values stay
-#'    on disk.
+#' 1. **Template**: [natdata_template()] opens `template_file` in
+#'    `natdata_dir`, by default `_1km/idx.tif` (1 km cells in
+#'    Canada_Albers_WGS_1984); its values stay on disk.
 #' 2. **AOI**: [read_aoi()] in the template's CRS, dissolved into one
 #'    polygon; reprojection, when needed, moves each vertex with PROJ.
 #' 3. **Cells**: [rasterize_aoi()] on the template at its own resolution,
@@ -299,26 +305,20 @@ read_natdata_metadata <- function(natdata_dir,
 #' # Terra cell numbers as the ID (the example template's values are its cell
 #' # numbers, so here they are the same as the default's)
 #' create_1km_grid(aoi, natdata_dir, index = "cell")$polygons$NCCID
+#'
+#' # The template file named explicitly, as for a template kept elsewhere in
+#' # the folder (here NAT_DATA's own, the default)
+#' create_1km_grid(aoi, natdata_dir, template_file = "_1km/idx.tif")$polygons
 create_1km_grid <- function(aoi, natdata_dir, cells = "touches",
                             value = "NCCID", id = "PUID",
-                            index = "template", order = "value") {
+                            index = "template", order = "value",
+                            template_file = "_1km/idx.tif") {
   call <- environment()
-  check_natdata_dir(natdata_dir, call)
-  check_cells(cells, call)
-  check_column_name(value, "value", call)
-  if (!is.null(id)) {
-    check_column_name(id, "id", call)
-    if (identical(id, value)) {
-      cli::cli_abort(
-        "{.arg id} must differ from {.arg value}; both are {.str {id}}.",
-        call = call
-      )
-    }
-  }
-  check_choice(index, "index", c("template", "cell"), call)
-  check_choice(order, "order", c("value", "cell"), call)
+  check_1km_grid_args(
+    natdata_dir, cells, value, id, index, order, template_file, call
+  )
 
-  template <- open_natdata_template(natdata_dir, call)
+  template <- open_natdata_template(natdata_dir, template_file, call)
   aoi <- read_aoi(aoi, crs = template)
   aoi_raster <- rasterize_aoi(
     aoi, template,
@@ -342,46 +342,28 @@ create_1km_grid <- function(aoi, natdata_dir, cells = "touches",
 #' Open a NAT_DATA folder's template for a use-case function
 #'
 #' @param natdata_dir The NAT_DATA folder, already checked.
+#' @param template_file The template's file within `natdata_dir`, already
+#'   checked.
 #' @param call The environment that errors name.
 #' @return The template from `natdata_template()`; an error naming
-#'   `natdata_dir`, with the cause as its parent, if it cannot be opened.
+#'   `template_file` and the path tried, with the cause as its parent, if it
+#'   cannot be opened.
 #' @noRd
-open_natdata_template <- function(natdata_dir, call) {
+open_natdata_template <- function(natdata_dir, template_file, call) {
   tryCatch(
-    natdata_template(natdata_dir),
+    natdata_template(natdata_dir, file = template_file),
     error = function(e) {
       cli::cli_abort(
-        "The national template in {.arg natdata_dir} could not be opened.",
+        c(
+          "The national template ({.arg template_file}) in
+          {.arg natdata_dir} could not be opened.",
+          "i" = "Path tried: {.file {file.path(natdata_dir, template_file)}}."
+        ),
         parent = e,
         call = call
       )
     }
   )
-}
-
-#' Check an argument that takes one of a few strings
-#'
-#' @param x The value given.
-#' @param arg The argument's name.
-#' @param choices The accepted strings.
-#' @param call The environment that errors name.
-#' @return `x`, invisibly; an error if it is not one of `choices`.
-#' @noRd
-check_choice <- function(x, arg, choices, call) {
-  if (assertthat::is.string(x) && !(x %in% choices)) {
-    cli::cli_abort(
-      "{.arg {arg}} must be one of {.or {.str {choices}}}, not {.str {x}}.",
-      call = call
-    )
-  }
-  if (!assertthat::is.string(x)) {
-    cli::cli_abort(
-      "{.arg {arg}} must be one of {.or {.str {choices}}}, not
-      {.obj_type_friendly {x}}.",
-      call = call
-    )
-  }
-  invisible(x)
 }
 
 #' Check the `natdata_dir` argument
@@ -415,13 +397,14 @@ check_natdata_dir <- function(natdata_dir, call) {
 #'
 #' @param file The value given.
 #' @param call The environment that errors name.
+#' @param arg The argument's name, for errors.
 #' @return `file`, invisibly; an error if it is not a single, non-empty
 #'   string.
 #' @noRd
-check_natdata_file <- function(file, call) {
+check_natdata_file <- function(file, call, arg = "file") {
   if (!assertthat::is.string(file) || is.na(file) || !nzchar(file)) {
     cli::cli_abort(
-      "{.arg file} must be a single file path relative to
+      "{.arg {arg}} must be a single file path relative to
       {.arg natdata_dir}, not {.obj_type_friendly {file}}.",
       call = call
     )
@@ -481,4 +464,34 @@ catalogue_files <- function(natdata_dir, folder, name) {
   files[!in_folder] <- file.path(natdata_dir, name[!in_folder])
   files[is.na(name) | !nzchar(name)] <- NA_character_
   files
+}
+
+#' Check the arguments of `create_1km_grid()` other than the AOI
+#'
+#' Shared with `create_wtw_planning_units()`, which checks them before it
+#' reads the AOI.
+#'
+#' @param natdata_dir,cells,value,id,index,order,template_file The values
+#'   given.
+#' @param call The environment that errors name.
+#' @return `NULL`, invisibly; an error naming the first invalid argument.
+#' @noRd
+check_1km_grid_args <- function(natdata_dir, cells, value, id, index, order,
+                                template_file, call) {
+  check_natdata_dir(natdata_dir, call)
+  check_natdata_file(template_file, call, arg = "template_file")
+  check_cells(cells, call)
+  check_column_name(value, "value", call)
+  if (!is.null(id)) {
+    check_column_name(id, "id", call)
+    if (identical(id, value)) {
+      cli::cli_abort(
+        "{.arg id} must differ from {.arg value}; both are {.str {id}}.",
+        call = call
+      )
+    }
+  }
+  check_choice(index, "index", c("template", "cell"), call)
+  check_choice(order, "order", c("value", "cell"), call)
+  invisible(NULL)
 }

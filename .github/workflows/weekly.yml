@@ -1,0 +1,31 @@
+name: Weekly CI
+
+# Starts CI (ci.yml) on dev and on main each week, so a new CRAN release of
+# a dependency that breaks the package shows up on both branches (#114).
+#
+# A schedule only fires from the default branch (main), so the schedule
+# lives here and dispatches ci.yml on each branch, each run using that
+# branch's own code and ci.yml. GITHUB_TOKEN may start a workflow_dispatch
+# run (it is one of the events it is allowed to trigger).
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Start CI on dev and main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          for ref in dev main; do
+            gh workflow run ci.yml --ref "$ref"
+            echo "started ci.yml on $ref"
+          done

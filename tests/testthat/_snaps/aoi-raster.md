@@ -9,15 +9,6 @@
 # invalid arguments give clear errors
 
     Code
-      rasterize_aoi(aoi, template)
-    Condition
-      Error in `rasterize_aoi()`:
-      ! `cells` is required.
-      i Use "touches" (every cell the AOI touches) or "centre" (cells whose centre is inside the AOI).
-
----
-
-    Code
       rasterize_aoi(aoi, template, cells = "center")
     Condition
       Error in `rasterize_aoi()`:

@@ -21,15 +21,17 @@ extract_wtw_natdata(
   progress = function(i, n, layer) {
     
     cli::cli_inform("Layer {i} of {n}: {basename(layer)}")
- }
+ },
+  template_file = "_1km/idx.tif"
 )
 }
 \arguments{
 \item{natdata_dir}{The NAT_DATA folder: a single path to an existing
-folder, such as a dated release (\code{NAT_DATA_20261009}). Its template is
-opened with \code{\link[=natdata_template]{natdata_template()}} (\verb{_1km/idx.tif}) and, by default, its
-catalogue read with \code{\link[=read_natdata_metadata]{read_natdata_metadata()}}. Where NAT_DATA lives is
-each tool's own setting; this function only reads from it.}
+folder, such as a dated release (\code{NAT_DATA_20261009}). Its template,
+the file \code{template_file}, is opened with \code{\link[=natdata_template]{natdata_template()}} and, by
+default, its catalogue read with \code{\link[=read_natdata_metadata]{read_natdata_metadata()}}. Where
+NAT_DATA lives is each tool's own setting; this function only reads
+from it.}
 
 \item{project_dir}{The WTW project folder: a single folder path, under
 which \code{tifs_dir} (and \code{align_file}) are written. Missing folders,
@@ -99,6 +101,12 @@ before each layer is extracted as \code{progress(i, n, layer)}, with the
 layer's number \code{i}, the number of layers \code{n} and the layer's path
 \code{layer}. The default prints a short message naming the layer, since a
 national extraction can take a while.}
+
+\item{template_file}{The template's file within \code{natdata_dir}, as a path
+relative to it, passed to \code{\link[=natdata_template]{natdata_template()}} as its \code{file}. The
+default, \code{"_1km/idx.tif"}, is NAT_DATA's national template. Another
+path opens a template kept elsewhere in the folder, such as another
+version or resolution of the grid.}
 }
 \value{
 The paths of the layer files written, invisibly: a character
@@ -118,9 +126,10 @@ except \code{aoi/pu_1km_align.tif}, written only when \code{align_file} asks for
 \section{Method}{
 
 \enumerate{
-\item \strong{Template}: \code{\link[=natdata_template]{natdata_template()}} opens \code{natdata_dir}'s
-\verb{_1km/idx.tif}, the national grid of 1 km cells in
-Canada_Albers_WGS_1984; only which of its cells have data is used.
+\item \strong{Template}: \code{\link[=natdata_template]{natdata_template()}} opens \code{template_file} in
+\code{natdata_dir}, by default \verb{_1km/idx.tif}, the national grid of 1 km
+cells in Canada_Albers_WGS_1984; only which of its cells have data is
+used.
 \item \strong{Layers}: \code{\link[=extract_layers]{extract_layers()}} with \code{path_column = "file"}, one layer
 at a time, in the order of \code{layers}: each layer is read as an rij
 matrix (a GeoTIFF on the template's grid, or an \code{.rds} rij matrix),

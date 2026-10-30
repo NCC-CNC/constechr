@@ -11,18 +11,20 @@ create_1km_grid(
   value = "NCCID",
   id = "PUID",
   index = "template",
-  order = "value"
+  order = "value",
+  template_file = "_1km/idx.tif"
 )
 }
 \arguments{
 \item{aoi}{The AOI: anything \code{\link[=read_aoi]{read_aoi()}} accepts (\code{sf}, \code{sfc} or
 \code{SpatVector} polygons, a file path, or bounds with their CRS in an sf
-\code{bbox}). Several polygons are dissolved into one.}
+\code{bbox}), dissolved into one area.}
 
 \item{natdata_dir}{The NAT_DATA folder: a single path to an existing
-folder, such as a dated release (\code{NAT_DATA_20261009}). Its template is
-opened with \code{\link[=natdata_template]{natdata_template()}} (\verb{_1km/idx.tif}). Where NAT_DATA lives
-is each tool's own setting; this function only reads from it.}
+folder, such as a dated release (\code{NAT_DATA_20261009}). Its template,
+the file \code{template_file}, is opened with \code{\link[=natdata_template]{natdata_template()}}. Where
+NAT_DATA lives is each tool's own setting; this function only reads
+from it.}
 
 \item{cells}{The cell inclusion rule, one of \code{"touches"} (every cell the
 AOI touches) or \code{"centre"} (every cell whose centre is inside the AOI).
@@ -57,6 +59,12 @@ first, as wtw-data-prep2 orders them.
 }
 
 With \code{index = "cell"} the two orders are the same.}
+
+\item{template_file}{The template's file within \code{natdata_dir}, as a path
+relative to it, passed to \code{\link[=natdata_template]{natdata_template()}} as its \code{file}. The
+default, \code{"_1km/idx.tif"}, is NAT_DATA's national template. Another
+path opens a template kept elsewhere in the folder, such as another
+version or resolution of the grid.}
 }
 \value{
 A list, with nothing written:
@@ -87,9 +95,9 @@ wtw-data-prep2 makes. Nothing is written.
 \section{Method}{
 
 \enumerate{
-\item \strong{Template}: \code{\link[=natdata_template]{natdata_template()}} opens \code{natdata_dir}'s
-\verb{_1km/idx.tif} (1 km cells in Canada_Albers_WGS_1984); its values stay
-on disk.
+\item \strong{Template}: \code{\link[=natdata_template]{natdata_template()}} opens \code{template_file} in
+\code{natdata_dir}, by default \verb{_1km/idx.tif} (1 km cells in
+Canada_Albers_WGS_1984); its values stay on disk.
 \item \strong{AOI}: \code{\link[=read_aoi]{read_aoi()}} in the template's CRS, dissolved into one
 polygon; reprojection, when needed, moves each vertex with PROJ.
 \item \strong{Cells}: \code{\link[=rasterize_aoi]{rasterize_aoi()}} on the template at its own resolution,
@@ -140,6 +148,10 @@ create_1km_grid(
 # Terra cell numbers as the ID (the example template's values are its cell
 # numbers, so here they are the same as the default's)
 create_1km_grid(aoi, natdata_dir, index = "cell")$polygons$NCCID
+
+# The template file named explicitly, as for a template kept elsewhere in
+# the folder (here NAT_DATA's own, the default)
+create_1km_grid(aoi, natdata_dir, template_file = "_1km/idx.tif")$polygons
 }
 \seealso{
 \code{\link[=rasterize_aoi]{rasterize_aoi()}} and \code{\link[=polygonize_raster]{polygonize_raster()}}, the building blocks

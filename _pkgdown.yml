@@ -25,6 +25,10 @@ reference:
     desc: Read an AOI and rasterize it onto a template or a new grid.
     contents:
       - has_concept("aoi")
+  - title: Vector layers
+    desc: Read one layer of a vector file as stored.
+    contents:
+      - has_concept("vector")
   - title: Rasters
     desc: Align, polygonize and write rasters.
     contents:

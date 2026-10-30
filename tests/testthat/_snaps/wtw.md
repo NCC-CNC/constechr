@@ -1,3 +1,12 @@
+# an AOI of several features is an error, and nothing is written
+
+    Code
+      create_wtw_planning_units(fixture_aoi_two(), natdata, project)
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `aoi` must be one feature, not 2.
+      i Dissolve the features into one first, for example with `read_aoi()`.
+
 # create_wtw_planning_units() gives clear errors
 
     Code
@@ -17,6 +26,25 @@
 ---
 
     Code
+      create_wtw_planning_units(aoi, natdata, template_file = "")
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `template_file` must be a single file path relative to `natdata_dir`, not `""`.
+
+---
+
+    Code
+      create_wtw_planning_units(aoi, natdata, "new_project", template_file = "_1km/missing.tif")
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! The national template (`template_file`) in `natdata_dir` could not be opened.
+      i Path tried: 'natdata/_1km/missing.tif'.
+      Caused by error in `natdata_template()`:
+      ! `file` must be an existing file; 'natdata/_1km/missing.tif' does not exist.
+
+---
+
+    Code
       create_wtw_planning_units(aoi, natdata, trim = NA)
     Condition
       Error in `create_wtw_planning_units()`:
@@ -25,10 +53,28 @@
 ---
 
     Code
-      create_wtw_planning_units(aoi, natdata, aoi_union = "yes")
+      create_wtw_planning_units(1:3, natdata)
     Condition
       Error in `create_wtw_planning_units()`:
-      ! `aoi_union` must be `TRUE` or `FALSE`, not a string.
+      ! `aoi` must be an AOI, not an integer vector.
+      i Use an <sf> or <SpatVector> of polygons, a file path, or bounds `c(xmin, ymin, xmax, ymax)`.
+
+---
+
+    Code
+      create_wtw_planning_units(sf::st_set_crs(aoi, NA), natdata)
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `aoi` has no coordinate reference system.
+      i Set one with `sf::st_set_crs()` first.
+
+---
+
+    Code
+      create_wtw_planning_units(file.path("no-such-folder", "aoi.shp"), natdata)
+    Condition
+      Error in `create_wtw_planning_units()`:
+      ! `aoi` must be an existing file; 'no-such-folder/aoi.shp' does not exist.
 
 ---
 
@@ -93,7 +139,7 @@
     Code
       create_wtw_planning_units(aoi, natdata, cells = "all")
     Condition
-      Error in `create_1km_grid()`:
+      Error in `create_wtw_planning_units()`:
       ! `cells` must be one of "touches" or "centre", not a string.
 
 ---
@@ -101,7 +147,7 @@
     Code
       create_wtw_planning_units(aoi, "no_such_folder")
     Condition
-      Error in `create_1km_grid()`:
+      Error in `create_wtw_planning_units()`:
       ! `natdata_dir` must be an existing folder; 'no_such_folder' is not one.
 
 ---
@@ -310,9 +356,29 @@
         "themes", "habitat", "cover.tif"))
     Condition
       Error in `extract_wtw_natdata()`:
-      ! The national template in `natdata_dir` could not be opened.
+      ! The national template (`template_file`) in `natdata_dir` could not be opened.
+      i Path tried: 'no_template/_1km/idx.tif'.
       Caused by error in `natdata_template()`:
       ! `file` must be an existing file; 'no_template/_1km/idx.tif' does not exist.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", template_file = 1)
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! `template_file` must be a single file path relative to `natdata_dir`, not a number.
+
+---
+
+    Code
+      extract_wtw_natdata(natdata, "project", template_file = "_1km/missing.tif")
+    Condition
+      Error in `extract_wtw_natdata()`:
+      ! The national template (`template_file`) in `natdata_dir` could not be opened.
+      i Path tried: 'natdata/_1km/missing.tif'.
+      Caused by error in `natdata_template()`:
+      ! `file` must be an existing file; 'natdata/_1km/missing.tif' does not exist.
 
 ---
 

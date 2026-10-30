@@ -34,10 +34,12 @@ produced it.
 
 ## Status
 
-As of 2026-10-28, v0.1.0 is released (#28): every function below is built,
-documented and tested (#13 to #27), with its design choices in ADRs 0007 to
-0023. Work now lands on `dev` and reaches `main` only by a promotion PR
-(ADR 0024). Next, wtw-data-prep2 switches to v0.1.0 (#29).
+As of 2026-10-29, v0.2.0 is released (#105): every function below is
+built, documented and tested (#13 to #27 for v0.1.0; the v0.2.0 milestone
+added `read_layer()` and `write_raster_file()` and refined the rest), with
+its design choices in ADRs 0007 to 0027. Work lands on `dev` and reaches
+`main`, the default branch, only by a promotion PR (ADR 0024). Next,
+wtw-data-prep2 switches to constechr (#29).
 
 ## MVP scope
 

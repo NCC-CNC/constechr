@@ -5,7 +5,9 @@
 Accepted; the `NCCID` field type noted under Consequences is now an
 integer, as wtw-data-prep2 writes it (0019-raster-values-keep-their-type.md);
 `pu_1km.tif`'s value, data type and band name made arguments by #79 (the
-paragraph after the list in "Decision")
+paragraph after the list in "Decision"); point 1 amended by #102
+(0026-aoi-is-one-area.md): `aoi_union` is removed, the AOI must be one
+feature, and `aoi.shp` is that feature with its attributes, reprojected.
 
 ## Context
 

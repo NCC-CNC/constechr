@@ -6,7 +6,7 @@
 \usage{
 write_rasters(
   x,
-  dir,
+  output_dir,
   prefix = "",
   datatype = NULL,
   round_int = TRUE,
@@ -20,22 +20,23 @@ write_rasters(
 path to a raster file. With one file per layer, its layer names name the
 files.}
 
-\item{dir}{The folder to write to: a single path. It is created, with any
-missing parent folders, if it does not exist. Required unless \code{filename}
-is given, which takes its place.}
+\item{output_dir}{The folder to write to: a single path. It is created,
+with any missing parent folders, if it does not exist. Required unless
+\code{filename} is given, which takes its place.}
 
 \item{prefix}{A single string put before each file name (\code{""}, the
 default, adds none), such as \code{"T_"} for \verb{T_<layer name>.tif}. A path
-separator in it puts the files in a subfolder of \code{dir}, which is
+separator in it puts the files in a subfolder of \code{output_dir}, which is
 created. Not used when \code{filename} is given.}
 
 \item{datatype}{The data type of the written files, one of terra's types:
 \code{"INT1U"}, \code{"INT2U"}, \code{"INT2S"}, \code{"INT4U"}, \code{"INT4S"}, \code{"INT8U"},
 \code{"INT8S"}, \code{"FLT4S"} or \code{"FLT8S"}, used for every layer. \code{NULL} (the
-default) uses each layer's data type in the file it was read from
-(\code{\link[terra:datatype]{terra::datatype()}}). A layer held in memory (made or changed in R, such
-as by \code{\link[=rij_matrix_to_raster]{rij_matrix_to_raster()}}) has none, so \code{datatype} is then required.
-Written to one file with \code{NULL}, the layers must share one stored type.}
+default) decides each file's type as \code{\link[=write_raster_file]{write_raster_file()}} does: the
+data type stored with its layers' file (\code{\link[terra:datatype]{terra::datatype()}}) if they
+share one; otherwise, such as for a layer held in memory (made or
+changed in R, such as by \code{\link[=rij_matrix_to_raster]{rij_matrix_to_raster()}}), the smallest type
+that holds its values, with a message naming it.}
 
 \item{round_int}{A single logical. \code{TRUE} (the default) rounds values to
 the nearest whole number, halves away from zero, before writing them as
@@ -73,13 +74,13 @@ rasters to new files in another data type.
 Where the layers go:
 \itemize{
 \item Neither \code{filename} nor \code{multiband = TRUE} (the defaults): one file per
-layer in \code{dir}, \verb{<prefix><layer name>.tif}.
+layer in \code{output_dir}, \verb{<prefix><layer name>.tif}.
 \item \code{filename} and a one-layer \code{x}: that layer, to \code{filename}, whatever
 \code{multiband} is.
 \item \code{filename} and \code{multiband = TRUE}: all layers, one band each, to
 \code{filename}.
 \item \code{multiband = TRUE} without \code{filename}: all layers to
-\verb{<dir>/<prefix><stem>.tif}, where \verb{<stem>} is the name, without its
+\verb{<output_dir>/<prefix><stem>.tif}, where \verb{<stem>} is the name, without its
 extension, of the one file \code{x} is read from (as the
 opportunity-screening-toolkit names its files). An \code{x} held in memory or
 read from several files has no such name, so it needs \code{filename}.
@@ -87,18 +88,23 @@ read from several files has no such name, so it needs \code{filename}.
 name cannot name several files.
 }
 
-\code{dir} and \code{prefix} are not used when \code{filename} is given.
+\code{output_dir} and \code{prefix} are not used when \code{filename} is given.
 }
 \section{Method}{
 
 \itemize{
-\item \strong{Files}: each layer is written with \code{\link[terra:writeRaster]{terra::writeRaster()}} to
-\verb{<dir>/<prefix><layer name>.tif}, a GeoTIFF; or all layers to one file
-as bands in layer order, each band named after its layer. Cells, extent,
-resolution and CRS are written as they are: no resampling or
+\item \strong{Files}: each file is written with \code{\link[=write_raster_file]{write_raster_file()}}'s writer
+(\code{\link[terra:writeRaster]{terra::writeRaster()}}): each layer to
+\verb{<output_dir>/<prefix><layer name>.tif}, a GeoTIFF; or all layers to one
+file as bands in layer order, each band named after its layer. Cells,
+extent, resolution and CRS are written as they are: no resampling or
 reprojection.
-\item \strong{Data type}: \code{datatype}, or with \code{NULL} each layer's stored data type
-(in one file, the one type all layers share).
+\item \strong{Data type}: \code{datatype}, or with \code{NULL}, decided for each file from
+the layers written to it as in \code{\link[=write_raster_file]{write_raster_file()}}: the stored type
+they all share, else inferred from their values (all values are read):
+the smallest integer type that holds whole numbers without its NoData
+value, else \code{"FLT4S"} (or \code{"FLT8S"} beyond its range), \code{"INT1U"} if all
+are \code{NA}, with a message naming the type and why.
 \item \strong{Rounding}: with \code{round_int = TRUE} and an integer data type, values
 are first rounded to the nearest whole number, halves away from zero
 (\code{terra::round()}: 0.5 becomes 1, -1.5 becomes -2, 0.75 becomes 1),
@@ -120,11 +126,11 @@ file that \code{x} is read from is an error, as is an existing file with
 \code{overwrite = FALSE}.
 }
 
-Method choices are recorded in ADR 0014, and the rounding follows ADR 0010
-for \code{\link[=align_raster]{align_raster()}}. Compared with wtw-data-prep2's \code{rij_to_raster()},
-which wrote each layer to \verb{<prefix><name>.tif} after rounding unless the
-data type was a float, the files and values are the same with the default
-\code{round_int = TRUE}.
+Method choices are recorded in ADR 0014 and ADR 0027 (data types), and
+the rounding follows ADR 0010 for \code{\link[=align_raster]{align_raster()}}. Compared with
+wtw-data-prep2's \code{rij_to_raster()}, which wrote each layer to
+\verb{<prefix><name>.tif} after rounding unless the data type was a float, the
+files and values are the same with the default \code{round_int = TRUE}.
 }
 
 \examples{
@@ -141,16 +147,17 @@ r <- rij_matrix_to_raster(
 names(r)
 
 # One file per layer: sp_a and cover, as T_sp_a.tif and T_cover.tif.
-# r is in memory, so datatype is required.
-dir <- file.path(tempdir(), "layers")
-paths <- write_rasters(r, dir, prefix = "T_", datatype = "INT1U")
+# r is in memory, so without datatype each file's type would be inferred
+# from its values.
+output_dir <- file.path(tempdir(), "layers")
+paths <- write_rasters(r, output_dir, prefix = "T_", datatype = "INT1U")
 basename(paths)
 
 # cover's 1.6 is rounded to 2 before it is written as an integer
 terra::values(terra::rast(paths[["cover"]]), mat = FALSE)
 
 # With round_int = FALSE it is cut off to 1, as terra does
-paths <- write_rasters(r, dir, datatype = "INT1U", round_int = FALSE)
+paths <- write_rasters(r, output_dir, datatype = "INT1U", round_int = FALSE)
 terra::values(terra::rast(paths[["cover"]]), mat = FALSE)
 
 # One multi-band file instead
@@ -161,10 +168,10 @@ f <- write_rasters(
 )
 
 # A raster read from one file can be copied without a filename: here to
-# <dir>/layers.tif, as integers
-write_rasters(f, dir, datatype = "INT2S", multiband = TRUE)
+# <output_dir>/layers.tif, as integers
+write_rasters(f, output_dir, datatype = "INT2S", multiband = TRUE)
 
-# One layer to a named file
+# One layer to a named file (or use write_raster_file())
 write_rasters(
   r[["cover"]],
   datatype = "FLT4S", filename = file.path(tempdir(), "cover.tif")
@@ -172,10 +179,12 @@ write_rasters(
 }
 \seealso{
 \code{\link[=rij_matrix_to_raster]{rij_matrix_to_raster()}} for the in-memory layers this writes in
-national data extraction.
+national data extraction; \code{\link[=write_raster_file]{write_raster_file()}} to write a raster to one
+named file.
 
 Other raster:
 \code{\link[=align_raster]{align_raster()}},
-\code{\link[=polygonize_raster]{polygonize_raster()}}
+\code{\link[=polygonize_raster]{polygonize_raster()}},
+\code{\link[=write_raster_file]{write_raster_file()}}
 }
 \concept{raster}

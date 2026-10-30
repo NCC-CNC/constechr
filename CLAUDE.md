@@ -23,10 +23,12 @@ full brief.
 
 ## Project status
 
-v0.1.0 is released: every function planned for it is built, documented and
-tested on `main` (reading, rasterizing and aligning AOIs, rij matrix
-helpers, extracting and writing layers, and the NAT_DATA and WTW use-case
-functions), with design choices in ADRs.
+v0.2.0 is released: every function planned for it is built, documented and
+tested on `main` (reading vector layers, reading, rasterizing and aligning
+AOIs, polygonizing rasters, rij matrix helpers, extracting and writing
+layers, and the NAT_DATA and WTW use-case functions), with design choices
+in ADRs. Area methods (#30) and summary functions (#31, #35) wait for a
+later milestone.
 `docs/design/01_wtw-data-prep2_inventory.md` maps them to wtw-data-prep2.
 wtw-data-prep2 still uses its own copies; switching it to constechr waits
 for the owner. Open GitHub issues are the live task tracker.
@@ -97,6 +99,10 @@ Run from the repo root.
   every exported topic. Gate: CI fails if not. A new `@family` needs a
   section in `_pkgdown.yml`. Needs pandoc (bundled with RStudio; set
   `RSTUDIO_PANDOC` to its folder if pandoc is not on the path).
+- `npx --yes markdownlint-cli '**/*.md' --ignore node_modules --ignore LICENSE.md`:
+  lint Markdown (settings in `.markdownlint.json`). Gate: CI fails on any
+  error. Needs Node.js; where it is missing, check by eye against the
+  Markdown rule in "Working rules".
 - `Rscript -e "pkgdown::build_site()"`: preview the site in `site/`. Not
   committed; CI builds and deploys it on release tags.
 - `Rscript -e "devtools::install()"`: install the working copy locally, for
@@ -116,16 +122,28 @@ job. `CONTRIBUTING.md` Setup should match.
 
 ## Working rules
 
-- Branch from `dev`; one short-lived branch per change. Open a pull request
-  into `dev`; CI must pass before merge. Non-draft PRs into `dev` from
-  branches in this repo auto-merge (squash) when CI passes, so open a draft
-  if a PR must not merge yet. These hold unless the owner says otherwise.
+- Work on `dev` only. `main` is the GitHub default branch, for people who
+  clone or browse the repo; a session that starts on `main` switches to
+  `dev` first. Branch from `dev`; one short-lived branch per change. Open a
+  pull request into `dev`, always with `--base dev` (without it, `gh pr
+  create` targets `main`); CI must pass before merge. Non-draft PRs into
+  `dev` from branches in this repo auto-merge (squash) when CI passes, so
+  open a draft if a PR must not merge yet. "Closes #N" closes the issue when
+  the PR merges into `dev` (`close-issues.yml`). These hold unless the owner
+  says otherwise.
 - Never open a pull request into `main`, retarget one to `main`, or push to
   `main`, unless the owner asks. `main` changes only by a promotion PR from
   `dev` (merge commit), usually for a release (ADR 0024).
 - Conventional Commits (for example `feat: ...`, `fix: ...`, `chore: ...`,
   `docs: ...`).
 - No em dashes in code, comments, docs, commit messages, or user-facing text.
+- Markdown must pass markdownlint (see "Commands"). The usual failures:
+  - A line that starts with a hash and a number, such as an issue
+    reference at the start of a line or of a wrapped line, reads as a
+    heading (MD018). Put a word before it ("Issue #114") or rewrap.
+  - A code span with a space just inside a backtick, such as a span
+    holding `dir =` followed by a space (MD038). Trim it: `dir`, or
+    `dir = "x"`.
 - Significant technical or design decisions get an ADR in `docs/decisions/`.
 - Design notes live in `docs/design/`; session handoffs in `docs/handoffs/` (see "Where durable context lives").
 - Keep changes small and focused; update docs when behaviour or design changes.

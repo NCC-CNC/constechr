@@ -4,7 +4,8 @@
 
 Accepted; decision 2 amended by 0016-natdata-catalogue-and-template.md
 (the `type` column is renamed `format`, and `path_column` names the column
-of file paths)
+of file paths); decision 7 amended by the owner on #96 (2026-10-29:
+repeated names in memory are made unique with `make.unique()`)
 
 ## Context
 
@@ -69,7 +70,12 @@ safely.
    no features at all (an `.rds` matrix with no rows) is skipped with a
    message, whatever `drop_empty` is.
 7. **Results**: without `dir`, a list of in-memory `SpatRaster`s, one per
-   layer that was not skipped, named after the layer's file stem; with
+   layer that was not skipped, named after the layer's file stem, with
+   repeated stems (layers with the same file name in different folders, or
+   a layer given twice) made unique with `make.unique()` in the order of
+   `layers`: the first keeps the stem and later ones get `.1`, `.2` (`rij`,
+   `rij.1`), so a lookup by name does not silently return only the first.
+   Stems that do not repeat (NAT_DATA's today) are unchanged (#96). With
    `dir`, the paths written, invisibly, named after the feature, or after
    the layer's file stem for a multi-band file. A `layers` with no rows
    gives an empty result.

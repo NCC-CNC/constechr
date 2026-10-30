@@ -28,8 +28,10 @@
 #'   bounds are in.
 #' @param cells The cell inclusion rule, one of `"touches"` (every cell the
 #'   AOI touches) or `"centre"` (every cell whose centre is inside the AOI).
-#'   Required: there is no default, because the rule changes which cells an
-#'   AOI gets. Bounds follow the same rule as polygons.
+#'   `"centre"` (the default) is terra's and GDAL's own default
+#'   (`touches = FALSE`). The NAT_DATA and WTW use-case functions,
+#'   [create_1km_grid()] and [create_wtw_planning_units()], default to
+#'   `"touches"` instead. Bounds follow the same rule as polygons.
 #' @param value What the AOI's cells hold, one of:
 #'   - `"index"` (the default): the cell number (terra's numbering, row by
 #'     row from the top-left cell, starting at 1) in the template, or, at a
@@ -92,6 +94,9 @@
 #' template), the function stops with an error. If the AOI overlaps but gets
 #' no cells (for example a small AOI that covers no cell centre, or only
 #' cells without data), it warns and returns a raster that is all `NA`.
+#' The warning is only for an AOI that gets no cells at all: with
+#' `cells = "centre"`, or with `drop_na = TRUE`, a small part of an AOI in
+#' several parts (such as an islet) can get no cells, without a warning.
 #'
 #' @return A `SpatRaster` with one layer, in the template's CRS (or the
 #'   target CRS without a template): `value` in the AOI's cells and `NA`
@@ -114,8 +119,8 @@
 #' x <- rasterize_aoi(aoi, template, cells = "touches")
 #' terra::values(x, mat = FALSE)
 #'
-#' # Only cells whose centre is inside the AOI, holding 1
-#' rasterize_aoi(aoi, template, cells = "centre", value = 1)
+#' # The default rule, cells whose centre is inside the AOI, holding 1
+#' rasterize_aoi(aoi, template, value = 1)
 #'
 #' # Coarser cells (2 km on the 1 km template), numbered in the 2 km grid
 #' rasterize_aoi(aoi, template, resolution = 2000, cells = "touches")
@@ -127,23 +132,12 @@
 #' rasterize_aoi(
 #'   c(xmin = 1003600, ymin = 604300, xmax = 1005800, ymax = 606600),
 #'   resolution = 500,
-#'   crs = template,
-#'   cells = "centre"
+#'   crs = template
 #' )
 rasterize_aoi <- function(aoi, template = NULL, resolution = NULL, crs = NULL,
-                          cells, value = "index", drop_na = TRUE,
+                          cells = "centre", value = "index", drop_na = TRUE,
                           crop = TRUE) {
   call <- environment()
-  if (missing(cells)) {
-    cli::cli_abort(
-      c(
-        "{.arg cells} is required.",
-        "i" = "Use {.str touches} (every cell the AOI touches) or
-        {.str centre} (cells whose centre is inside the AOI)."
-      ),
-      call = call
-    )
-  }
   check_cells(cells, call)
   check_value(value, call)
   check_flag(drop_na, "drop_na", call)
@@ -252,25 +246,6 @@ rasterize_aoi <- function(aoi, template = NULL, resolution = NULL, crs = NULL,
   out
 }
 
-#' Check the `cells` argument
-#'
-#' @param cells The value given.
-#' @param call The environment that errors name.
-#' @return `cells`, invisibly; an error if it is not `"touches"` or
-#'   `"centre"`.
-#' @noRd
-check_cells <- function(cells, call) {
-  rules <- c("touches", "centre")
-  if (!assertthat::is.string(cells) || !(cells %in% rules)) {
-    cli::cli_abort(
-      "{.arg cells} must be one of {.or {.str {rules}}}, not
-      {.obj_type_friendly {cells}}.",
-      call = call
-    )
-  }
-  invisible(cells)
-}
-
 #' Check the `value` argument
 #'
 #' @param value The value given.
@@ -292,46 +267,6 @@ check_value <- function(value, call) {
   invisible(value)
 }
 
-#' Check a logical flag argument
-#'
-#' @param x The value given.
-#' @param arg The argument's name.
-#' @param call The environment that errors name.
-#' @return `x`, invisibly; an error if it is not `TRUE` or `FALSE`.
-#' @noRd
-check_flag <- function(x, arg, call) {
-  if (!assertthat::is.flag(x) || is.na(x)) {
-    cli::cli_abort(
-      "{.arg {arg}} must be {.code TRUE} or {.code FALSE}, not
-      {.obj_type_friendly {x}}.",
-      call = call
-    )
-  }
-  invisible(x)
-}
-
-#' Check a single finite number argument
-#'
-#' @param x The value given.
-#' @param arg The argument's name.
-#' @param call The environment that errors name.
-#' @return `x`, invisibly; an error if it is not a single finite number.
-#' @noRd
-check_number <- function(x, arg, call) {
-  if (!assertthat::is.number(x) || !is.finite(x)) {
-    given <- if (assertthat::is.number(x)) {
-      "{.val {x}}"
-    } else {
-      "{.obj_type_friendly {x}}"
-    }
-    cli::cli_abort(
-      paste0("{.arg {arg}} must be a single finite number, not ", given, "."),
-      call = call
-    )
-  }
-  invisible(x)
-}
-
 #' Check the `resolution` argument
 #'
 #' @param resolution The value given.
@@ -349,71 +284,6 @@ check_resolution <- function(resolution, call) {
     )
   }
   rep_len(as.numeric(resolution), 2)
-}
-
-#' A raster argument as a one-layer SpatRaster
-#'
-#' @param x A `SpatRaster` or a path to a raster file.
-#' @param arg The argument's name, for errors.
-#' @param call The environment that errors name.
-#' @param one_layer A single logical: `TRUE` (the default) requires one
-#'   layer; `FALSE` accepts any number of layers.
-#' @return A `SpatRaster`; an error if it cannot be read or, with
-#'   `one_layer = TRUE`, has more than one layer.
-#' @noRd
-as_raster_layer <- function(x, arg, call, one_layer = TRUE) {
-  if (assertthat::is.string(x) && !is.na(x)) {
-    if (!file.exists(x)) {
-      cli::cli_abort(
-        "{.arg {arg}} must be an existing file; {.file {x}} does not
-        exist.",
-        call = call
-      )
-    }
-    x <- tryCatch(
-      suppressWarnings(terra::rast(x)),
-      error = function(e) NULL
-    )
-    if (is.null(x)) {
-      cli::cli_abort(
-        "{.arg {arg}} could not be opened as a raster.",
-        call = call
-      )
-    }
-  }
-  if (!inherits(x, "SpatRaster")) {
-    cli::cli_abort(
-      "{.arg {arg}} must be a {.cls SpatRaster} or a file path, not
-      {.obj_type_friendly {x}}.",
-      call = call
-    )
-  }
-  if (one_layer && terra::nlyr(x) != 1) {
-    cli::cli_abort(
-      "{.arg {arg}} must have one layer, not {terra::nlyr(x)}.",
-      call = call
-    )
-  }
-  x
-}
-
-#' The `template` argument as a one-layer SpatRaster with a CRS
-#'
-#' @param template A `SpatRaster` or a path to a raster file.
-#' @param call The environment that errors name.
-#' @param arg The argument's name, for errors.
-#' @return A `SpatRaster`; an error if it cannot be read, has no CRS or has
-#'   more than one layer.
-#' @noRd
-as_template <- function(template, call, arg = "template") {
-  template <- as_raster_layer(template, arg, call)
-  if (is.na(sf::st_crs(template))) {
-    cli::cli_abort(
-      "{.arg {arg}} has no coordinate reference system.",
-      call = call
-    )
-  }
-  template
 }
 
 #' The whole number of template cells per AOI cell, in x and y

@@ -3,11 +3,14 @@ updates:
   # Keep GitHub Actions themselves up to date.
   - package-ecosystem: github-actions
     directory: '/'
+    # PRs go into dev, the integration branch, not the default branch main
+    # (ADR 0024).
+    target-branch: dev
     schedule:
       interval: weekly
     commit-message:
       prefix: ci
 
   # Dependabot has no R ecosystem. R dependencies are declared with minimum
-  # versions in DESCRIPTION, and the weekly scheduled CI run checks the
-  # package against current CRAN.
+  # versions in DESCRIPTION, and the weekly CI run (weekly.yml) checks dev
+  # and main against current CRAN.

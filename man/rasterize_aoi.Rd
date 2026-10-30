@@ -9,7 +9,7 @@ rasterize_aoi(
   template = NULL,
   resolution = NULL,
   crs = NULL,
-  cells,
+  cells = "centre",
   value = "index",
   drop_na = TRUE,
   crop = TRUE
@@ -42,8 +42,10 @@ bounds are in.}
 
 \item{cells}{The cell inclusion rule, one of \code{"touches"} (every cell the
 AOI touches) or \code{"centre"} (every cell whose centre is inside the AOI).
-Required: there is no default, because the rule changes which cells an
-AOI gets. Bounds follow the same rule as polygons.}
+\code{"centre"} (the default) is terra's and GDAL's own default
+(\code{touches = FALSE}). The NAT_DATA and WTW use-case functions,
+\code{\link[=create_1km_grid]{create_1km_grid()}} and \code{\link[=create_wtw_planning_units]{create_wtw_planning_units()}}, default to
+\code{"touches"} instead. Bounds follow the same rule as polygons.}
 
 \item{value}{What the AOI's cells hold, one of:
 \itemize{
@@ -130,6 +132,9 @@ If the AOI's bounding box does not overlap the grid (the template, with a
 template), the function stops with an error. If the AOI overlaps but gets
 no cells (for example a small AOI that covers no cell centre, or only
 cells without data), it warns and returns a raster that is all \code{NA}.
+The warning is only for an AOI that gets no cells at all: with
+\code{cells = "centre"}, or with \code{drop_na = TRUE}, a small part of an AOI in
+several parts (such as an islet) can get no cells, without a warning.
 }
 
 \examples{
@@ -142,8 +147,8 @@ aoi <- system.file("extdata", "aoi.gpkg", package = "constechr")
 x <- rasterize_aoi(aoi, template, cells = "touches")
 terra::values(x, mat = FALSE)
 
-# Only cells whose centre is inside the AOI, holding 1
-rasterize_aoi(aoi, template, cells = "centre", value = 1)
+# The default rule, cells whose centre is inside the AOI, holding 1
+rasterize_aoi(aoi, template, value = 1)
 
 # Coarser cells (2 km on the 1 km template), numbered in the 2 km grid
 rasterize_aoi(aoi, template, resolution = 2000, cells = "touches")
@@ -155,8 +160,7 @@ rasterize_aoi(aoi, template, cells = "touches", crop = FALSE)
 rasterize_aoi(
   c(xmin = 1003600, ymin = 604300, xmax = 1005800, ymax = 606600),
   resolution = 500,
-  crs = template,
-  cells = "centre"
+  crs = template
 )
 }
 \seealso{

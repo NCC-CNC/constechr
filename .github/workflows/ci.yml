@@ -9,15 +9,14 @@ name: CI
 #     branches: [dev, main]
 #
 # Weekly: R dependencies are only pinned to minimum versions, so a new sf or
-# terra release can break the package with no commit here. The scheduled run
-# checks the default branch (dev) against current CRAN, and also saves the R
-# package cache on it, which PRs can read. workflow_dispatch allows a manual
-# run.
+# terra release can break the package with no commit here. weekly.yml starts
+# this workflow on dev and on main each week (workflow_dispatch), checking
+# both against current CRAN; the run on dev also saves the R package cache
+# there, which PRs into dev can read. workflow_dispatch also allows a manual
+# run on any branch.
 on:
   pull_request:
     branches: [dev, main]
-  schedule:
-    - cron: '0 6 * * 1'
   workflow_dispatch:
 
 # Cancel superseded runs for the same ref.

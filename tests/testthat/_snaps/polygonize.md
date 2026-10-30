@@ -62,3 +62,19 @@
       Error in `polygonize_raster()`:
       ! `id` must differ from `value`; both are "NCCID".
 
+# dissolve must be a flag
+
+    Code
+      polygonize_raster(fixture_template(), dissolve = "yes")
+    Condition
+      Error in `polygonize_raster()`:
+      ! `dissolve` must be `TRUE` or `FALSE`, not a string.
+
+---
+
+    Code
+      polygonize_raster(fixture_template(), dissolve = NA)
+    Condition
+      Error in `polygonize_raster()`:
+      ! `dissolve` must be `TRUE` or `FALSE`, not `NA`.
+

@@ -1,3 +1,45 @@
+# a geometry collection with points or lines is rejected
+
+    Code
+      read_aoi(aoi)
+    Condition
+      Error in `read_aoi()`:
+      ! `x` must hold polygons or multipolygons only.
+      x It holds "LINESTRING" geometry.
+      i A geometry collection is accepted only if it holds polygons only.
+
+# invalid geometries give a clear error
+
+    Code
+      read_aoi(aoi)
+    Condition
+      Error in `read_aoi()`:
+      ! `x` has 1 invalid geometry.
+      x Feature 2: Self-intersection[1003500 604500]
+      i Repair it first, for example with `sf::st_make_valid()`, and check the result: a repair can change its shape.
+    Code
+      read_aoi(aoi[2, ])
+    Condition
+      Error in `read_aoi()`:
+      ! `x` has 1 invalid geometry.
+      x Feature 1: Self-intersection[1003500 604500]
+      i Repair it first, for example with `sf::st_make_valid()`, and check the result: a repair can change its shape.
+
+---
+
+    Code
+      read_aoi(many)
+    Condition
+      Error in `read_aoi()`:
+      ! `x` has 7 invalid geometries.
+      x Feature 1: Self-intersection[1003500 604500]
+      x Feature 2: Self-intersection[1003500 604500]
+      x Feature 3: Self-intersection[1003500 604500]
+      x Feature 4: Self-intersection[1003500 604500]
+      x Feature 5: Self-intersection[1003500 604500]
+      x And 2 more.
+      i Repair them first, for example with `sf::st_make_valid()`, and check the result: a repair can change their shape.
+
 # invalid arguments give clear errors
 
     Code
@@ -18,16 +60,6 @@
       Error in `read_aoi()`:
       ! `x` must be an AOI, not a character vector.
       i Use an <sf> or <SpatVector> of polygons, a file path, or bounds `c(xmin, ymin, xmax, ymax)`.
-    Code
-      read_aoi(aoi, union = NA)
-    Condition
-      Error in `read_aoi()`:
-      ! `union` must be `TRUE` or `FALSE`, not `NA`.
-    Code
-      read_aoi(aoi, union = "yes")
-    Condition
-      Error in `read_aoi()`:
-      ! `union` must be `TRUE` or `FALSE`, not a string.
     Code
       read_aoi(aoi, crs = "not a crs")
     Condition
@@ -92,4 +124,13 @@
     Condition
       Error in `read_aoi()`:
       ! `x` must be an existing file; 'no-such-folder/aoi.shp' does not exist.
+
+# a multi-layer source without a layer reads its first layer
+
+    Code
+      x <- read_aoi(gpkg)
+    Message
+      Reading layer "a", the first of 2 layers in `x`.
+      i Its other layer is "b".
+      i Name one as `<path>/<layer>`.
 

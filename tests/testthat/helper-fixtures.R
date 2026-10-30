@@ -136,6 +136,24 @@ fixture_template_bottom_left <- function() {
   x
 }
 
+# A 3 by 4 raster of 1000 m cells for dissolve = TRUE, by row from the top:
+#   3  3  1  2
+#   NA 1  1  2
+#   2  2  1  2
+# Value 1 is one patch of 4 cells, value 2 two patches (cells 9 and 10, and
+# cells 4, 8 and 12) of 5 cells in all, value 3 one patch of 2 cells. Layer
+# "class", in the template's CRS. Needs terra.
+fixture_classes <- function(values = c(3, 3, 1, 2, NA, 1, 1, 2, 2, 2, 1, 2)) {
+  x <- terra::rast(
+    nrows = 3, ncols = 4,
+    xmin = 0, xmax = 4000, ymin = 0, ymax = 3000,
+    crs = terra::crs(fixture_template())
+  )
+  terra::values(x) <- values
+  names(x) <- "class"
+  x
+}
+
 # AOI rectangles as offsets in metres from the template's left (x) and top
 # (y) edges: c(x_from, x_to, y_from, y_to). See the table above.
 fixture_aoi_offsets <- function() {
@@ -192,6 +210,13 @@ fixture_aoi_two <- function() {
       crs = fixture_crs()
     )
   )
+}
+
+# fixture_aoi_two() as one feature: its two rectangles as one MULTIPOLYGON
+# row, named "ab", in the template's CRS. It gets the same cells. Needs sf.
+fixture_aoi_multi <- function() {
+  two <- fixture_aoi_two()
+  sf::st_sf(name = "ab", geometry = sf::st_combine(sf::st_geometry(two)))
 }
 
 # A planning-unit raster for an AOI, as wtw-data-prep2's `pu_1km.tif`: 1 in
@@ -466,6 +491,16 @@ fixture_natdata_idx_dir <- function(template = fixture_template_bottom_left(),
     datatype = datatype
   )
   dir
+}
+
+# Moves a NAT_DATA-like folder's `_1km/idx.tif` to `template_file`, a path
+# relative to the folder (its folders are created), so the folder has no
+# `_1km/idx.tif`. Returns `natdata_dir`, invisibly.
+move_natdata_template <- function(natdata_dir, template_file) {
+  to <- file.path(natdata_dir, template_file)
+  dir.create(dirname(to), recursive = TRUE, showWarnings = FALSE)
+  stopifnot(file.rename(file.path(natdata_dir, "_1km", "idx.tif"), to))
+  invisible(natdata_dir)
 }
 
 # Each polygon's lower-left corner, as a two-column matrix. Needs sf.

@@ -11,6 +11,7 @@ Functions shared by Conservation Technology (ConsTech) apps and pipelines to pre
 \seealso{
 Useful links:
 \itemize{
+  \item \url{https://ncc-cnc.github.io/constechr/}
   \item \url{https://github.com/NCC-CNC/constechr}
   \item Report bugs at \url{https://github.com/NCC-CNC/constechr/issues}
 }

@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted; amended 2026-10-29 (#114): `main` is the default branch again,
+`dev` stays the integration branch, and issues are closed by a workflow
 
 ## Context
 
@@ -13,9 +14,16 @@ else first, and no PRs into `main` unless the owner asks for one (#93).
 
 ## Decision
 
-- `dev` is the integration branch and the repository's default branch.
-  Every branch is made from an up-to-date `dev`, and every PR goes into
-  `dev`, unless the owner says otherwise.
+- `dev` is the integration branch. Every branch is made from an up-to-date
+  `dev`, and every PR goes into `dev` (`gh pr create --base dev`), unless
+  the owner says otherwise.
+- `main` is the repository's default branch (amended 2026-10-29, #114; it
+  was `dev` until then), so people who clone or browse the repository see
+  released code. The dev-only rule is for work on the package, Claude's
+  included, not for what the repository shows by default.
+- `close-issues.yml` closes the issues a PR names with closing keywords
+  ("Closes #N") when it merges into `dev`, with a comment naming the PR.
+  GitHub does this itself only for PRs into the default branch.
 - `main` changes only through a promotion PR from `dev` into `main`, opened
   only when the owner asks (usually for a release). No other PRs into
   `main`, and no direct pushes.
@@ -41,9 +49,18 @@ else first, and no PRs into `main` unless the owner asks for one (#93).
 
 - `main` always matches the latest promotion, normally the latest release.
   Tools still install tags, so this changes nothing for them.
-- As the default branch, `dev` is what new clones check out, what `gh pr
-  create` and Dependabot target, and where "Closes #N" closes issues. The
-  weekly scheduled CI run checks `dev`.
+- As the default branch, `main` is what new clones check out and what
+  GitHub shows. `gh pr create` targets it unless given `--base dev`, so
+  every PR is opened with `--base dev`; `auto-merge.yml` does not arm a PR
+  into `main` unless it comes from `dev`.
+- Dependabot opens its PRs into `dev` (`target-branch: dev`).
+- A schedule only fires from the default branch, so `weekly.yml` (on
+  `main`) starts CI on both `dev` and `main` each week. It takes effect once
+  it reaches `main` at the next promotion; until then `main`'s own
+  `ci.yml` schedule checks `main` only.
+- `close-issues.yml` runs from `dev`'s copy (`pull_request_target`), so it
+  works as soon as it merges into `dev`.
 - Changes to CLAUDE.md and other repo rules reach `main` only at the next
-  promotion; sessions should work from `dev`.
+  promotion; sessions should work from `dev`, so a session that starts on
+  `main` switches to `dev` first.
 - One more step per release (the promotion PR).

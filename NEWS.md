@@ -1,5 +1,206 @@
 <!-- markdownlint-disable-file MD025 -->
 
+# constechr 0.2.0
+
+Second release (#105). It refactors and extends v0.1.0's functions: a
+public vector reader, an AOI that is always one area, clearer names, and
+simpler writing and template arguments. Tools install it with
+`pak::pak("NCC-CNC/constechr@v0.2.0")`. The entries for the development
+versions below give the detail, and the ADRs in `docs/decisions/` the
+reasons.
+
+## Breaking changes
+
+Removed or renamed outright, without a deprecation period, by the owner's
+decision while constechr is 0.x (ADR 0026). Passing a removed argument is
+R's "unused argument" error.
+
+- `read_aoi()` no longer has `union`: an AOI is always dissolved into one
+  area, with no attributes (#102). To read features with their
+  attributes, use `read_layer()`.
+- `create_wtw_planning_units()` no longer has `aoi_union`, and its AOI
+  must be one feature; dissolve several first, for example with
+  `read_aoi()` (#102). With a one-feature AOI and the defaults, its
+  outputs are unchanged.
+- `extract_layers()` and `write_rasters()`: the output folder argument
+  `dir` is now `output_dir` (#109).
+
+## New functions
+
+- `read_layer()` reads one layer of a vector file or folder as `sf`, as
+  stored (#104). `read_aoi()` reads files through it.
+- `write_raster_file()` writes a raster to one file at a given path, one
+  layer or several as bands (#108, ADR 0027).
+
+## New arguments and defaults
+
+- `rasterize_aoi()`'s `cells` defaults to `"centre"` instead of being
+  required (#106, ADR 0008). `create_1km_grid()` and
+  `create_wtw_planning_units()` keep `"touches"`.
+- `polygonize_raster(dissolve = TRUE)` merges cells into one feature per
+  value, with values kept exact (#107).
+- `create_1km_grid()`, `create_wtw_planning_units()` and
+  `extract_wtw_natdata()` gain `template_file`, the national template's
+  path within `natdata_dir`, defaulting to `"_1km/idx.tif"` as before
+  (#110).
+
+## Other changes
+
+- `read_aoi()` stops with a clear error naming invalid geometries, instead
+  of failing inside GEOS or passing a single invalid feature on; it does
+  not repair them (#103). It accepts geometry
+  collections that hold only polygons (#103), and a multi-layer source
+  given without a layer reads its first layer, with a message (#104).
+- With `datatype = NULL`, a raster with no stored data type, such as one
+  held in memory, is written in a type inferred from its values, with a
+  message, instead of being an error (#108, ADR 0027). Where a type was
+  found before, it is still used.
+- `extract_layers()` keeps layers with the same file name apart in memory
+  (`rij`, `rij.1`) (#96, ADR 0015).
+- Argument checks shared between files are in one place (#53); no change
+  to results or messages.
+
+# constechr 0.1.0.9009
+
+- `create_1km_grid()`, `create_wtw_planning_units()` and
+  `extract_wtw_natdata()` gain `template_file`, the national template's
+  file within `natdata_dir` as a path relative to it, passed to
+  `natdata_template()` as its `file` (#110). The default,
+  `"_1km/idx.tif"`, is the file they opened before, so no existing call or
+  result changes. Another path opens a template kept elsewhere in a
+  NAT_DATA folder, such as another version or resolution. It is the last
+  argument of each, so positional calls keep working. When the template
+  cannot be opened, the error names `template_file` and the path tried.
+
+# constechr 0.1.0.9008
+
+- New `write_raster_file()` writes a raster to one file at a given path
+  (#108, ADR 0027): one layer, or several layers as the bands of one file,
+  each band named after its layer. It is the writer `write_rasters()`
+  already used internally, now exported with its checks: missing parent
+  folders are created, and `filename` must be a single path, not inside an
+  existing file, not a file `x` is read from, and not an existing file with
+  `overwrite = FALSE`. Rounding (`round_int`) and NoData are as in
+  `write_rasters()`.
+- With `datatype = NULL`, a raster with no stored data type (held in
+  memory, such as one made or changed in R) or with layers of different
+  stored types is no longer an error: its data type is inferred from its
+  values, and a message names the type and why (#108, ADR 0027). Whole
+  numbers get the smallest integer type that holds their range without its
+  NoData value (`INT1U`, `INT2U` or `INT4U` when the smallest value is 0 or
+  more, else `INT2S` or `INT4S`); values with decimals, or beyond 32-bit
+  integers, get `FLT4S` (`FLT8S` beyond its range); all `NA` gets `INT1U`.
+  This applies to `write_raster_file()`, `write_rasters()` (for each file),
+  `align_raster()` (for an in-memory input written to `filename`) and
+  `extract_layers()` and `extract_wtw_natdata()` (for a layer with no
+  `datatype` in `layers`, no `datatype` argument and no stored type, such as
+  an `.rds` rij matrix, which no longer stops the call before extracting).
+  Where a data type was found before, it is still used, so no call that
+  worked before changes its output.
+
+# constechr 0.1.0.9007
+
+## Breaking changes
+
+Renamed outright, without a deprecation period, by the owner's decision
+while constechr is 0.x (#109, ADR 0026). Passing `dir` is now R's "unused
+argument" error.
+
+- `extract_layers()` and `write_rasters()`: the output folder argument
+  `dir` is now `output_dir`, matching constechr's other folder arguments
+  (`natdata_dir`, `project_dir`, `tifs_dir`) and no longer shadowing
+  `base::dir()`. Behaviour is unchanged; only the name changes. Calls that
+  pass the folder by position are unaffected; calls that name it
+  (`dir = "out"`) must use `output_dir = "out"`. Error messages name
+  `output_dir`.
+
+# constechr 0.1.0.9006
+
+- `polygonize_raster()` gains `dissolve = FALSE` (#107). The default is
+  unchanged: one polygon per cell. `dissolve = TRUE` merges all cells with
+  the same value into one feature per value, whether or not they touch (a
+  value in separate patches gives one `MULTIPOLYGON`), ordered by value,
+  ascending, so `id` numbers the values. Values are matched exactly and
+  keep the raster's stored type (ADR 0019); they are not rounded or
+  compared in single precision, as `terra::as.polygons()`'s own
+  `dissolve = TRUE` does. `create_1km_grid()` and
+  `create_wtw_planning_units()` are unchanged.
+
+# constechr 0.1.0.9005
+
+- `extract_layers()` without `dir` makes repeated list names unique with
+  `make.unique()` (#96, ADR 0015). Two layers with the same file name in
+  different folders (such as `species/rij.rds` and `habitat/rij.rds`), or a
+  layer given twice, were both named `rij`, so `x[["rij"]]` returned only
+  the first; now they are `rij` and `rij.1`, in the order of `layers`.
+  Names change only for repeated file names; written files are unaffected.
+
+# constechr 0.1.0.9004
+
+- `rasterize_aoi()`'s `cells` argument has a default, `"centre"` (cells
+  whose centre is inside the AOI, terra's and GDAL's own default), instead
+  of being required (#106, ADR 0008). No existing call changes its result,
+  since every call had to name `cells`. `create_1km_grid()` and
+  `create_wtw_planning_units()` keep their default, `cells = "touches"`.
+
+# constechr 0.1.0.9003
+
+- `read_aoi()` checks that the AOI's geometries are valid
+  (`sf::st_is_valid()`), in the target CRS before the dissolve, and stops
+  with a clear error naming the invalid features and why, suggesting
+  `sf::st_make_valid()` (#103). Geometries are checked, not repaired.
+  Before, an invalid AOI failed with a GEOS error in `sf::st_union()`, or,
+  for a single invalid feature, was passed on as is. `rasterize_aoi()` and
+  the other functions that read an AOI with `read_aoi()` check it too.
+- `read_aoi()` and `create_wtw_planning_units()` accept a geometry
+  collection that holds only polygons or multipolygons, as one multipolygon
+  of its polygons (#103). A collection holding points or lines is still an
+  error, so nothing is dropped silently.
+- `read_aoi()` documents how to use the bounds of a raster or other spatial
+  object (`read_aoi(sf::st_bbox(r))`), and `rasterize_aoi()` documents that
+  a small part of an AOI in several parts can get no cells without a
+  warning.
+
+# constechr 0.1.0.9002
+
+## Breaking changes
+
+Removed outright, without a deprecation period, by the owner's decision
+while constechr is 0.x (#102, ADR 0026). Passing a removed argument is an
+"unused argument" error.
+
+- `read_aoi()` no longer has a `union` argument: an AOI is always
+  dissolved into one area (one row, one polygon or multipolygon, no
+  attributes). To read features with their attributes, use `read_layer()`
+  and `sf::st_transform()`.
+- `create_wtw_planning_units()` no longer has an `aoi_union` argument, and
+  requires the AOI to be one feature: an AOI of several features, accepted
+  before, is now an error, raised before anything is written. Dissolve
+  them first, for example with `read_aoi()`. `aoi_file` is that feature
+  with its attributes, reprojected to the template's CRS; a path is read
+  with `read_layer()`'s reader. With a one-feature AOI and the defaults,
+  the outputs are unchanged.
+
+## Other changes
+
+- `create_wtw_planning_units()` checks its `create_1km_grid()` arguments
+  itself, before reading the AOI, so errors about them, and about the AOI,
+  name `create_wtw_planning_units()` and its `aoi` argument.
+
+# constechr 0.1.0.9001
+
+- New `read_layer()` reads one layer of a vector file or folder as `sf`,
+  as stored (#104): by name or position with `layer`, or the first layer
+  by default, with a message naming it when the source has others. `...`
+  is passed to `sf::st_read()` (for example `query`). Nothing is
+  reprojected or changed. Missing files, sources GDAL cannot open,
+  missing layers, layer positions out of range and layers with no
+  geometries are clear errors. It is in a new "Vector layers" family.
+- `read_aoi()` reads files through `read_layer()`. A path to a source
+  with more than one layer and no `<path>/<layer>` now reads its first
+  layer, with a message, instead of being an error. Other files read as
+  before.
+
 # constechr 0.1.0
 
 First release (#28). It has functions for what wtw-data-prep2 does to

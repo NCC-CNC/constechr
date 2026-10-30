@@ -243,16 +243,16 @@ the conventions.
 
 ### Areas of interest
 
-`read_aoi(x, crs = NULL, union = TRUE)`
+`read_aoi(x, crs = NULL)`
 
 - Split out of `create_1km_grid()` and `aoi_to_grid()`, which read and
   reproject the AOI inline.
 - `x`: an `sf` or `SpatVector` polygon, a file path (shapefile, GeoPackage,
   GeoJSON, geodatabase layer as `<gdb>/<layer>`), or bounds (`xmin`, `ymin`,
   `xmax`, `ymax`, with `crs` required).
-- `crs`: target CRS; `NULL` keeps the input's. `union`: dissolve to one
-  polygon (default `TRUE`).
-- Returns an `sf` polygon.
+- `crs`: target CRS; `NULL` keeps the input's.
+- Returns an `sf` data frame of one row: the AOI dissolved into one polygon
+  or multipolygon, without attributes.
 - Wider use: the toolkit reads uploads in several formats and builds AOIs from
   lines and points; conservation-profiles reads geodatabase layers. The aim
   is one entry point that the raster functions share, not every format.
@@ -264,11 +264,15 @@ the conventions.
   spatial object, such as the template raster. Z and M are dropped;
   geometries are not repaired; the union runs after reprojection, in the
   target CRS. Lines and points are rejected.
+- Since #102 (ADR 0026): the `union` argument is removed (no deprecation
+  period, owner's decision); an AOI is always dissolved into one area.
+  Features with their attributes are read with `read_layer()` (#104) and
+  reprojected with `sf::st_transform()`.
 
 ### AOI rasters
 
 `rasterize_aoi(aoi, template = NULL, resolution = NULL, crs = NULL,
-cells, value = "index", drop_na = TRUE, crop = TRUE)`
+cells = "centre", value = "index", drop_na = TRUE, crop = TRUE)`
 
 - From `create_1km_grid()`, minus AOI reading (now `read_aoi()`) and vector
   output (now `polygonize_raster()`).
@@ -283,9 +287,10 @@ cells, value = "index", drop_na = TRUE, crop = TRUE)`
   template must be the same CRS, or the function errors.
 - `cells`: `"touches"` (every cell the AOI touches; wtw-data-prep2 today,
   through a 1 km buffer) or `"centre"` (cell centre inside; toolkit and
-  erap-deer-code). No default in this building block: it changes which
-  cells an AOI gets, so callers choose. Replaces the hidden buffer. Bounds
-  follow the same rule as polygons.
+  erap-deer-code). Defaults to `"centre"`, terra's and GDAL's own default,
+  as the generic building block (#106, ADR 0008); the NAT_DATA and WTW
+  use-case functions default to `"touches"` and pass it explicitly.
+  Replaces the hidden buffer. Bounds follow the same rule as polygons.
 - `value`: what AOI cells hold (ADR 0008). `"index"` (default): the terra
   cell number (row by row from the top-left) in the template, so cells link
   back to the template and to rij matrix columns; at a coarser resolution,
@@ -312,7 +317,7 @@ cells, value = "index", drop_na = TRUE, crop = TRUE)`
   wtw-data-prep2's `create_1km_grid()` gives the same cells as
   `cells = "touches"` on the fixtures (an equivalence test records them).
 
-`polygonize_raster(x, value = names(x), id = NULL)`
+`polygonize_raster(x, value = names(x), id = NULL, dissolve = FALSE)`
 
 - Split out of `create_1km_grid()`.
 - Polygonizes any one-layer raster (`SpatRaster` or path) with one polygon
@@ -335,6 +340,11 @@ cells, value = "index", drop_na = TRUE, crop = TRUE)`
   for a raster that stores integers (an `INT*` data type, or integer values
   in memory, such as `rasterize_aoi()`'s cell numbers), a double column for
   floats.
+- `dissolve = TRUE` (#107) merges all cells with the same value into one
+  feature per value (a `MULTIPOLYGON` for a value in separate patches),
+  ordered by value, so `id` numbers values. Values are matched exactly, not
+  rounded as `terra::as.polygons()`'s own dissolve does. Planning units keep
+  the default `FALSE`.
 
 `summarize_aoi_raster(aoi_raster, template = NULL)` (candidate)
 
@@ -364,7 +374,8 @@ datatype = NULL, overwrite = TRUE)`
 - Returns the aligned `SpatRaster`.
 - As built (#16, ADR 0010): a `SpatRaster` read from a file and not changed
   counts as a file input, like its path. `datatype = NULL` uses the input
-  file's data type; an in-memory input needs `datatype` to be written.
+  file's data type; for an in-memory input it is inferred from the aligned
+  values (since #108, ADR 0027).
   Values written as an integer type are rounded first (halves away from
   zero), since GDAL would truncate them. An input whose extent misses the
   template is an error. On the fixtures and the real mb_prairie AOI it gives
@@ -428,22 +439,22 @@ change from wtw-data-prep2's (`ncc_1km` to `template`, `ncc_1km_idx` to
   layers). On the fixtures and the mb_prairie AOI with NAT_DATA_20261009 it
   gives the same rasters as `rij_to_raster()` before rounding and writing.
 
-`write_rasters(x, dir, prefix = "", datatype = NULL, round_int = TRUE,
+`write_rasters(x, output_dir, prefix = "", datatype = NULL, round_int = TRUE,
 multiband = FALSE, filename = NULL, overwrite = TRUE)`
 
 - The writing half of `rij_to_raster()`, usable for any rasters. `x` is a
   `SpatRaster` or a path to a raster file.
-- `datatype`: `NULL` uses each layer's stored data type when it can be
-  inferred (a raster read from a file, `terra::datatype()`); an in-memory
-  raster has none, so `datatype` is then required and the function stops
-  with an error rather than guessing. Rasters from `rij_matrix_to_raster()` are in
-  memory, so they always need it.
+- `datatype`: `NULL` uses each file's stored data type (a raster read from
+  a file, `terra::datatype()`). Until #108 an in-memory raster (such as one
+  from `rij_matrix_to_raster()`) needed `datatype`; since #108 (ADR 0027)
+  its type is inferred from the values, with a message, by
+  `write_raster_file()`, which `write_rasters()` writes each file through.
 - Where the layers go (ADR 0014): one file per layer,
-  `<dir>/<prefix><layer name>.tif` (today); `filename` (a full path) for a
+  `<output_dir>/<prefix><layer name>.tif` (today); `filename` (a full path) for a
   one-layer `x`, or for all layers with `multiband = TRUE` (the toolkit's
   choice); `multiband = TRUE` without `filename` names the file after the
-  one file `x` is read from, `<dir>/<prefix><stem>.tif` (the toolkit's
-  names). `dir` and `prefix` are not used with `filename`.
+  one file `x` is read from, `<output_dir>/<prefix><stem>.tif` (the toolkit's
+  names). `output_dir` and `prefix` are not used with `filename`.
 - `round_int`: `TRUE` (default) rounds halves away from zero before an
   integer data type, as wtw-data-prep2 does; `FALSE` keeps terra's
   truncation. Float types are never rounded. Other repos do not round, so
@@ -451,11 +462,10 @@ multiband = FALSE, filename = NULL, overwrite = TRUE)`
 - Returns the paths written, invisibly.
 - As built (#20, ADR 0014): every output path is checked before anything is
   written, and a write that still fails removes the files the call created.
-  Errors only where the request cannot be met or is ambiguous: no `dir` (or
+  Errors only where the request cannot be met or is ambiguous: no `output_dir` (or
   `filename`); `filename` with several layers and `multiband = FALSE`;
   `multiband = TRUE` with no `filename` and no single source file to name
-  it after; `datatype = NULL` with an in-memory layer, or with different
-  stored types going into one file; layer names that cannot be file names
+  it after; layer names that cannot be file names
   (empty, a path separator or a character Windows does not allow, repeated
   ignoring case) with one file per layer; an output that is a file `x` is
   read from; an existing file with `overwrite = FALSE`. `prefix` may hold a
@@ -463,12 +473,24 @@ multiband = FALSE, filename = NULL, overwrite = TRUE)`
   with `align_raster()`. On the fixtures and the mb_prairie AOI with
   NAT_DATA_20261009 it writes the same files as `rij_to_raster()`.
 
-`extract_layers(layers, aoi_raster, template, dir = NULL, prefix = "",
+`write_raster_file(x, filename, datatype = NULL, round_int = TRUE,
+overwrite = TRUE)`
+
+- Added in #108 (ADR 0027): the shared writer made public, to write one
+  raster (one or more layers, as bands) to one named file, with the same
+  checks, rounding and NoData as `write_rasters()`, which writes each of
+  its files through it. It is the one place a file's data type is decided:
+  a given type, else the one stored type all layers share, else inferred
+  from the values (the smallest integer type for whole numbers, else
+  `FLT4S` or `FLT8S`), with a message.
+
+`extract_layers(layers, aoi_raster, template, output_dir = NULL,
+prefix = "",
 datatype = NULL, round_int = TRUE, multiband = FALSE, drop_empty = TRUE,
 overwrite = TRUE, progress = NULL, path_column = "path")`
 
 - The wrapper: `read_rij_matrix()`, `clip_rij_matrix()`, `rij_matrix_to_raster()`, then
-  `write_rasters()` when `dir` is given (else returns the rasters).
+  `write_rasters()` when `output_dir` is given (else returns the rasters).
 - `layers`: file paths, or a table with a column of file paths, named by
   `path_column` (default `"path"`), and optional `prefix`, `datatype`,
   `subdir` (output subfolder) and `format` (`"auto"`, `"raster"`, `"rij"`)
@@ -479,8 +501,9 @@ overwrite = TRUE, progress = NULL, path_column = "path")`
   want.
 - `datatype` (when writing): taken per layer from the `layers` table, else
   this argument, else the source GeoTIFF's stored type. A prebuilt `.rds`
-  rij layer has no stored type, so it needs one of the first two, or the
-  function stops before extracting anything.
+  rij layer has no stored type; without one of the first two, its type is
+  inferred from the extracted values when written (since #108, ADR 0027;
+  before, the function stopped before extracting anything).
 - `round_int` is passed to `write_rasters()` (ADR 0014). For a multi-band
   file per layer, `extract_layers()` builds `filename` from the layer's file
   stem (the toolkit's names), since its rasters are in memory.
@@ -581,8 +604,7 @@ WTW projects (wtw-data-prep2, and other tools that build WTW projects):
 
 `create_wtw_planning_units(aoi, natdata_dir, project_dir = NULL,
 cells = "touches", value = "NCCID", id = "PUID", index = "template",
-order = "value", trim = TRUE, aoi_union = FALSE,
-aoi_file = "aoi/aoi.shp", polygons_file = "aoi/pu_1km.shp",
+order = "value", trim = TRUE, aoi_file = "aoi/aoi.shp", polygons_file = "aoi/pu_1km.shp",
 raster_file = "aoi/pu_1km.tif", raster_value = 1,
 raster_datatype = "INT1U", raster_name = "layer", overwrite = TRUE)`
 
@@ -608,6 +630,11 @@ raster_datatype = "INT1U", raster_name = "layer", overwrite = TRUE)`
   (default 1), `raster_datatype` (default `"INT1U"`, formerly `datatype`)
   and `raster_name` (default `"layer"`), so the defaults write today's
   file; a value the data type cannot store is an error.
+- Since #102 (ADR 0026): the AOI must be one feature (an error, before
+  anything is written, otherwise); `aoi_union` is removed (no deprecation
+  period), and `aoi.shp` is always that one feature with its attributes,
+  reprojected to the template's CRS, read with `read_layer()` for a path.
+  wtw-data-prep2's step 02 assumes a one-feature AOI without checking.
 
 `extract_wtw_natdata(natdata_dir, project_dir,
 aoi_raster = file.path(project_dir, "aoi", "pu_1km.tif"),

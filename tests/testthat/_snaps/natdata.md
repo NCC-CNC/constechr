@@ -178,9 +178,37 @@
       create_1km_grid(aoi, "empty")
     Condition
       Error in `create_1km_grid()`:
-      ! The national template in `natdata_dir` could not be opened.
+      ! The national template (`template_file`) in `natdata_dir` could not be opened.
+      i Path tried: 'empty/_1km/idx.tif'.
       Caused by error in `natdata_template()`:
       ! `file` must be an existing file; 'empty/_1km/idx.tif' does not exist.
+
+---
+
+    Code
+      create_1km_grid(aoi, natdata, template_file = "_1km/missing.tif")
+    Condition
+      Error in `create_1km_grid()`:
+      ! The national template (`template_file`) in `natdata_dir` could not be opened.
+      i Path tried: 'natdata/_1km/missing.tif'.
+      Caused by error in `natdata_template()`:
+      ! `file` must be an existing file; 'natdata/_1km/missing.tif' does not exist.
+
+---
+
+    Code
+      create_1km_grid(aoi, natdata, template_file = NA)
+    Condition
+      Error in `create_1km_grid()`:
+      ! `template_file` must be a single file path relative to `natdata_dir`, not `NA`.
+
+---
+
+    Code
+      create_1km_grid(aoi, natdata, template_file = c("a.tif", "b.tif"))
+    Condition
+      Error in `create_1km_grid()`:
+      ! `template_file` must be a single file path relative to `natdata_dir`, not a character vector.
 
 ---
 
