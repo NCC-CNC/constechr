@@ -31,7 +31,7 @@ while its API settles, and it is used only by ConsTech tools.
   version is bumped once per release, only when the owner asks, in a PR
   into `dev` just before the promotion PR (`usethis::use_version()`, which
   also turns the development heading into the new version's heading). For
-  an urgent fix or feature, the bump can go in that change's own PR
+  a release of one change, the bump can go in that change's own PR
   (amended 2026-10-30), so the release needs no extra PR. The
   bump picks PATCH, MINOR or MAJOR from the largest change since the last
   release.

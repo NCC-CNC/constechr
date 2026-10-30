@@ -201,13 +201,11 @@ Claude works through issues with full GitHub access in this repo (issues,
 labels, branches, commits, pushes, pull requests), as allowed by
 `.claude/settings.json`.
 
-constechr is for internal use, and work that depends on it cannot wait on
-process. When the owner needs a fix or feature fast, make the smallest
-change that is correct and tested, and skip anything that does not protect
-results: a milestone, a separate issue for a small follow-up, or a long
-handoff. Keep the CI gates, a test for the change, and a `NEWS.md` entry
-when results change. If the owner asks for a release with the change, the
-version bump can go in the same PR.
+constechr is for internal use, and its work follows what the tools that
+use it need: a fix or feature can come up at any time, not planned in a
+milestone. Such a request is normal work (one issue, one PR, the usual
+checks). If the owner asks for a release with the change, the version bump
+can go in the same PR.
 
 1. Start of a session: read the latest handoff in `docs/handoffs/` (the last
    file by name), then the issue the owner named. If no issue was named, ask
