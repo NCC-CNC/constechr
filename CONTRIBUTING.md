@@ -2,6 +2,21 @@
 
 Feedback, bug reports, and ideas are welcome through GitHub issues.
 
+## Who can do what
+
+- Anyone with a GitHub account can open issues and comment on them.
+- Members of the NCC-CNC Cons-Tech team develop the package: the team has
+  write access, so members push branches and open and merge pull requests,
+  all with the same rights. Org owners also have admin through their org
+  role, for repo settings.
+- Anyone else who wants to propose a change can fork the repo and open a
+  pull request from the fork; a team member merges it by hand.
+
+To develop the package, ask an org owner to add you to the Cons-Tech team.
+Access to this repo is through the team, not individual grants.
+
+## Workflow
+
 The workflow is:
 
 1. Branch from `dev`, the integration branch (one short-lived branch per
