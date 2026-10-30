@@ -169,7 +169,8 @@ job. `CONTRIBUTING.md` Setup should match.
 - Every exported function has roxygen docs (including its method), an
   example, and tests, including a known-answer test where it computes a
   result. Follow `docs/decisions/0006-documentation-and-testing-standards.md`
-  for what the docs and tests must contain.
+  for what the docs and tests must contain. A behaviour a consumer tool
+  relies on gets a test here, naming that tool (ADR 0029).
 - A change that alters a function's results or arguments gets a `NEWS.md`
   entry under `# constechr (development version)`. Do not bump the version
   in `DESCRIPTION`: it changes only for a release, when the owner asks
