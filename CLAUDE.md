@@ -133,7 +133,8 @@ job. `CONTRIBUTING.md` Setup should match.
   says otherwise.
 - Never open a pull request into `main`, retarget one to `main`, or push to
   `main`, unless the owner asks. `main` changes only by a promotion PR from
-  `dev` (merge commit), usually for a release (ADR 0024).
+  `dev`, usually for a release (ADR 0024). Promotion PRs are not
+  auto-merged: the owner merges them by hand with a merge commit.
 - Conventional Commits (for example `feat: ...`, `fix: ...`, `chore: ...`,
   `docs: ...`).
 - No em dashes in code, comments, docs, commit messages, or user-facing text.
