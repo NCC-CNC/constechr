@@ -134,6 +134,9 @@ job. `CONTRIBUTING.md` Setup should match.
   open a draft if a PR must not merge yet. "Closes #N" closes the issue when
   the PR merges into `dev` (`close-issues.yml`). These hold unless the owner
   says otherwise.
+- When work on a branch is done (pushed and its PR opened), switch the
+  working copy back to the branch it was on before, usually `dev`, and pull
+  it. Do not leave the owner on a feature branch.
 - Never open a pull request into `main`, retarget one to `main`, or push to
   `main`, unless the owner asks. `main` changes only by a promotion PR from
   `dev`, usually for a release (ADR 0024). Promotion PRs are not
