@@ -64,8 +64,8 @@ one; set `RSTUDIO_PANDOC` to its folder if pandoc is not on the path).
 
 A release takes two manual steps (ADR 0028): bump the version in a PR into
 `dev` (`usethis::use_version("patch")`, `"minor"` or `"major"`, with its
-`NEWS.md` entry), then open and merge the promotion PR from `dev` into
-`main`. On the merge, `release.yml` tags the merge commit `vX.Y.Z` to match
+`NEWS.md` entry; for an urgent fix, the fix's own PR can carry it), then
+open and merge the promotion PR from `dev` into `main`. On the merge, `release.yml` tags the merge commit `vX.Y.Z` to match
 `DESCRIPTION`, and the tag deploys the site. A promotion that leaves the
 version unchanged tags nothing.
 
