@@ -179,8 +179,9 @@ job. `CONTRIBUTING.md` Setup should match.
   relies on gets a test here, naming that tool (ADR 0029).
 - A change that alters a function's results or arguments gets a `NEWS.md`
   entry under `# constechr (development version)`. Do not bump the version
-  in `DESCRIPTION`: it changes only for a release, when the owner asks
-  (ADR 0004). Deprecate before removing or renaming.
+  in `DESCRIPTION`: it changes only for a release, when the owner asks,
+  in that change's PR or its own (ADR 0004). Deprecate before removing or
+  renaming.
 - CI's Ubuntu check runs in a pinned `rocker/geospatial` image, now
   `4.6.1` (ADR 0022). Bump the tag in its own PR
   (`ci: bump rocker/geospatial to X.Y.Z`) when a new R minor version is
@@ -196,9 +197,17 @@ the issue to work. A milestone is set up only for an orchestrated run of
 several issues (see "Orchestrated runs"), so there may be none open, and an
 open issue need not belong to one. Open means to do, closed means shipped.
 Do not open and close issues after the fact for work already shipped.
-Claude works through issues
-with full GitHub access in this repo (issues, labels, branches, commits,
-pushes, pull requests), as allowed by `.claude/settings.json`.
+Claude works through issues with full GitHub access in this repo (issues,
+labels, branches, commits, pushes, pull requests), as allowed by
+`.claude/settings.json`.
+
+constechr is for internal use, and work that depends on it cannot wait on
+process. When the owner needs a fix or feature fast, make the smallest
+change that is correct and tested, and skip anything that does not protect
+results: a milestone, a separate issue for a small follow-up, or a long
+handoff. Keep the CI gates, a test for the change, and a `NEWS.md` entry
+when results change. If the owner asks for a release with the change, the
+version bump can go in the same PR.
 
 1. Start of a session: read the latest handoff in `docs/handoffs/` (the last
    file by name), then the issue the owner named. If no issue was named, ask
