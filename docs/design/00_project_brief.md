@@ -80,9 +80,11 @@ For all of them:
    code, with unchanged outputs (#29, work in wtw-data-prep2 after the
    release).
 
-Not in v0.1.0: `summarize_aoi_raster()` (#31, a candidate), and the later
-candidates in the inventory, such as zonal sums and overlap areas (#35),
-which wait on the area and intersection methods ADR (#30).
+Not in v0.1.0: `summarize_aoi_raster()` (#31), and the later candidates in
+the inventory, such as zonal sums and overlap areas (#35), with the area
+and intersection methods ADR they needed (#30). All three were closed as
+not planned: no tool needed them yet. Any of them that a tool needs later
+gets its own issue, scoped from that use case.
 
 ## Explicit non-goals (for now)
 
@@ -124,15 +126,8 @@ which wait on the area and intersection methods ADR (#30).
 
 Each is tracked by an open issue:
 
-- The area and intersection methods to standardize on: CRS for areas,
-  planar or spherical, coverage-weighted or plain sums, partial cells, units
-  and rounding (#30). Not needed for v0.1.0, which has no area functions;
-  needed before the zonal sums and overlap areas in #35.
 - Whether wtw-data-prep2 runs its full pipeline on v0.1.0 with unchanged
   outputs, so its copies can be deleted (#29, after the release).
-- Which later functions to add, and when: `summarize_aoi_raster()` (#31),
-  and zonal sums, overlap areas, ecoregions and unit conversions (#35,
-  after #30).
 - How tools find and trust the functions: a Claude Code plugin that maps
   tasks to functions (#33, design principle 7), and a CI job that runs
   consumers' tests against `main` (#34).
