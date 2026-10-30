@@ -34,10 +34,12 @@ produced it.
 
 ## Status
 
-As of 2026-10-29, v0.2.0 is released (#105): every function below is
-built, documented and tested (#13 to #27 for v0.1.0; the v0.2.0 milestone
+As of 2026-10-30, v0.3.0 is released: every function below is built,
+documented and tested (#13 to #27 for v0.1.0; the v0.2.0 milestone, #105,
 added `read_layer()` and `write_raster_file()` and refined the rest), with
-its design choices in ADRs 0007 to 0027. Work lands on `dev` and reaches
+its design choices in ADRs 0007 to 0029. v0.3.0 (#142) made
+`create_wtw_planning_units()` accept a multi-feature AOI and write
+`aoi.shp` as the dissolved boundary without attributes. Work lands on `dev` and reaches
 `main`, the default branch, only by a promotion PR (ADR 0024). Next,
 wtw-data-prep2 switches to constechr (#29).
 
