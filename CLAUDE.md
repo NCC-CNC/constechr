@@ -191,17 +191,19 @@ job. `CONTRIBUTING.md` Setup should match.
 
 ## How work happens
 
-GitHub issues are the task list; the milestone for the next release holds the
-planned work. Open means to do, closed means shipped. Do not open and close
-issues after the fact for work already shipped. Claude works through issues
+GitHub issues are the task list. Work is mostly on demand: the owner names
+the issue to work. A milestone is set up only for an orchestrated run of
+several issues (see "Orchestrated runs"), so there may be none open, and an
+open issue need not belong to one. Open means to do, closed means shipped.
+Do not open and close issues after the fact for work already shipped.
+Claude works through issues
 with full GitHub access in this repo (issues, labels, branches, commits,
 pushes, pull requests), as allowed by `.claude/settings.json`.
 
 1. Start of a session: read the latest handoff in `docs/handoffs/` (the last
-   file by name), then the current milestone's description. Its "Work order"
-   lists the issues in the order to do them; the next issue is the first
-   open one in that list. Work one issue per session, unless the owner asks
-   otherwise.
+   file by name), then the issue the owner named. If no issue was named, ask
+   which one; do not pick one. Work one issue per session, unless the owner
+   asks otherwise.
 2. One issue, one branch, one pull request:
    - branch `<issue number>-<short-slug>` from an up-to-date `dev`, and
      open the PR into `dev` (`gh pr create --base dev`);
@@ -222,18 +224,22 @@ pushes, pull requests), as allowed by `.claude/settings.json`.
 Never force-push, rewrite pushed history, or change repo settings without
 being asked.
 
-To start a session, the owner can say: "Work the next issue in constechr,
-following CLAUDE.md." That means: steps 1 to 6 above for one issue, then stop
-and report the PR.
+To start a session, the owner can say: "Work issue #N in constechr,
+following CLAUDE.md." That means: steps 1 to 6 above for that issue, then
+stop and report the PR.
 
 ## Orchestrated runs
 
-To run all open issues in turn, the owner can say: "Run the open issues in
-constechr in turn, following CLAUDE.md 'Orchestrated runs'." The session then
-acts as the orchestrator. It does not write package code itself, and it never
-merges.
+For several issues in one run, the owner sets up a milestone whose
+description has a "Work order": the issues in the order to do them. The
+owner then says: "Run the open issues in milestone X in constechr in turn,
+following CLAUDE.md 'Orchestrated runs'." The session then acts as the
+orchestrator. It does not write package code itself, and it never merges.
+If the owner names no milestone, or it has no work order, ask; do not
+build one from the open issues.
 
-1. Read the latest handoff and the milestone's work order.
+1. Read the latest handoff and the milestone's work order. The next issue
+   is the first open one in that list.
 2. For the next open issue, start a fresh agent (Agent tool,
    `general-purpose`, run in this repo) with this brief:
    "Work issue #N in NCC-CNC/constechr as a one-issue session, following
@@ -252,9 +258,10 @@ merges.
    start one fresh agent to fix it on the same branch; if it still fails, ask
    the owner.
 5. Report one line to the owner (issue, PR, result) and go to the next issue.
-6. Stop when the work order is done, when the owner says stop, or when an
-   issue needs something this machine does not have (for example NAT_DATA or
-   a package that cannot be installed): say what is needed and stop.
+6. Stop when the work order is done (then tell the owner the milestone can
+   be closed), when the owner says stop, or when an issue needs something
+   this machine does not have (for example NAT_DATA or a package that
+   cannot be installed): say what is needed and stop.
 7. When stopping, write a session handoff for the run (its own PR) covering
    all issues done.
 
@@ -287,11 +294,12 @@ At the end of a session, write `docs/handoffs/<YYYY-MM-DD>_Handoff_vNN.md`
   to the repo and anything published.
 - **Completed**: what landed, each item with its PR and issue numbers.
 - **Current state**: what works, what is incomplete, known issues.
-- **Next actions**: numbered, as issue numbers in the order to pick them up,
-  with why.
+- **Next actions**: numbered, as issue numbers with why; in the work order
+  during an orchestrated run, otherwise suggestions for the owner to pick
+  from.
 - **Risks or decisions needed**: open questions that need the owner.
 
 A one-issue session writes a short handoff instead, a few lines under the same
 headings: the issue and its PR, anything learned that the PR does not say
-(surprises, gotchas, follow-up issues opened), and the next issue in the work
-order.
+(surprises, gotchas, follow-up issues opened), and any open issues it
+suggests next.
