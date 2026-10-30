@@ -16,7 +16,8 @@ The workflow is:
    `update-branches.yml`). Open it as a draft to hold it back.
 5. Do not open pull requests into `main`. `main` changes only by a
    promotion PR from `dev`, opened when the owner asks, usually for a
-   release (ADR 0024).
+   release (ADR 0024). Promotion PRs are not auto-merged: the owner merges
+   them by hand with "Create a merge commit" (not squash or rebase).
 
 ## Setup
 

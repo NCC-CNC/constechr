@@ -1,21 +1,19 @@
 name: Enable auto-merge
 
-# Arms GitHub's auto-merge on every PR opened from a branch in this repo, so
-# it merges itself once the required "checks" job passes. Pushing a branch
-# here needs write access, so this covers every collaborator; PRs from forks
-# and from Dependabot are left to merge by hand (their runs cannot read the
-# app's secret). A draft is armed when it is marked ready for review.
+# Arms GitHub's auto-merge (squash) on every PR into dev opened from a
+# branch in this repo, so it merges itself once the required "checks" job
+# passes. Pushing a branch here needs write access, so this covers every
+# collaborator; PRs from forks and from Dependabot are left to merge by hand
+# (their runs cannot read the app's secret). A draft is armed when it is
+# marked ready for review.
 #
-# Branching (ADR 0024): work PRs go into dev and are squashed. A promotion
-# PR from dev into main is merged with a merge commit, so main and dev keep
-# a shared history; promotions are opened only when the owner asks. Any
-# other PR into main is not armed.
+# Branching (ADR 0024): work PRs go into dev and are squashed. No PR into
+# main is armed: the owner merges a promotion PR from dev into main by hand,
+# with a merge commit, so main and dev keep a shared history.
 #
-# It also brings a PR into dev level with dev as it arms it: dev's strict
-# branch protection wants an up-to-date branch, and update-branches.yml only
-# runs on a push to dev. main's protection is not strict: after a promotion
-# main holds a merge commit that dev lacks, and making a promotion PR "up to
-# date" would mean pushing that into the protected dev.
+# It also brings the PR level with dev as it arms it: dev's strict branch
+# protection wants an up-to-date branch, and update-branches.yml only runs
+# on a push to dev.
 #
 # Both act through the NCC ConsTech Automation GitHub App (org-owned), not
 # the built-in GITHUB_TOKEN: GitHub starts no workflows for actions taken
@@ -37,8 +35,7 @@ jobs:
       !github.event.pull_request.draft &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor != 'dependabot[bot]' &&
-      (github.base_ref == 'dev' ||
-       (github.base_ref == 'main' && github.head_ref == 'dev'))
+      github.base_ref == 'dev'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -54,11 +51,9 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
-          METHOD: ${{ github.base_ref == 'main' && '--merge' || '--squash' }}
-        run: gh pr merge --auto "$METHOD" "$PR"
+        run: gh pr merge --auto --squash "$PR"
 
       - name: Bring it level with dev
-        if: github.base_ref == 'dev'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
