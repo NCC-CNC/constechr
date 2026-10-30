@@ -27,9 +27,10 @@ v0.2.0 is released: every function planned for it is built, documented and
 tested on `main` (reading vector layers, reading, rasterizing and aligning
 AOIs, polygonizing rasters, rij matrix helpers, extracting and writing
 layers, and the NAT_DATA and WTW use-case functions), with design choices
-in ADRs. Area methods (#30) and summary functions (#31, #35) wait for a
-later milestone.
-`docs/design/01_wtw-data-prep2_inventory.md` maps them to wtw-data-prep2.
+in ADRs. Area methods and summary functions (issues 30, 31 and 35) were
+dropped as speculative; any that a tool needs later gets its own issue.
+`docs/design/01_wtw-data-prep2_inventory.md` maps the functions to
+wtw-data-prep2.
 wtw-data-prep2 still uses its own copies; switching it to constechr waits
 for the owner. Open GitHub issues are the live task tracker.
 

@@ -148,10 +148,9 @@ Design points for constechr:
 `wtw-utils/` converts regional data to planning units with statistics (sum,
 mean, area and so on) and units, using exactextract. These are the area and
 intersection calculations the ConsTech tools most need to agree on. They are
-Python, so they do not move into constechr, but the ADR on area and
-intersection methods (issue #30) should take their methods into account, and R
-equivalents (for example with exactextractr) are candidates for a later
-constechr release.
+Python, so they do not move into constechr. A shared area and intersection
+method (issue #30, closed as not planned) should take their methods into
+account if one is needed later.
 
 ## Hard-coded values to turn into arguments
 
@@ -346,11 +345,14 @@ cells = "centre", value = "index", drop_na = TRUE, crop = TRUE)`
   rounded as `terra::as.polygons()`'s own dissolve does. Planning units keep
   the default `FALSE`.
 
-`summarize_aoi_raster(aoi_raster, template = NULL)` (candidate)
+`summarize_aoi_raster(aoi_raster, template = NULL)` (dropped)
 
 - Cell count, area, and AOI cells where the template has no data (`NA`, for
   example outside the national template's land cells), as the toolkit checks
   before building a project.
+- Dropped (issue #31, closed as not planned): only the toolkit's
+  `check_aoi()` needs it, and its value is in that function's thresholds and
+  messages, which belong to the toolkit.
 
 ### Aligning rasters
 
@@ -705,10 +707,11 @@ overwrite = TRUE, progress = <a message per layer>)`
   defaults the file is the same as `create_project_folder()`'s, byte for
   byte.
 
-### Later candidates (not v0.1.0)
+### Later candidates (dropped)
 
-Found in two or more ConsTech repos; they depend on the area and
-intersection methods ADR:
+Found in two or more ConsTech repos. Dropped with the area and intersection
+methods ADR they depended on (issues #35 and #30, closed as not planned): no
+tool needed them yet. Any that a tool needs later gets its own issue:
 
 - Coverage-weighted zonal sums of rasters over polygons (exactextractr in
   erap-deer-code and conservation-profiles, `terra::extract(exact = TRUE)` in
