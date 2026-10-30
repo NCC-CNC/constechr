@@ -171,7 +171,9 @@ job. `CONTRIBUTING.md` Setup should match.
   result. Follow `docs/decisions/0006-documentation-and-testing-standards.md`
   for what the docs and tests must contain.
 - A change that alters a function's results or arguments gets a `NEWS.md`
-  entry and a version bump. Deprecate before removing or renaming.
+  entry under `# constechr (development version)`. Do not bump the version
+  in `DESCRIPTION`: it changes only for a release, when the owner asks
+  (ADR 0004). Deprecate before removing or renaming.
 - CI's Ubuntu check runs in a pinned `rocker/geospatial` image, now
   `4.6.1` (ADR 0022). Bump the tag in its own PR
   (`ci: bump rocker/geospatial to X.Y.Z`) when a new R minor version is
