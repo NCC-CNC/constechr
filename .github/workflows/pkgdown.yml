@@ -4,8 +4,8 @@ name: pkgdown
 # only (ADR 0025): the site always documents a released version, never
 # unreleased dev code.
 #
-# - A release tag (vX.Y.Z, pushed on main's promotion merge commit; ADR 0004)
-#   builds and deploys that tag.
+# - A release tag (vX.Y.Z, made on main's promotion merge commit by
+#   release.yml; ADR 0004, ADR 0028) builds and deploys that tag.
 # - workflow_dispatch rebuilds the site for a tag given as input, for
 #   example to publish a release made before this workflow existed, or to
 #   redeploy after a failed run. Run it from main (the default branch); the

@@ -43,7 +43,7 @@ else first, and no PRs into `main` unless the owner asks for one (#93).
 - `.claude/settings.json` makes Claude ask before any command that opens or
   retargets a PR to `main`, merges a PR, or pushes to `main`.
 - A release (ADR 0004) is a promotion PR, then a `vX.Y.Z` tag on the merge
-  commit on `main`.
+  commit on `main`, made by `release.yml` since ADR 0028.
 
 ## Consequences
 

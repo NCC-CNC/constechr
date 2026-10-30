@@ -104,7 +104,9 @@ Run from the repo root.
   error. Needs Node.js; where it is missing, check by eye against the
   Markdown rule in "Working rules".
 - `Rscript -e "pkgdown::build_site()"`: preview the site in `site/`. Not
-  committed; CI builds and deploys it on release tags.
+  committed; CI builds and deploys it on release tags, which `release.yml`
+  makes when a promotion with a new version merges into `main` (ADR 0028).
+  Never tag a release by hand unless that workflow fails.
 - `Rscript -e "devtools::install()"`: install the working copy locally, for
   trying it from another repo.
 
