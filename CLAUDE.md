@@ -31,8 +31,10 @@ in ADRs. Area methods and summary functions (issues 30, 31 and 35) were
 dropped as speculative; any that a tool needs later gets its own issue.
 `docs/design/01_wtw-data-prep2_inventory.md` maps the functions to
 wtw-data-prep2.
-wtw-data-prep2 still uses its own copies; switching it to constechr waits
-for the owner. Open GitHub issues are the live task tracker.
+wtw-data-prep2 is switching to constechr on its branch
+`21-constechr-integration` (issue #29), which calls constechr for steps 01
+to 04 and drops its own copies of those functions. Open GitHub issues are
+the live task tracker.
 
 ## Scope
 
