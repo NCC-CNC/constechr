@@ -104,7 +104,9 @@ Run from the repo root.
   error. Needs Node.js; where it is missing, check by eye against the
   Markdown rule in "Working rules".
 - `Rscript -e "pkgdown::build_site()"`: preview the site in `site/`. Not
-  committed; CI builds and deploys it on release tags.
+  committed; CI builds and deploys it on release tags, which `release.yml`
+  makes when a promotion with a new version merges into `main` (ADR 0028).
+  Never tag a release by hand unless that workflow fails.
 - `Rscript -e "devtools::install()"`: install the working copy locally, for
   trying it from another repo.
 
@@ -133,7 +135,8 @@ job. `CONTRIBUTING.md` Setup should match.
   says otherwise.
 - Never open a pull request into `main`, retarget one to `main`, or push to
   `main`, unless the owner asks. `main` changes only by a promotion PR from
-  `dev` (merge commit), usually for a release (ADR 0024).
+  `dev`, usually for a release (ADR 0024). Promotion PRs are not
+  auto-merged: the owner merges them by hand with a merge commit.
 - Conventional Commits (for example `feat: ...`, `fix: ...`, `chore: ...`,
   `docs: ...`).
 - No em dashes in code, comments, docs, commit messages, or user-facing text.
@@ -168,7 +171,9 @@ job. `CONTRIBUTING.md` Setup should match.
   result. Follow `docs/decisions/0006-documentation-and-testing-standards.md`
   for what the docs and tests must contain.
 - A change that alters a function's results or arguments gets a `NEWS.md`
-  entry and a version bump. Deprecate before removing or renaming.
+  entry under `# constechr (development version)`. Do not bump the version
+  in `DESCRIPTION`: it changes only for a release, when the owner asks
+  (ADR 0004). Deprecate before removing or renaming.
 - CI's Ubuntu check runs in a pinned `rocker/geospatial` image, now
   `4.6.1` (ADR 0022). Bump the tag in its own PR
   (`ci: bump rocker/geospatial to X.Y.Z`) when a new R minor version is

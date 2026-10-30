@@ -29,7 +29,8 @@ runners, a slower check).
   `_pkgdown.yml`), not pkgdown's default `docs/`, which holds design notes
   and ADRs.
 - The site documents releases only. `.github/workflows/pkgdown.yml` builds
-  and deploys it when a release tag (`vX.Y.Z`) is pushed, and on a manual
+  and deploys it when a release tag (`vX.Y.Z`) is pushed (made by
+  `release.yml` since ADR 0028), and on a manual
   run for a given tag (for example v0.1.0, tagged before the workflow
   existed). It never builds `dev`. `development: mode: release` keeps
   pkgdown from showing a development version.

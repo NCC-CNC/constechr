@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Accepted; amended 2026-10-30 (#131): the version changes once per release,
+not with each change; changes between releases are listed under a
+development heading in `NEWS.md`.
 
 ## Context
 
@@ -14,8 +16,10 @@ while its API settles, and it is used only by ConsTech tools.
 
 ## Decision
 
-- Versions follow semantic versioning (`MAJOR.MINOR.PATCH`), with a
-  `.9000` suffix for development versions between releases:
+- Versions follow semantic versioning (`MAJOR.MINOR.PATCH`). Between
+  releases, `DESCRIPTION` keeps the last release's version (amended
+  2026-10-30, #131; until then each change bumped a `.9000` or patch
+  development version):
   - PATCH: fixes that do not change documented results or arguments.
   - MINOR: new functions or arguments that are backward compatible.
   - MAJOR: changes to existing results or arguments, or removals (after
@@ -23,14 +27,20 @@ while its API settles, and it is used only by ConsTech tools.
   - While the version is 0.x, the API is not yet stable, and MINOR releases
     may include changes to results; each is called out in `NEWS.md`.
 - Every change to a function's results or arguments gets a `NEWS.md` entry
-  and a version bump.
+  under `# constechr (development version)`, with no version bump. The
+  version is bumped once per release, only when the owner asks, in a PR
+  into `dev` just before the promotion PR (`usethis::use_version()`, which
+  also turns the development heading into the new version's heading). The
+  bump picks PATCH, MINOR or MAJOR from the largest change since the last
+  release.
 - `NEWS.md` has one `# constechr x.y.z` heading per version, newest first
   (the R convention), with markdownlint's MD025 turned off for that file
   only (#49; see `CONTRIBUTING.md`).
 - A release is a Git tag (`vX.Y.Z`) on `main`, matching the `DESCRIPTION`
   version. Since ADR 0024, work lands on `dev` and reaches `main` through a
   promotion PR from `dev`; the tag goes on that PR's merge commit.
-  Pushing the tag publishes the reference site for it (ADR 0025).
+  Pushing the tag publishes the reference site for it (ADR 0025). Since
+  ADR 0028, `release.yml` makes the tag when the promotion merges.
 - Before each release, check that the pinned CI image is current (ADR
   0022): the `rocker/geospatial` tag in `.github/workflows/ci.yml` is on
   the current R minor version. If not, bump it in its own PR first.

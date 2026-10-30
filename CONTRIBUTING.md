@@ -16,7 +16,8 @@ The workflow is:
    `update-branches.yml`). Open it as a draft to hold it back.
 5. Do not open pull requests into `main`. `main` changes only by a
    promotion PR from `dev`, opened when the owner asks, usually for a
-   release (ADR 0024).
+   release (ADR 0024). Promotion PRs are not auto-merged: the owner merges
+   them by hand with "Create a merge commit" (not squash or rebase).
 
 ## Setup
 
@@ -46,6 +47,13 @@ one; set `RSTUDIO_PANDOC` to its folder if pandoc is not on the path).
 <https://ncc-cnc.github.io/constechr/>, is built from release tags only
 (ADR 0025): pushing a `vX.Y.Z` tag publishes it.
 
+A release takes two manual steps (ADR 0028): bump the version in a PR into
+`dev` (`usethis::use_version("patch")`, `"minor"` or `"major"`, with its
+`NEWS.md` entry), then open and merge the promotion PR from `dev` into
+`main`. On the merge, `release.yml` tags the merge commit `vX.Y.Z` to match
+`DESCRIPTION`, and the tag deploys the site. A promotion that leaves the
+version unchanged tags nothing.
+
 CI runs the same checks on every pull request and weekly:
 `styler::style_pkg(dry = "fail")`, the lint, the pkgdown config check,
 and R CMD check (which runs the
@@ -66,11 +74,16 @@ See `CLAUDE.md` for the package's stack, scope and working rules.
   `docs: ...`).
 - No em dashes in code, comments, docs, commit messages, or user-facing text.
 - A change that alters a function's results or arguments gets a `NEWS.md`
-  entry and a version bump.
-- `NEWS.md` has one `# constechr x.y.z` heading per version, newest first,
-  as `usethis::use_version()`, pkgdown and `utils::news()` expect. A
-  version bump adds a new heading above the last one; entries go under the
-  heading of the version they come with. markdownlint's MD025 (one
+  entry under a `# constechr (development version)` heading at the top
+  (add the heading if it is not there). Do not change `Version` in
+  `DESCRIPTION`; it changes only for a release (ADR 0004).
+- `NEWS.md` has one `# constechr x.y.z` heading per release, newest first,
+  as `usethis::use_version()`, pkgdown and `utils::news()` expect. For a
+  release, `usethis::use_version("patch")` (or `"minor"`, `"major"`) bumps
+  `DESCRIPTION` and turns the development heading into the new version's
+  heading, in one PR into `dev` just before the promotion PR. Earlier
+  versions, up to 0.2.0, also have headings for development versions
+  between releases. markdownlint's MD025 (one
   top-level heading per file) is turned off for `NEWS.md` only, by the
   `<!-- markdownlint-disable-file MD025 -->` comment at its top; keep that
   line first.
