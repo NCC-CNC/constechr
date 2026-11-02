@@ -8,6 +8,10 @@ integer, as wtw-data-prep2 writes it (0019-raster-values-keep-their-type.md);
 paragraph after the list in "Decision"); point 1 amended by #102
 (0026-aoi-is-one-area.md): `aoi_union` is removed, the AOI must be one
 feature, and `aoi.shp` is that feature with its attributes, reprojected.
+Amended 2026-10-30 (#142, ADR 0026's amendment of that date): an AOI of
+several features is accepted and dissolved, and `aoi.shp` is the dissolved
+AOI in the template's CRS without the input's attributes, the same `aoi`
+the function returns (see "Amendment 2026-10-30" below).
 
 ## Context
 
@@ -105,3 +109,22 @@ ignored, without `raster_file` or `project_dir`.
   each square's vertices start at a different corner.
 - `extract_wtw_natdata()` (#25) takes the returned (trimmed) `aoi_raster`,
   or `pu_1km.tif`, and gets the same extent from either.
+
+## Amendment 2026-10-30 (#142)
+
+`aoi.shp` is no longer the input AOI with its attributes. It is the AOI
+dissolved into one area through `read_aoi()`, in the template's CRS,
+without the input's attributes: the `aoi` that `create_1km_grid()` and
+`create_wtw_planning_units()` return, so the file matches the area the
+planning units were made from. A shapefile cannot have no fields, so it
+holds the placeholder GDAL writes (`FID`, 0). An AOI of several features
+is accepted and dissolved, with a message naming how many (ADR 0026,
+amended the same day). Nothing reads `aoi.shp`'s attributes, and those
+exported from ArcGIS are often stale or overflow their `.dbf` fields.
+
+So, with the defaults, `aoi.shp` no longer matches wtw-data-prep2's step
+02 attribute for attribute; its geometry is the same for a one-feature
+AOI, and `pu_1km.shp`, `pu_1km.tif` and the returned list are unchanged.
+The equivalence test checks `aoi.shp`'s geometry and its one placeholder
+field instead of the input's attributes. Released as v0.3.0, a breaking
+change in `NEWS.md`.

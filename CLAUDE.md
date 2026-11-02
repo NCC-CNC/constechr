@@ -23,11 +23,13 @@ full brief.
 
 ## Project status
 
-v0.2.0 is released: every function planned for it is built, documented and
-tested on `main` (reading vector layers, reading, rasterizing and aligning
+v0.3.0 is released: every function planned for v0.2.0 is built, documented
+and tested on `main` (reading vector layers, reading, rasterizing and aligning
 AOIs, polygonizing rasters, rij matrix helpers, extracting and writing
 layers, and the NAT_DATA and WTW use-case functions), with design choices
-in ADRs. Area methods and summary functions (issues 30, 31 and 35) were
+in ADRs. v0.3.0 (issue #142) made `create_wtw_planning_units()` accept a
+multi-feature AOI and write `aoi.shp` as the dissolved boundary without
+attributes. Area methods and summary functions (issues 30, 31 and 35) were
 dropped as speculative; any that a tool needs later gets its own issue.
 `docs/design/01_wtw-data-prep2_inventory.md` maps the functions to
 wtw-data-prep2.

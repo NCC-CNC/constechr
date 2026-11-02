@@ -25,15 +25,14 @@ create_wtw_planning_units(
 )
 }
 \arguments{
-\item{aoi}{The AOI, one feature: anything \code{\link[=read_aoi]{read_aoi()}} accepts (\code{sf},
-\code{sfc} or \code{SpatVector} polygons, a file path, or bounds with their CRS
-in an sf \code{bbox}), holding exactly one feature (one row, a polygon or
-multipolygon). An AOI of several features is an error, raised before
-anything is written; dissolve them first, for example with
-\code{\link[=read_aoi]{read_aoi()}}. Bounds are one feature, their rectangle. A file path is
-read with \code{\link[=read_layer]{read_layer()}}, from the layer named as \verb{<path>/<layer>} or
-the first layer. The AOI is read once into memory before anything is
-written, so it can be the \code{aoi_file} this call overwrites.}
+\item{aoi}{The AOI: anything \code{\link[=read_aoi]{read_aoi()}} accepts (\code{sf}, \code{sfc} or
+\code{SpatVector} polygons, a file path, or bounds with their CRS in an sf
+\code{bbox}), with one feature or several. Several features are dissolved
+into one area, with a message naming how many. Bounds are their
+rectangle. A file path is read with \code{\link[=read_layer]{read_layer()}}, from the layer
+named as \verb{<path>/<layer>} or the first layer. The AOI is read once into
+memory before anything is written, so it can be the \code{aoi_file} this
+call overwrites.}
 
 \item{natdata_dir}{The NAT_DATA folder: a single path to an existing
 folder, such as a dated release (\code{NAT_DATA_20261009}). Its template,
@@ -98,9 +97,9 @@ data.}
 \item{aoi_file, polygons_file, raster_file}{The files to write, as paths
 relative to \code{project_dir}, or \code{NULL} to not write that file:
 \itemize{
-\item \code{aoi_file}: the AOI's one feature with its attributes, reprojected
-to the template's CRS, as wtw-data-prep2 writes \code{aoi.shp}. Default
-\code{"aoi/aoi.shp"}.
+\item \code{aoi_file}: the AOI's boundary, the returned \code{aoi}: dissolved into
+one feature, in the template's CRS, without the input's attributes.
+Default \code{"aoi/aoi.shp"}.
 \item \code{polygons_file}: the planning-unit polygons. Default
 \code{"aoi/pu_1km.shp"}.
 \item \code{raster_file}: the planning-unit raster, \code{raster_value} in every
@@ -142,7 +141,7 @@ The list \code{\link[=create_1km_grid]{create_1km_grid()}} returns, differing fr
 the raster's extent (see \code{trim}):
 \itemize{
 \item \code{aoi}: the AOI dissolved into one polygon, an \code{sf} data frame without
-attributes, in the template's CRS;
+attributes, in the template's CRS, as written to \code{aoi_file};
 \item \code{aoi_raster}: a \code{SpatRaster} with one layer named \code{value}, on the
 template's grid: the national ID in the planning units and \code{NA}
 elsewhere. It can be passed as the \code{aoi_raster} of \code{\link[=extract_layers]{extract_layers()}}
@@ -171,13 +170,14 @@ defaults write the files that step writes.
 \code{\link[=read_layer]{read_layer()}}; Z and M dropped; reprojected to the template's CRS
 (\code{template_file} in \code{natdata_dir}, by default \verb{_1km/idx.tif}, in
 Canada_Albers_WGS_1984) with \code{\link[sf:st_transform]{sf::st_transform()}} (PROJ), which moves
-each vertex. It must be one feature, or the function stops before
-anything is written; nothing is dissolved silently.
-\item \strong{Planning units}: \code{\link[=create_1km_grid]{create_1km_grid()}} on that feature, with
+each vertex. Several features give a message naming how many, as
+they are dissolved in step 2; nothing is dissolved silently.
+\item \strong{Planning units}: \code{\link[=create_1km_grid]{create_1km_grid()}} on that AOI, with
 \code{cells}, \code{value}, \code{id}, \code{index}, \code{order} and \code{template_file} (its
 Method section has
-the details): the AOI dissolved by \code{\link[=read_aoi]{read_aoi()}} (one feature, so the
-same area); its cells on the template by
+the details): the AOI dissolved into one area by \code{\link[=read_aoi]{read_aoi()}}
+(\code{\link[sf:st_union]{sf::st_union()}}, planar, in the template's CRS), without its
+attributes; its cells on the template by
 raster intersection (\code{"touches"} is GDAL's all-touched rule), without
 the cells where the template is \code{NA}; one 1 km square polygon per cell,
 holding its national ID (\code{NCCID}) and planning-unit number (\code{PUID}).
@@ -189,7 +189,9 @@ planning unit. If the AOI gets no cells, it is not trimmed (and
 \code{\link[sf:st_write]{sf::st_write()}} for the vector files (an existing file's layer is
 replaced) and \code{\link[=write_rasters]{write_rasters()}} for the raster:
 \itemize{
-\item \code{aoi_file}: the AOI's one feature from step 1, with its attributes;
+\item \code{aoi_file}: the dissolved AOI from step 2 (the returned \code{aoi}), one
+feature without the input's attributes. A format that needs a field,
+such as a shapefile, gets the placeholder GDAL writes (\code{FID}, 0);
 \item \code{polygons_file}: the polygons, with the columns \code{value}, \code{id} and
 their geometry. \code{value} keeps the type it has in the polygons, so
 with NAT_DATA's \code{idx.tif} (an \verb{INT*} data type) \code{NCCID} is an
@@ -204,11 +206,12 @@ halves away from zero before an integer type). The defaults, 1 as
 }
 
 No areas are computed and no values are rounded. With the defaults, the
-files are those of wtw-data-prep2's step 02 (\code{aoi_to_grid()}): the same
-AOI feature and attributes, the same planning units (\code{NCCID}, \code{PUID} and
-polygons, with \code{NCCID} and \code{PUID} as integer fields), and the same
-\code{pu_1km.tif} extent, values and data type. Decisions are recorded in
-ADR 0017, ADR 0018, ADR 0019 and ADR 0026.
+planning-unit files are those of wtw-data-prep2's step 02
+(\code{aoi_to_grid()}): the same planning units (\code{NCCID}, \code{PUID} and polygons,
+with \code{NCCID} and \code{PUID} as integer fields), and the same \code{pu_1km.tif}
+extent, values and data type. \code{aoi.shp} is the AOI's boundary, not the
+input feature with its attributes as that step wrote it (#142).
+Decisions are recorded in ADR 0017, ADR 0018, ADR 0019 and ADR 0026.
 
 Arguments are checked before the AOI is read; the AOI is read before
 anything is written. If writing fails partway, the files already written
@@ -236,10 +239,11 @@ pu <- create_wtw_planning_units(
   aoi_file = "aoi/aoi.gpkg", raster_file = NULL
 )
 
-# An AOI of several features is an error: dissolve them first
+# An AOI of several features is dissolved into one area, with a message;
+# aoi.shp is that boundary, without the input's attributes
 two <- rbind(read_layer(aoi), read_layer(aoi))
-try(create_wtw_planning_units(two, natdata_dir))
-pu <- create_wtw_planning_units(read_aoi(two), natdata_dir)
+pu <- create_wtw_planning_units(two, natdata_dir, project_dir)
+read_layer(file.path(project_dir, "aoi", "aoi.shp"))
 
 # The planning units as 0s in a signed data type, in a band named "pu"
 pu <- create_wtw_planning_units(

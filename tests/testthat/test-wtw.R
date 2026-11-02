@@ -78,9 +78,9 @@ test_that("create_wtw_planning_units() writes the WTW project files", {
     )
   )
 
-  # aoi.shp: the input feature with its attributes, in the template's CRS
+  # aoi.shp: the dissolved AOI without attributes, in the template's CRS
   a <- read_vector(file.path(project, "aoi", "aoi.shp"))
-  expect_identical(a$name, "inside")
+  expect_named(a, c("FID", "geometry"))
   expect_true(sf::st_crs(a) == sf::st_crs(fixture_template()))
   expect_equal(
     polygon_coords(a),
@@ -129,10 +129,11 @@ test_that("create_wtw_planning_units() matches wtw-data-prep2's step 02", {
   # values (INT1U, NoData 255, one layer named "layer"). Every pu_1km.shp
   # polygon was a 1000 m square; its columns were NCCID, PUID, geometry.
   # The "two" case was run with fixture_aoi_two()'s two features; it is now
-  # fixture_aoi_multi(), the same rectangles as one feature, which
-  # aoi_to_grid() writes back as given (the planning units depend only on
-  # the area, so they are unchanged). AOIs of several features are now an
-  # error (#102).
+  # fixture_aoi_multi(), the same rectangles as one feature (the planning
+  # units depend only on the area, so they are unchanged). Since #142,
+  # aoi.shp is the dissolved boundary without the input's attributes (only
+  # the placeholder FID field), so its `name` is no longer checked; its
+  # polygon corners are still the same.
   skip_if_not_installed("sf")
   corners <- function(xmin, xmax, ymin, ymax) {
     cbind(c(xmin, xmax, xmax, xmin, xmin), c(ymax, ymax, ymin, ymin, ymax))
@@ -140,7 +141,6 @@ test_that("create_wtw_planning_units() matches wtw-data-prep2's step 02", {
   original <- list(
     inside = list(
       aoi = fixture_aoi("inside"),
-      name = "inside",
       aoi_coords = list(corners(1003600, 1005800, 604300, 606600)),
       nccid = c(44, 45, 46, 54, 55, 56, 64, 65, 66),
       xmin = rep(c(1003000, 1004000, 1005000), 3),
@@ -150,7 +150,6 @@ test_that("create_wtw_planning_units() matches wtw-data-prep2's step 02", {
     ),
     straddle = list(
       aoi = fixture_aoi("straddle"),
-      name = "straddle",
       aoi_coords = list(corners(999400, 1002600, 607600, 610500)),
       nccid = c(71, 72, 73, 83, 93),
       xmin = c(1000000, 1001000, 1002000, 1002000, 1002000),
@@ -160,7 +159,6 @@ test_that("create_wtw_planning_units() matches wtw-data-prep2's step 02", {
     ),
     edge = list(
       aoi = fixture_aoi("edge"),
-      name = "edge",
       aoi_coords = list(corners(1007400, 1010000, 601300, 602400)),
       nccid = c(18, 19, 20, 28, 29, 30),
       xmin = rep(c(1007000, 1008000, 1009000), 2),
@@ -170,7 +168,6 @@ test_that("create_wtw_planning_units() matches wtw-data-prep2's step 02", {
     ),
     two = list(
       aoi = fixture_aoi_multi(),
-      name = "ab",
       aoi_coords = list(rbind(
         corners(1000300, 1001700, 607300, 608700),
         corners(1000200, 1001800, 608800, 609800)
@@ -192,7 +189,7 @@ test_that("create_wtw_planning_units() matches wtw-data-prep2's step 02", {
     create_wtw_planning_units(input, natdata, project)
 
     a <- read_vector(file.path(project, "aoi", "aoi.shp"))
-    expect_identical(a$name, expected$name, label = case)
+    expect_named(a, c("FID", "geometry"))
     expect_true(sf::st_crs(a) == sf::st_crs(fixture_crs()), label = case)
     expect_equal(polygon_coords(a), expected$aoi_coords, label = case)
 
@@ -278,79 +275,119 @@ test_that("project_dir = NULL writes nothing", {
   expect_equal(pu$polygons$NCCID, c(44, 45, 46, 54, 55, 56, 64, 65, 66))
 })
 
-test_that("an AOI of several features is an error, and nothing is written", {
+test_that("an AOI of several features is dissolved, with a message", {
   skip_if_not_installed("sf")
   natdata <- fixture_natdata_idx_dir()
   project <- tempfile("project")
   expect_snapshot(
-    error = TRUE,
-    create_wtw_planning_units(fixture_aoi_two(), natdata, project)
+    pu <- create_wtw_planning_units(fixture_aoi_two(), natdata, project)
   )
-  expect_false(file.exists(project))
+  # The same planning units as the one-feature AOI of the same area
+  one <- create_wtw_planning_units(fixture_aoi_multi(), natdata)
+  expect_identical(pu$polygons, one$polygons)
+  expect_identical(
+    terra::values(pu$aoi_raster), terra::values(one$aoi_raster)
+  )
+  expect_identical(extent_of(pu$aoi_raster), extent_of(one$aoi_raster))
+  a <- read_vector(file.path(project, "aoi", "aoi.shp"))
+  expect_identical(nrow(a), 1L)
+  expect_named(a, c("FID", "geometry"))
 
   # From a file too, and without project_dir
   shp <- file.path(tempfile("input"), "two.shp")
   dir.create(dirname(shp))
   sf::write_sf(fixture_aoi_two(), shp)
-  expect_error(
-    create_wtw_planning_units(shp, natdata, project),
-    "must be one feature, not 2"
+  expect_message(
+    create_wtw_planning_units(shp, natdata, tempfile("project")),
+    "Dissolving the 2 features of `aoi` into one area"
   )
-  expect_error(
-    create_wtw_planning_units(fixture_aoi_two(), natdata),
-    "must be one feature, not 2"
+  expect_message(
+    pu <- create_wtw_planning_units(fixture_aoi_two(), natdata),
+    "Dissolving the 2 features"
   )
-  expect_false(file.exists(project))
-
-  # Dissolved first, it is one feature: the same planning units
-  pu <- create_wtw_planning_units(read_aoi(fixture_aoi_two()), natdata)
   expect_equal(pu$polygons$NCCID, c(71, 72))
+
+  # One feature: no message
+  expect_no_message(create_wtw_planning_units(fixture_aoi_multi(), natdata))
 })
 
-test_that("aoi_file is the one input feature, from any kind of AOI", {
+test_that("aoi_file is the dissolved AOI without attributes (wtw-data-prep2)", {
+  # wtw-data-prep2 (NCC-CNC/wtw-data-prep2#21) relies on this (ADR 0029):
+  # a multi-feature AOI is accepted, and aoi/aoi.shp is one boundary
+  # feature, the area the planning units were made from, in the template's
+  # CRS, without the input's attributes (#142).
   skip_if_not_installed("sf")
   natdata <- fixture_natdata_idx_dir()
-  aoi <- fixture_aoi_multi()
   input_dir <- tempfile("input")
   dir.create(input_dir)
   written <- function(x) {
     project <- tempfile("project")
-    pu <- create_wtw_planning_units(x, natdata, project)
+    pu <- suppressMessages(create_wtw_planning_units(x, natdata, project))
     expect_equal(pu$polygons$NCCID, c(71, 72))
-    read_vector(file.path(project, "aoi", "aoi.shp"))
+    a <- read_vector(file.path(project, "aoi", "aoi.shp"))
+    expect_identical(nrow(a), 1L)
+    expect_named(a, c("FID", "geometry"))
+    expect_true(sf::st_crs(a) == sf::st_crs(fixture_template()))
+    expect_true(sf::st_equals(a, pu$aoi, sparse = FALSE)[1, 1])
+    a
   }
-  expected_coords <- polygon_coords(aoi)
+  dissolved <- read_aoi(fixture_aoi_two())
 
-  # An sf feature: its attributes and its geometry, not dissolved
-  a <- written(aoi)
-  expect_identical(nrow(a), 1L)
-  expect_identical(a$name, "ab")
+  # Two features: one MULTIPOLYGON, the area of both
+  a <- written(fixture_aoi_two())
   expect_equal(as.character(sf::st_geometry_type(a)), "MULTIPOLYGON")
-  expect_equal(polygon_coords(a), expected_coords)
+  expect_true(sf::st_equals(a, dissolved, sparse = FALSE)[1, 1])
+  expect_equal(as.numeric(sf::st_area(a)), 1400^2 + 1600 * 1000)
 
-  # A one-feature file, read with read_layer()
+  # One feature with attributes: its geometry, without the attributes
+  a <- written(fixture_aoi_multi())
+  expect_equal(polygon_coords(a), polygon_coords(fixture_aoi_multi()))
+
+  # A file, read with read_layer()
   shp <- file.path(input_dir, "aoi.shp")
-  sf::write_sf(aoi, shp)
+  sf::write_sf(fixture_aoi_two(), shp)
   a <- written(shp)
-  expect_identical(a$name, "ab")
-  expect_equal(polygon_coords(a), expected_coords)
+  expect_true(sf::st_equals(a, dissolved, sparse = FALSE)[1, 1])
 
   # A <path>/<layer> path to one layer of a GeoPackage of two layers
   gpkg <- file.path(input_dir, "aois.gpkg")
   sf::st_write(fixture_aoi("inside"), gpkg, layer = "first", quiet = TRUE)
-  sf::st_write(aoi, gpkg, layer = "multi", quiet = TRUE)
-  a <- written(file.path(gpkg, "multi"))
-  expect_identical(a$name, "ab")
-  expect_equal(polygon_coords(a), expected_coords)
+  sf::st_write(fixture_aoi_two(), gpkg, layer = "two", quiet = TRUE)
+  a <- written(file.path(gpkg, "two"))
+  expect_true(sf::st_equals(a, dissolved, sparse = FALSE)[1, 1])
 
-  # Bounds: their rectangle, one feature without attributes
+  # Bounds: their rectangle
   bounds <- sf::st_bbox(
     c(xmin = 1000300, ymin = 607300, xmax = 1001700, ymax = 607800),
     crs = sf::st_crs(fixture_crs())
   )
   a <- written(bounds)
-  expect_identical(nrow(a), 1L)
   expect_equal(as.numeric(sf::st_bbox(a)), as.numeric(bounds))
+})
+
+test_that("aoi.shp's only field is the placeholder sf writes", {
+  # A shapefile cannot have no fields, so for the attribute-less AOI sf
+  # (GDAL) writes one: FID, a number field, 0 for the one feature.
+  skip_if_not_installed("sf")
+  project <- tempfile("project")
+  create_wtw_planning_units(
+    fixture_aoi("inside"), fixture_natdata_idx_dir(), project
+  )
+  path <- file.path(project, "aoi", "aoi.shp")
+  fields <- dbf_fields(sub("shp$", "dbf", path))
+  expect_identical(fields$name, "FID")
+  expect_identical(fields$type, "N")
+  expect_identical(fields$decimals, 0L)
+  expect_identical(read_vector(path)$FID, 0)
+
+  # A GeoPackage gets no attribute fields at all
+  create_wtw_planning_units(
+    fixture_aoi("inside"), fixture_natdata_idx_dir(), project,
+    aoi_file = "aoi/aoi.gpkg"
+  )
+  expect_named(
+    read_vector(file.path(project, "aoi", "aoi.gpkg")), "geom"
+  )
 })
 
 test_that("aoi_union is no longer an argument", {
@@ -365,14 +402,14 @@ test_that("aoi_union is no longer an argument", {
   )
 })
 
-test_that("the AOI is reprojected to the template's CRS with its attributes", {
+test_that("the AOI is reprojected to the template's CRS", {
   skip_if_not_installed("sf")
   natdata <- fixture_natdata_idx_dir()
   lonlat <- sf::st_transform(fixture_aoi("inside"), 4326)
   project <- tempfile("project")
   pu <- create_wtw_planning_units(lonlat, natdata, project)
   a <- read_vector(file.path(project, "aoi", "aoi.shp"))
-  expect_identical(a$name, "inside")
+  expect_named(a, c("FID", "geometry"))
   expect_true(sf::st_crs(a) == sf::st_crs(fixture_template()))
   expect_equal(
     polygon_coords(a)[[1]],
@@ -397,9 +434,11 @@ test_that("file names, formats and data type are arguments", {
     list.files(project, recursive = TRUE),
     c("boundary/aoi.gpkg", "units/pu.gpkg", "units/rasters/pu.tif")
   )
-  expect_identical(
-    read_vector(file.path(project, "boundary", "aoi.gpkg"))$name,
-    "inside"
+  expect_equal(
+    as.numeric(sf::st_bbox(
+      read_vector(file.path(project, "boundary", "aoi.gpkg"))
+    )),
+    as.numeric(sf::st_bbox(fixture_aoi("inside")))
   )
   expect_equal(
     read_vector(file.path(project, "units", "pu.gpkg"))$PUID,
@@ -517,9 +556,9 @@ test_that("overwrite replaces files, and the AOI can be the file replaced", {
   create_wtw_planning_units(fixture_aoi("inside"), natdata, project)
   p <- read_vector(file.path(project, "aoi", "pu_1km.shp"))
   expect_equal(p$NCCID, c(44, 45, 46, 54, 55, 56, 64, 65, 66))
-  expect_identical(
-    read_vector(file.path(project, "aoi", "aoi.shp"))$name,
-    "inside"
+  expect_equal(
+    as.numeric(sf::st_bbox(read_vector(file.path(project, "aoi", "aoi.shp")))),
+    as.numeric(sf::st_bbox(fixture_aoi("inside")))
   )
   expect_identical(
     extent_of(terra::rast(file.path(project, "aoi", "pu_1km.tif"))),
@@ -528,9 +567,13 @@ test_that("overwrite replaces files, and the AOI can be the file replaced", {
 
   # The input AOI can be the aoi.shp being replaced: it is read first
   aoi_shp <- file.path(project, "aoi", "aoi.shp")
-  sf::write_sf(fixture_aoi_multi(), aoi_shp)
-  pu <- create_wtw_planning_units(aoi_shp, natdata, project)
-  expect_identical(read_vector(aoi_shp)$name, "ab")
+  sf::write_sf(fixture_aoi_two(), aoi_shp)
+  pu <- suppressMessages(create_wtw_planning_units(aoi_shp, natdata, project))
+  a <- read_vector(aoi_shp)
+  expect_named(a, c("FID", "geometry"))
+  expect_true(
+    sf::st_equals(a, read_aoi(fixture_aoi_two()), sparse = FALSE)[1, 1]
+  )
   expect_equal(pu$polygons$NCCID, c(71, 72))
 
   # FALSE with an existing file: an error, and nothing is written

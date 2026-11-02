@@ -637,6 +637,12 @@ raster_datatype = "INT1U", raster_name = "layer", overwrite = TRUE)`
   period), and `aoi.shp` is always that one feature with its attributes,
   reprojected to the template's CRS, read with `read_layer()` for a path.
   wtw-data-prep2's step 02 assumes a one-feature AOI without checking.
+- Since #142 (v0.3.0, ADR 0026 and ADR 0018 amended): an AOI of several
+  features is accepted and dissolved through `read_aoi()`, with a message
+  naming how many, and `aoi.shp` is that dissolved boundary in the
+  template's CRS, the returned `aoi`, without the input's attributes (a
+  shapefile gets GDAL's placeholder `FID` field). Nothing reads `aoi.shp`'s
+  attributes; the planning-unit files and the returned list are unchanged.
 
 `extract_wtw_natdata(natdata_dir, project_dir,
 aoi_raster = file.path(project_dir, "aoi", "pu_1km.tif"),

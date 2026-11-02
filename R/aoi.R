@@ -108,8 +108,8 @@ read_aoi <- function(x, crs = NULL) {
 #' Read an AOI's features: checked, two-dimensional and reprojected
 #'
 #' The input handling of `read_aoi()`, without the dissolve, shared with
-#' `create_wtw_planning_units()`, which keeps the one feature it requires
-#' with its attributes.
+#' `create_wtw_planning_units()`, which counts the features to say how many
+#' are dissolved.
 #'
 #' @param x Anything `read_aoi()` accepts.
 #' @param crs The target CRS (a `crs` object, from `as_aoi_crs()`) or

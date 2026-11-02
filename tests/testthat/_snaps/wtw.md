@@ -1,11 +1,9 @@
-# an AOI of several features is an error, and nothing is written
+# an AOI of several features is dissolved, with a message
 
     Code
-      create_wtw_planning_units(fixture_aoi_two(), natdata, project)
-    Condition
-      Error in `create_wtw_planning_units()`:
-      ! `aoi` must be one feature, not 2.
-      i Dissolve the features into one first, for example with `read_aoi()`.
+      pu <- create_wtw_planning_units(fixture_aoi_two(), natdata, project)
+    Message
+      Dissolving the 2 features of `aoi` into one area.
 
 # create_wtw_planning_units() gives clear errors
 

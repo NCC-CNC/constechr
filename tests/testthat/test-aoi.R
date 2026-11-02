@@ -254,7 +254,7 @@ test_that("a geometry collection of polygons is accepted", {
   )
 
   # Mixed with an ordinary polygon feature: both are kept, and one
-  # collection stays one feature (as create_wtw_planning_units() needs).
+  # collection stays one feature.
   both <- sf::st_sfc(gc, square(1007000, 604000, 100), crs = fixture_crs())
   expect_equal(area_of(read_aoi(both)), 1000^2 + 500^2 + 100^2)
   features <- read_aoi_features(both, NULL, environment())

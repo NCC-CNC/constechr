@@ -8,15 +8,14 @@
 #' defaults write the files that step writes.
 #'
 #' @inheritParams create_1km_grid
-#' @param aoi The AOI, one feature: anything [read_aoi()] accepts (`sf`,
-#'   `sfc` or `SpatVector` polygons, a file path, or bounds with their CRS
-#'   in an sf `bbox`), holding exactly one feature (one row, a polygon or
-#'   multipolygon). An AOI of several features is an error, raised before
-#'   anything is written; dissolve them first, for example with
-#'   [read_aoi()]. Bounds are one feature, their rectangle. A file path is
-#'   read with [read_layer()], from the layer named as `<path>/<layer>` or
-#'   the first layer. The AOI is read once into memory before anything is
-#'   written, so it can be the `aoi_file` this call overwrites.
+#' @param aoi The AOI: anything [read_aoi()] accepts (`sf`, `sfc` or
+#'   `SpatVector` polygons, a file path, or bounds with their CRS in an sf
+#'   `bbox`), with one feature or several. Several features are dissolved
+#'   into one area, with a message naming how many. Bounds are their
+#'   rectangle. A file path is read with [read_layer()], from the layer
+#'   named as `<path>/<layer>` or the first layer. The AOI is read once into
+#'   memory before anything is written, so it can be the `aoi_file` this
+#'   call overwrites.
 #' @param project_dir The WTW project folder: `NULL` (the default) writes
 #'   nothing, or a single folder path, under which the files named by
 #'   `aoi_file`, `polygons_file` and `raster_file` are written. Missing
@@ -35,9 +34,9 @@
 #'   data.
 #' @param aoi_file,polygons_file,raster_file The files to write, as paths
 #'   relative to `project_dir`, or `NULL` to not write that file:
-#'   - `aoi_file`: the AOI's one feature with its attributes, reprojected
-#'     to the template's CRS, as wtw-data-prep2 writes `aoi.shp`. Default
-#'     `"aoi/aoi.shp"`.
+#'   - `aoi_file`: the AOI's boundary, the returned `aoi`: dissolved into
+#'     one feature, in the template's CRS, without the input's attributes.
+#'     Default `"aoi/aoi.shp"`.
 #'   - `polygons_file`: the planning-unit polygons. Default
 #'     `"aoi/pu_1km.shp"`.
 #'   - `raster_file`: the planning-unit raster, `raster_value` in every
@@ -69,13 +68,14 @@
 #'    [read_layer()]; Z and M dropped; reprojected to the template's CRS
 #'    (`template_file` in `natdata_dir`, by default `_1km/idx.tif`, in
 #'    Canada_Albers_WGS_1984) with [sf::st_transform()] (PROJ), which moves
-#'    each vertex. It must be one feature, or the function stops before
-#'    anything is written; nothing is dissolved silently.
-#' 2. **Planning units**: [create_1km_grid()] on that feature, with
+#'    each vertex. Several features give a message naming how many, as
+#'    they are dissolved in step 2; nothing is dissolved silently.
+#' 2. **Planning units**: [create_1km_grid()] on that AOI, with
 #'    `cells`, `value`, `id`, `index`, `order` and `template_file` (its
 #'    Method section has
-#'    the details): the AOI dissolved by [read_aoi()] (one feature, so the
-#'    same area); its cells on the template by
+#'    the details): the AOI dissolved into one area by [read_aoi()]
+#'    ([sf::st_union()], planar, in the template's CRS), without its
+#'    attributes; its cells on the template by
 #'    raster intersection (`"touches"` is GDAL's all-touched rule), without
 #'    the cells where the template is `NA`; one 1 km square polygon per cell,
 #'    holding its national ID (`NCCID`) and planning-unit number (`PUID`).
@@ -86,7 +86,9 @@
 #' 4. **Writing** (only with `project_dir`), in this order, with
 #'    [sf::st_write()] for the vector files (an existing file's layer is
 #'    replaced) and [write_rasters()] for the raster:
-#'    - `aoi_file`: the AOI's one feature from step 1, with its attributes;
+#'    - `aoi_file`: the dissolved AOI from step 2 (the returned `aoi`), one
+#'      feature without the input's attributes. A format that needs a field,
+#'      such as a shapefile, gets the placeholder GDAL writes (`FID`, 0);
 #'    - `polygons_file`: the polygons, with the columns `value`, `id` and
 #'      their geometry. `value` keeps the type it has in the polygons, so
 #'      with NAT_DATA's `idx.tif` (an `INT*` data type) `NCCID` is an
@@ -99,11 +101,12 @@
 #'      `pu_1km.tif`.
 #'
 #' No areas are computed and no values are rounded. With the defaults, the
-#' files are those of wtw-data-prep2's step 02 (`aoi_to_grid()`): the same
-#' AOI feature and attributes, the same planning units (`NCCID`, `PUID` and
-#' polygons, with `NCCID` and `PUID` as integer fields), and the same
-#' `pu_1km.tif` extent, values and data type. Decisions are recorded in
-#' ADR 0017, ADR 0018, ADR 0019 and ADR 0026.
+#' planning-unit files are those of wtw-data-prep2's step 02
+#' (`aoi_to_grid()`): the same planning units (`NCCID`, `PUID` and polygons,
+#' with `NCCID` and `PUID` as integer fields), and the same `pu_1km.tif`
+#' extent, values and data type. `aoi.shp` is the AOI's boundary, not the
+#' input feature with its attributes as that step wrote it (#142).
+#' Decisions are recorded in ADR 0017, ADR 0018, ADR 0019 and ADR 0026.
 #'
 #' Arguments are checked before the AOI is read; the AOI is read before
 #' anything is written. If writing fails partway, the files already written
@@ -112,7 +115,7 @@
 #' @return The list [create_1km_grid()] returns, differing from it only in
 #'   the raster's extent (see `trim`):
 #'   - `aoi`: the AOI dissolved into one polygon, an `sf` data frame without
-#'     attributes, in the template's CRS;
+#'     attributes, in the template's CRS, as written to `aoi_file`;
 #'   - `aoi_raster`: a `SpatRaster` with one layer named `value`, on the
 #'     template's grid: the national ID in the planning units and `NA`
 #'     elsewhere. It can be passed as the `aoi_raster` of [extract_layers()]
@@ -150,10 +153,11 @@
 #'   aoi_file = "aoi/aoi.gpkg", raster_file = NULL
 #' )
 #'
-#' # An AOI of several features is an error: dissolve them first
+#' # An AOI of several features is dissolved into one area, with a message;
+#' # aoi.shp is that boundary, without the input's attributes
 #' two <- rbind(read_layer(aoi), read_layer(aoi))
-#' try(create_wtw_planning_units(two, natdata_dir))
-#' pu <- create_wtw_planning_units(read_aoi(two), natdata_dir)
+#' pu <- create_wtw_planning_units(two, natdata_dir, project_dir)
+#' read_layer(file.path(project_dir, "aoi", "aoi.shp"))
 #'
 #' # The planning units as 0s in a signed data type, in a band named "pu"
 #' pu <- create_wtw_planning_units(
@@ -212,14 +216,9 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
     aoi, as_aoi_crs(template, call), call,
     arg = "aoi"
   )
-  if (nrow(aoi) != 1) {
-    cli::cli_abort(
-      c(
-        "{.arg aoi} must be one feature, not {nrow(aoi)}.",
-        "i" = "Dissolve the features into one first, for example with
-        {.fn read_aoi}."
-      ),
-      call = call
+  if (nrow(aoi) > 1) {
+    cli::cli_inform(
+      "Dissolving the {nrow(aoi)} features of {.arg aoi} into one area."
     )
   }
 
@@ -236,7 +235,7 @@ create_wtw_planning_units <- function(aoi, natdata_dir, project_dir = NULL,
   }
 
   if ("aoi_file" %in% names(paths)) {
-    write_vector(aoi, paths[["aoi_file"]])
+    write_vector(grid$aoi, paths[["aoi_file"]])
   }
   if ("polygons_file" %in% names(paths)) {
     write_vector(grid$polygons, paths[["polygons_file"]])

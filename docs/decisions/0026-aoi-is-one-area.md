@@ -3,7 +3,10 @@
 ## Status
 
 Accepted (owner's decisions on #102, 2026-10-29). Amends point 1 of
-0018-wtw-planning-unit-files.md.
+0018-wtw-planning-unit-files.md. Amended 2026-10-30 (#142): decision 2
+is replaced; a WTW project's AOI may have several features, dissolved with
+a message, and `aoi_file` is the dissolved boundary without attributes (see
+"Amendment 2026-10-30" below).
 
 ## Context
 
@@ -62,3 +65,32 @@ ADR 0002 and CLAUDE.md say to deprecate before removing or renaming.
   it, so their errors name it too.
 - After 0.x, ADR 0002's deprecate-first rule applies again unless the
   owner decides otherwise.
+
+## Amendment 2026-10-30 (#142)
+
+Found while switching wtw-data-prep2 to v0.2.0 (NCC-CNC/wtw-data-prep2#21):
+nothing reads `aoi.shp`'s attributes (wtw-data-prep2's later steps read
+`pu_1km.tif`, `tifs/` and the metadata; its manual calls `aoi.shp` the
+"reprojected AOI boundary"), and those attributes are often stale or
+broken, such as ArcGIS's `SHAPE_Area` in the source projection, which
+overflows its `.dbf` field on the mb_prairie AOI. The one-feature rule of
+decision 2 protected only those attributes, and made users dissolve
+multi-feature AOIs by hand. The owner decided (issue #142) to replace
+decision 2 with this one.
+
+**2. A WTW project's AOI is one area, like any other AOI.**
+`create_wtw_planning_units()` accepts an AOI of one feature or several,
+read through `read_aoi()`'s input handling and checks, and dissolves it
+into one area through `read_aoi()` (in `create_1km_grid()`). When it has
+several features, a message names how many are dissolved, so nothing is
+dissolved silently. `aoi_file` is that dissolved boundary in the
+template's CRS, the `aoi` the function returns, without the input's
+attributes. A shapefile cannot have no fields, so `aoi.shp` gets the
+placeholder GDAL writes for an attribute-less layer (`FID`, 0), pinned
+in a test.
+
+Consequences: decision 1 now holds for WTW projects too. The planning-unit
+files and the returned list are unchanged for any AOI that worked before;
+`aoi.shp` loses its attributes, a breaking change released as v0.3.0 and
+listed in `NEWS.md`. wtw-data-prep2 relies on this; a test names it
+(ADR 0029).
