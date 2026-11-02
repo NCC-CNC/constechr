@@ -141,7 +141,7 @@ aoi <- system.file("extdata", "aoi.gpkg", package = "constechr")
 # 1 and NA, as INT1U, with a message
 pu <- rasterize_aoi(aoi, template, value = 1)
 f <- write_raster_file(pu, file.path(tempdir(), "pu.tif"))
-#> Writing /tmp/RtmpmUy3jO/pu.tif as "INT1U", inferred from its values (whole
+#> Writing /tmp/Rtmps4c9d1/pu.tif as "INT1U", inferred from its values (whole
 #> numbers from 1 to 1), because the raster is held in memory, with no stored data
 #> type.
 #> ℹ Give `datatype` to choose another type.

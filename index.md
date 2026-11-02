@@ -12,7 +12,7 @@ rules), and tests with known answers hold that method in place.
 
 ## Status
 
-The current release is v0.2.0: reading vector layers, reading,
+The current release is v0.3.0: reading vector layers, reading,
 rasterizing and aligning AOIs, polygonizing rasters, rij matrix helpers,
 extracting and writing layers, and the NAT_DATA and Where To Work (WTW)
 functions for wtw-data-prep2’s steps. The function reference for the
@@ -29,7 +29,7 @@ pins the version it was built and tested with:
 
 \
 `# install.packages("pak")`\
-`pak``::`[`pak`](https://pak.r-lib.org/reference/pak.html)`(``"NCC-CNC/constechr@v0.2.0"``)`
+`pak``::`[`pak`](https://pak.r-lib.org/reference/pak.html)`(``"NCC-CNC/constechr@v0.3.0"``)`
 
 In a project that uses renv, run `renv::snapshot()` afterwards to record
 the version in `renv.lock`.

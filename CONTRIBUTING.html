@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">constechr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -29,19 +29,29 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Contributing</h1>
-      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.2.0/CONTRIBUTING.md" class="external-link"><code>CONTRIBUTING.md</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.3.0/CONTRIBUTING.md" class="external-link"><code>CONTRIBUTING.md</code></a></small>
     </div>
 
 <div id="contributing" class="section level1">
 
 <p>Feedback, bug reports, and ideas are welcome through GitHub issues.</p>
+<div class="section level2">
+<h2 id="who-can-do-what">Who can do what<a class="anchor" aria-label="anchor" href="#who-can-do-what"></a></h2>
+<ul><li>Anyone with a GitHub account can open issues and comment on them.</li>
+<li>Members of the NCC-CNC Cons-Tech team develop the package: the team has write access, so members push branches and open and merge pull requests, all with the same rights. Org owners also have admin through their org role, for repo settings.</li>
+<li>Anyone else who wants to propose a change can fork the repo and open a pull request from the fork; a team member merges it by hand.</li>
+</ul><p>To develop the package, ask an org owner to add you to the Cons-Tech team. Access to this repo is through the team, not individual grants.</p>
+</div>
+<div class="section level2">
+<h2 id="workflow">Workflow<a class="anchor" aria-label="anchor" href="#workflow"></a></h2>
 <p>The workflow is:</p>
 <ol style="list-style-type: decimal"><li>Branch from <code>dev</code>, the integration branch (one short-lived branch per change). <code>main</code>, the default branch, holds the latest release.</li>
 <li>Keep changes small and focused.</li>
 <li>Run the package checks locally before pushing (see Setup below).</li>
 <li>Open a pull request into <code>dev</code> (choose <code>dev</code> as the base; GitHub offers <code>main</code> by default). CI must pass before merge. A PR into <code>dev</code> from a branch in this repo merges itself (squash) once CI passes, and is kept up to date with <code>dev</code> while it waits; this is done by the NCC ConsTech Automation app (<code>.github/workflows/auto-merge.yml</code> and <code>update-branches.yml</code>). Open it as a draft to hold it back.</li>
-<li>Do not open pull requests into <code>main</code>. <code>main</code> changes only by a promotion PR from <code>dev</code>, opened when the owner asks, usually for a release (ADR 0024).</li>
-</ol><div class="section level2">
+<li>Do not open pull requests into <code>main</code>. <code>main</code> changes only by a promotion PR from <code>dev</code>, opened when the owner asks, usually for a release (ADR 0024). Promotion PRs are not auto-merged: the owner merges them by hand with “Create a merge commit” (not squash or rebase).</li>
+</ol></div>
+<div class="section level2">
 <h2 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a></h2>
 <p>Prerequisites:</p>
 <ul><li>R 4.4 or later.</li>
@@ -55,6 +65,7 @@
 <span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"devtools::check()"</span>       <span class="co"># full R CMD check (build, tests, examples)</span></span>
 <span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">"pkgdown::check_pkgdown()"</span> <span class="co"># site config lists every exported topic</span></span></code></pre></div>
 <p>The pkgdown check needs the pkgdown package and pandoc (RStudio bundles one; set <code>RSTUDIO_PANDOC</code> to its folder if pandoc is not on the path). <code>Rscript -e "pkgdown::build_site()"</code> previews the reference site in <code>site/</code>, which is not committed. The published site, <a href="https://ncc-cnc.github.io/constechr/" class="uri">https://ncc-cnc.github.io/constechr/</a>, is built from release tags only (ADR 0025): pushing a <code>vX.Y.Z</code> tag publishes it.</p>
+<p>A release takes two manual steps (ADR 0028): bump the version in a PR into <code>dev</code> (<code>usethis::use_version("patch")</code>, <code>"minor"</code> or <code>"major"</code>, with its <code>NEWS.md</code> entry; for a release of one change, that change’s PR can carry it), then open and merge the promotion PR from <code>dev</code> into <code>main</code>. On the merge, <code>release.yml</code> tags the merge commit <code>vX.Y.Z</code> to match <code>DESCRIPTION</code>, and the tag deploys the site. A promotion that leaves the version unchanged tags nothing.</p>
 <p>CI runs the same checks on every pull request and weekly: <code>styler::style_pkg(dry = "fail")</code>, the lint, the pkgdown config check, and R CMD check (which runs the tests) on Windows with all dependencies and without Suggests, and on Ubuntu in a pinned <code>rocker/geospatial</code> container. Every job uses the current CRAN version of each dependency, including the recommended packages R ships with, such as Matrix (ADR 0022). Any formatting change, lint, or check error or warning fails it, so if these pass locally CI should too. The Ubuntu check job also runs the formatting check and the lint, and reports test coverage (<code>covr::package_coverage()</code>) in its log. To try the working copy from another repo, install it with <code>Rscript -e "devtools::install()"</code>.</p>
 <p>See <code>CLAUDE.md</code> for the package’s stack, scope and working rules.</p>
 </div>
@@ -62,9 +73,9 @@
 <h2 id="conventions">Conventions<a class="anchor" aria-label="anchor" href="#conventions"></a></h2>
 <ul><li>Conventional Commits (for example <code>feat: ...</code>, <code>fix: ...</code>, <code>chore: ...</code>, <code>docs: ...</code>).</li>
 <li>No em dashes in code, comments, docs, commit messages, or user-facing text.</li>
-<li>A change that alters a function’s results or arguments gets a <code>NEWS.md</code> entry and a version bump.</li>
+<li>A change that alters a function’s results or arguments gets a <code>NEWS.md</code> entry under a <code># constechr (development version)</code> heading at the top (add the heading if it is not there). Do not change <code>Version</code> in <code>DESCRIPTION</code>; it changes only for a release (ADR 0004).</li>
 <li>
-<code>NEWS.md</code> has one <code># constechr x.y.z</code> heading per version, newest first, as <code><a href="https://usethis.r-lib.org/reference/use_version.html" class="external-link">usethis::use_version()</a></code>, pkgdown and <code><a href="https://rdrr.io/r/utils/news.html" class="external-link">utils::news()</a></code> expect. A version bump adds a new heading above the last one; entries go under the heading of the version they come with. markdownlint’s MD025 (one top-level heading per file) is turned off for <code>NEWS.md</code> only, by the <code>&lt;!-- markdownlint-disable-file MD025 --&gt;</code> comment at its top; keep that line first.</li>
+<code>NEWS.md</code> has one <code># constechr x.y.z</code> heading per release, newest first, as <code><a href="https://usethis.r-lib.org/reference/use_version.html" class="external-link">usethis::use_version()</a></code>, pkgdown and <code><a href="https://rdrr.io/r/utils/news.html" class="external-link">utils::news()</a></code> expect. For a release, <code>usethis::use_version("patch")</code> (or <code>"minor"</code>, <code>"major"</code>) bumps <code>DESCRIPTION</code> and turns the development heading into the new version’s heading, in one PR into <code>dev</code> just before the promotion PR. Earlier versions, up to 0.2.0, also have headings for development versions between releases. markdownlint’s MD025 (one top-level heading per file) is turned off for <code>NEWS.md</code> only, by the <code>&lt;!-- markdownlint-disable-file MD025 --&gt;</code> comment at its top; keep that line first.</li>
 <li>See <code>CLAUDE.md</code> for the full working rules and <code>docs/</code> for design notes and decision records.</li>
 </ul></div>
 </div>

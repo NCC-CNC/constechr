@@ -17,7 +17,7 @@ defaults write the files that step writes."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">constechr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +39,7 @@ defaults write the files that step writes."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Where To Work planning units for an area of interest</h1>
-      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.2.0/R/wtw.R" class="external-link"><code>R/wtw.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.3.0/R/wtw.R" class="external-link"><code>R/wtw.R</code></a></small>
       <div class="d-none name"><code>create_wtw_planning_units.Rd</code></div>
     </div>
 
@@ -80,15 +80,14 @@ defaults write the files that step writes.</p>
 
 
 <dl><dt id="arg-aoi">aoi<a class="anchor" aria-label="anchor" href="#arg-aoi"></a></dt>
-<dd><p>The AOI, one feature: anything <code><a href="read_aoi.html">read_aoi()</a></code> accepts (<code>sf</code>,
-<code>sfc</code> or <code>SpatVector</code> polygons, a file path, or bounds with their CRS
-in an sf <code>bbox</code>), holding exactly one feature (one row, a polygon or
-multipolygon). An AOI of several features is an error, raised before
-anything is written; dissolve them first, for example with
-<code><a href="read_aoi.html">read_aoi()</a></code>. Bounds are one feature, their rectangle. A file path is
-read with <code><a href="read_layer.html">read_layer()</a></code>, from the layer named as <code>&lt;path&gt;/&lt;layer&gt;</code> or
-the first layer. The AOI is read once into memory before anything is
-written, so it can be the <code>aoi_file</code> this call overwrites.</p></dd>
+<dd><p>The AOI: anything <code><a href="read_aoi.html">read_aoi()</a></code> accepts (<code>sf</code>, <code>sfc</code> or
+<code>SpatVector</code> polygons, a file path, or bounds with their CRS in an sf
+<code>bbox</code>), with one feature or several. Several features are dissolved
+into one area, with a message naming how many. Bounds are their
+rectangle. A file path is read with <code><a href="read_layer.html">read_layer()</a></code>, from the layer
+named as <code>&lt;path&gt;/&lt;layer&gt;</code> or the first layer. The AOI is read once into
+memory before anything is written, so it can be the <code>aoi_file</code> this
+call overwrites.</p></dd>
 
 
 <dt id="arg-natdata-dir">natdata_dir<a class="anchor" aria-label="anchor" href="#arg-natdata-dir"></a></dt>
@@ -159,9 +158,9 @@ data.</p></dd>
 
 <dt id="arg-aoi-file-polygons-file-raster-file">aoi_file, polygons_file, raster_file<a class="anchor" aria-label="anchor" href="#arg-aoi-file-polygons-file-raster-file"></a></dt>
 <dd><p>The files to write, as paths
-relative to <code>project_dir</code>, or <code>NULL</code> to not write that file:</p><ul><li><p><code>aoi_file</code>: the AOI's one feature with its attributes, reprojected
-to the template's CRS, as wtw-data-prep2 writes <code>aoi.shp</code>. Default
-<code>"aoi/aoi.shp"</code>.</p></li>
+relative to <code>project_dir</code>, or <code>NULL</code> to not write that file:</p><ul><li><p><code>aoi_file</code>: the AOI's boundary, the returned <code>aoi</code>: dissolved into
+one feature, in the template's CRS, without the input's attributes.
+Default <code>"aoi/aoi.shp"</code>.</p></li>
 <li><p><code>polygons_file</code>: the planning-unit polygons. Default
 <code>"aoi/pu_1km.shp"</code>.</p></li>
 <li><p><code>raster_file</code>: the planning-unit raster, <code>raster_value</code> in every
@@ -211,7 +210,7 @@ version or resolution of the grid.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>The list <code><a href="create_1km_grid.html">create_1km_grid()</a></code> returns, differing from it only in
 the raster's extent (see <code>trim</code>):</p><ul><li><p><code>aoi</code>: the AOI dissolved into one polygon, an <code>sf</code> data frame without
-attributes, in the template's CRS;</p></li>
+attributes, in the template's CRS, as written to <code>aoi_file</code>;</p></li>
 <li><p><code>aoi_raster</code>: a <code>SpatRaster</code> with one layer named <code>value</code>, on the
 template's grid: the national ID in the planning units and <code>NA</code>
 elsewhere. It can be passed as the <code>aoi_raster</code> of <code><a href="extract_layers.html">extract_layers()</a></code>
@@ -231,13 +230,14 @@ unit, with the columns <code>value</code>, <code>id</code> (unless <code>id = NU
 <code><a href="read_layer.html">read_layer()</a></code>; Z and M dropped; reprojected to the template's CRS
 (<code>template_file</code> in <code>natdata_dir</code>, by default <code>_1km/idx.tif</code>, in
 Canada_Albers_WGS_1984) with <code><a href="https://r-spatial.github.io/sf/reference/st_transform.html" class="external-link">sf::st_transform()</a></code> (PROJ), which moves
-each vertex. It must be one feature, or the function stops before
-anything is written; nothing is dissolved silently.</p></li>
-<li><p><strong>Planning units</strong>: <code><a href="create_1km_grid.html">create_1km_grid()</a></code> on that feature, with
+each vertex. Several features give a message naming how many, as
+they are dissolved in step 2; nothing is dissolved silently.</p></li>
+<li><p><strong>Planning units</strong>: <code><a href="create_1km_grid.html">create_1km_grid()</a></code> on that AOI, with
 <code>cells</code>, <code>value</code>, <code>id</code>, <code>index</code>, <code>order</code> and <code>template_file</code> (its
 Method section has
-the details): the AOI dissolved by <code><a href="read_aoi.html">read_aoi()</a></code> (one feature, so the
-same area); its cells on the template by
+the details): the AOI dissolved into one area by <code><a href="read_aoi.html">read_aoi()</a></code>
+(<code><a href="https://r-spatial.github.io/sf/reference/geos_combine.html" class="external-link">sf::st_union()</a></code>, planar, in the template's CRS), without its
+attributes; its cells on the template by
 raster intersection (<code>"touches"</code> is GDAL's all-touched rule), without
 the cells where the template is <code>NA</code>; one 1 km square polygon per cell,
 holding its national ID (<code>NCCID</code>) and planning-unit number (<code>PUID</code>).</p></li>
@@ -247,7 +247,9 @@ planning unit. If the AOI gets no cells, it is not trimmed (and
 <code><a href="create_1km_grid.html">create_1km_grid()</a></code> warns).</p></li>
 <li><p><strong>Writing</strong> (only with <code>project_dir</code>), in this order, with
 <code><a href="https://r-spatial.github.io/sf/reference/st_write.html" class="external-link">sf::st_write()</a></code> for the vector files (an existing file's layer is
-replaced) and <code><a href="write_rasters.html">write_rasters()</a></code> for the raster:</p><ul><li><p><code>aoi_file</code>: the AOI's one feature from step 1, with its attributes;</p></li>
+replaced) and <code><a href="write_rasters.html">write_rasters()</a></code> for the raster:</p><ul><li><p><code>aoi_file</code>: the dissolved AOI from step 2 (the returned <code>aoi</code>), one
+feature without the input's attributes. A format that needs a field,
+such as a shapefile, gets the placeholder GDAL writes (<code>FID</code>, 0);</p></li>
 <li><p><code>polygons_file</code>: the polygons, with the columns <code>value</code>, <code>id</code> and
 their geometry. <code>value</code> keeps the type it has in the polygons, so
 with NAT_DATA's <code>idx.tif</code> (an <code>INT*</code> data type) <code>NCCID</code> is an
@@ -260,11 +262,12 @@ halves away from zero before an integer type). The defaults, 1 as
 <code>pu_1km.tif</code>.</p></li>
 </ul></li>
 </ol><p>No areas are computed and no values are rounded. With the defaults, the
-files are those of wtw-data-prep2's step 02 (<code>aoi_to_grid()</code>): the same
-AOI feature and attributes, the same planning units (<code>NCCID</code>, <code>PUID</code> and
-polygons, with <code>NCCID</code> and <code>PUID</code> as integer fields), and the same
-<code>pu_1km.tif</code> extent, values and data type. Decisions are recorded in
-ADR 0017, ADR 0018, ADR 0019 and ADR 0026.</p>
+planning-unit files are those of wtw-data-prep2's step 02
+(<code>aoi_to_grid()</code>): the same planning units (<code>NCCID</code>, <code>PUID</code> and polygons,
+with <code>NCCID</code> and <code>PUID</code> as integer fields), and the same <code>pu_1km.tif</code>
+extent, values and data type. <code>aoi.shp</code> is the AOI's boundary, not the
+input feature with its attributes as that step wrote it (#142).
+Decisions are recorded in ADR 0017, ADR 0018, ADR 0019 and ADR 0026.</p>
 <p>Arguments are checked before the AOI is read; the AOI is read before
 anything is written. If writing fails partway, the files already written
 are kept.</p>
@@ -329,13 +332,19 @@ are kept.</p>
 <span class="r-in"><span>  aoi_file <span class="op">=</span> <span class="st">"aoi/aoi.gpkg"</span>, raster_file <span class="op">=</span> <span class="cn">NULL</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># An AOI of several features is an error: dissolve them first</span></span></span>
+<span class="r-in"><span><span class="co"># An AOI of several features is dissolved into one area, with a message;</span></span></span>
+<span class="r-in"><span><span class="co"># aoi.shp is that boundary, without the input's attributes</span></span></span>
 <span class="r-in"><span><span class="va">two</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="fu"><a href="read_layer.html">read_layer</a></span><span class="op">(</span><span class="va">aoi</span><span class="op">)</span>, <span class="fu"><a href="read_layer.html">read_layer</a></span><span class="op">(</span><span class="va">aoi</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/try.html" class="external-link">try</a></span><span class="op">(</span><span class="fu">create_wtw_planning_units</span><span class="op">(</span><span class="va">two</span>, <span class="va">natdata_dir</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Error in create_wtw_planning_units(two, natdata_dir) : </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   `aoi` must be one feature, not 2.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Dissolve the features into one first, for example with `read_aoi()`.</span>
-<span class="r-in"><span><span class="va">pu</span> <span class="op">&lt;-</span> <span class="fu">create_wtw_planning_units</span><span class="op">(</span><span class="fu"><a href="read_aoi.html">read_aoi</a></span><span class="op">(</span><span class="va">two</span><span class="op">)</span>, <span class="va">natdata_dir</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">pu</span> <span class="op">&lt;-</span> <span class="fu">create_wtw_planning_units</span><span class="op">(</span><span class="va">two</span>, <span class="va">natdata_dir</span>, <span class="va">project_dir</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Dissolving the 2 features of `aoi` into one area.</span>
+<span class="r-in"><span><span class="fu"><a href="read_layer.html">read_layer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">project_dir</span>, <span class="st">"aoi"</span>, <span class="st">"aoi.shp"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Simple feature collection with 1 feature and 1 field</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Geometry type: POLYGON</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Dimension:     XY</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Bounding box:  xmin: 1003600 ymin: 604300 xmax: 1005800 ymax: 606600</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Projected CRS: Canada_Albers_WGS_1984</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   FID                       geometry</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   0 POLYGON ((1003600 606600, 1...</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The planning units as 0s in a signed data type, in a band named "pu"</span></span></span>
 <span class="r-in"><span><span class="va">pu</span> <span class="op">&lt;-</span> <span class="fu">create_wtw_planning_units</span><span class="op">(</span></span></span>

@@ -1,5 +1,36 @@
 # Changelog
 
+## constechr 0.3.0
+
+Third release
+([\#142](https://github.com/NCC-CNC/constechr/issues/142)).
+[`create_wtw_planning_units()`](https://ncc-cnc.github.io/constechr/reference/create_wtw_planning_units.md)
+treats a WTW project’s AOI as a boundary, as every other AOI function
+does. Tools install it with `pak::pak("NCC-CNC/constechr@v0.3.0")`. A
+minor release, since it changes a documented result (ADR 0004).
+
+### Breaking changes
+
+- [`create_wtw_planning_units()`](https://ncc-cnc.github.io/constechr/reference/create_wtw_planning_units.md)
+  writes `aoi_file` (`aoi/aoi.shp`) as the AOI dissolved into one area
+  in the template’s CRS, the `aoi` it returns, without the input’s
+  attributes ([\#142](https://github.com/NCC-CNC/constechr/issues/142)).
+  A shapefile keeps one placeholder field, `FID`, as GDAL writes it.
+  Before, `aoi.shp` was the input feature with its attributes. Nothing
+  in wtw-data-prep2 reads those attributes. `pu_1km.shp`, `pu_1km.tif`
+  and the returned list are unchanged for any AOI that worked before.
+
+### Other changes
+
+- [`create_wtw_planning_units()`](https://ncc-cnc.github.io/constechr/reference/create_wtw_planning_units.md)
+  accepts an AOI of several features and dissolves it into one area
+  through
+  [`read_aoi()`](https://ncc-cnc.github.io/constechr/reference/read_aoi.md),
+  with a message naming how many features were dissolved, instead of
+  stopping with “`aoi` must be one feature”
+  ([\#142](https://github.com/NCC-CNC/constechr/issues/142)). ADR 0026
+  (decision 2) and ADR 0018 are amended.
+
 ## constechr 0.2.0
 
 Second release

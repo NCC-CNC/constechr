@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">constechr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -29,9 +29,23 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.2.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.3.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.3.0" id="constechr-030">constechr 0.3.0<a class="anchor" aria-label="anchor" href="#constechr-030"></a></h2>
+<p>Third release (<a href="https://github.com/NCC-CNC/constechr/issues/142" class="external-link">#142</a>). <code><a href="../reference/create_wtw_planning_units.html">create_wtw_planning_units()</a></code> treats a WTW project’s AOI as a boundary, as every other AOI function does. Tools install it with <code>pak::pak("NCC-CNC/constechr@v0.3.0")</code>. A minor release, since it changes a documented result (ADR 0004).</p>
+<div class="section level3">
+<h3 id="breaking-changes-0-3-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-3-0"></a></h3>
+<ul><li>
+<code><a href="../reference/create_wtw_planning_units.html">create_wtw_planning_units()</a></code> writes <code>aoi_file</code> (<code>aoi/aoi.shp</code>) as the AOI dissolved into one area in the template’s CRS, the <code>aoi</code> it returns, without the input’s attributes (<a href="https://github.com/NCC-CNC/constechr/issues/142" class="external-link">#142</a>). A shapefile keeps one placeholder field, <code>FID</code>, as GDAL writes it. Before, <code>aoi.shp</code> was the input feature with its attributes. Nothing in wtw-data-prep2 reads those attributes. <code>pu_1km.shp</code>, <code>pu_1km.tif</code> and the returned list are unchanged for any AOI that worked before.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="other-changes-0-3-0">Other changes<a class="anchor" aria-label="anchor" href="#other-changes-0-3-0"></a></h3>
+<ul><li>
+<code><a href="../reference/create_wtw_planning_units.html">create_wtw_planning_units()</a></code> accepts an AOI of several features and dissolves it into one area through <code><a href="../reference/read_aoi.html">read_aoi()</a></code>, with a message naming how many features were dissolved, instead of stopping with “<code>aoi</code> must be one feature” (<a href="https://github.com/NCC-CNC/constechr/issues/142" class="external-link">#142</a>). ADR 0026 (decision 2) and ADR 0018 are amended.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="constechr-020">constechr 0.2.0<a class="anchor" aria-label="anchor" href="#constechr-020"></a></h2>
 <p>Second release (<a href="https://github.com/NCC-CNC/constechr/issues/105" class="external-link">#105</a>). It refactors and extends v0.1.0’s functions: a public vector reader, an AOI that is always one area, clearer names, and simpler writing and template arguments. Tools install it with <code>pak::pak("NCC-CNC/constechr@v0.2.0")</code>. The entries for the development versions below give the detail, and the ADRs in <code>docs/decisions/</code> the reasons.</p>
