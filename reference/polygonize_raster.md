@@ -111,6 +111,7 @@ makes the AOI rasters this function is used on.
 
 Other raster:
 [`align_raster()`](https://ncc-cnc.github.io/constechr/reference/align_raster.md),
+[`geodesic_boundary_matrix()`](https://ncc-cnc.github.io/constechr/reference/geodesic_boundary_matrix.md),
 [`write_raster_file()`](https://ncc-cnc.github.io/constechr/reference/write_raster_file.md),
 [`write_rasters()`](https://ncc-cnc.github.io/constechr/reference/write_rasters.md)
 

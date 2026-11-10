@@ -18,10 +18,13 @@ Read one layer of a vector file as stored.
 
 ## Rasters
 
-Align, polygonize and write rasters.
+Align, polygonize and write rasters, and build the boundary matrix of a
+lat/long raster.
 
 - [`align_raster()`](https://ncc-cnc.github.io/constechr/reference/align_raster.md)
   : Align a raster to a template
+- [`geodesic_boundary_matrix()`](https://ncc-cnc.github.io/constechr/reference/geodesic_boundary_matrix.md)
+  : Boundary matrix of a lat/long raster, in geodesic metres
 - [`polygonize_raster()`](https://ncc-cnc.github.io/constechr/reference/polygonize_raster.md)
   : Polygonize a raster, by cell or by value
 - [`write_raster_file()`](https://ncc-cnc.github.io/constechr/reference/write_raster_file.md)

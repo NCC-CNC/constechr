@@ -174,6 +174,7 @@ to write a raster to one named file.
 
 Other raster:
 [`align_raster()`](https://ncc-cnc.github.io/constechr/reference/align_raster.md),
+[`geodesic_boundary_matrix()`](https://ncc-cnc.github.io/constechr/reference/geodesic_boundary_matrix.md),
 [`polygonize_raster()`](https://ncc-cnc.github.io/constechr/reference/polygonize_raster.md),
 [`write_raster_file()`](https://ncc-cnc.github.io/constechr/reference/write_raster_file.md)
 

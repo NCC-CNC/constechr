@@ -1,5 +1,25 @@
 # Changelog
 
+## constechr 0.4.0
+
+Adds
+[`geodesic_boundary_matrix()`](https://ncc-cnc.github.io/constechr/reference/geodesic_boundary_matrix.md)
+([\#149](https://github.com/NCC-CNC/constechr/issues/149)). Tools
+install it with `pak::pak("NCC-CNC/constechr@v0.4.0")`. A minor release,
+since it adds a function (ADR 0004); no existing function’s results or
+arguments change. v0.3.1 was never released.
+
+### New functions
+
+- [`geodesic_boundary_matrix()`](https://ncc-cnc.github.io/constechr/reference/geodesic_boundary_matrix.md)
+  builds the boundary matrix of a lat/long raster with edge lengths in
+  geodesic metres on the WGS84 ellipsoid, where
+  [`prioritizr::boundary_matrix()`](https://prioritizr.net/reference/boundary_matrix.html)
+  gives degrees
+  ([\#149](https://github.com/NCC-CNC/constechr/issues/149), ADR 0030).
+  Ported from wtw-data-prep2, which uses it for WTW boundary data; it
+  gives the same result as the original.
+
 ## constechr 0.3.0
 
 Third release

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">constechr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -29,9 +29,18 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.3.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/NCC-CNC/constechr/blob/v0.4.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.4.0" id="constechr-040">constechr 0.4.0<a class="anchor" aria-label="anchor" href="#constechr-040"></a></h2>
+<p>Adds <code><a href="../reference/geodesic_boundary_matrix.html">geodesic_boundary_matrix()</a></code> (<a href="https://github.com/NCC-CNC/constechr/issues/149" class="external-link">#149</a>). Tools install it with <code>pak::pak("NCC-CNC/constechr@v0.4.0")</code>. A minor release, since it adds a function (ADR 0004); no existing function’s results or arguments change. v0.3.1 was never released.</p>
+<div class="section level3">
+<h3 id="new-functions-0-4-0">New functions<a class="anchor" aria-label="anchor" href="#new-functions-0-4-0"></a></h3>
+<ul><li>
+<code><a href="../reference/geodesic_boundary_matrix.html">geodesic_boundary_matrix()</a></code> builds the boundary matrix of a lat/long raster with edge lengths in geodesic metres on the WGS84 ellipsoid, where <code><a href="https://prioritizr.net/reference/boundary_matrix.html" class="external-link">prioritizr::boundary_matrix()</a></code> gives degrees (<a href="https://github.com/NCC-CNC/constechr/issues/149" class="external-link">#149</a>, ADR 0030). Ported from wtw-data-prep2, which uses it for WTW boundary data; it gives the same result as the original.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.3.0" id="constechr-030">constechr 0.3.0<a class="anchor" aria-label="anchor" href="#constechr-030"></a></h2>
 <p>Third release (<a href="https://github.com/NCC-CNC/constechr/issues/142" class="external-link">#142</a>). <code><a href="../reference/create_wtw_planning_units.html">create_wtw_planning_units()</a></code> treats a WTW project’s AOI as a boundary, as every other AOI function does. Tools install it with <code>pak::pak("NCC-CNC/constechr@v0.3.0")</code>. A minor release, since it changes a documented result (ADR 0004).</p>

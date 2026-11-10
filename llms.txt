@@ -12,13 +12,13 @@ rules), and tests with known answers hold that method in place.
 
 ## Status
 
-The current release is v0.3.0: reading vector layers, reading,
-rasterizing and aligning AOIs, polygonizing rasters, rij matrix helpers,
-extracting and writing layers, and the NAT_DATA and Where To Work (WTW)
-functions for wtw-data-prep2’s steps. The function reference for the
-latest release is at <https://ncc-cnc.github.io/constechr/>. See
-`NEWS.md` for what each release changed,
-`docs/design/00_project_brief.md` for the scope and
+The current release is v0.4.0: reading vector layers, reading,
+rasterizing and aligning AOIs, polygonizing rasters, geodesic boundary
+matrices of lat/long rasters, rij matrix helpers, extracting and writing
+layers, and the NAT_DATA and Where To Work (WTW) functions for
+wtw-data-prep2’s steps. The function reference for the latest release is
+at <https://ncc-cnc.github.io/constechr/>. See `NEWS.md` for what each
+release changed, `docs/design/00_project_brief.md` for the scope and
 `docs/design/01_wtw-data-prep2_inventory.md` for how the functions map
 to wtw-data-prep2.
 
@@ -29,7 +29,7 @@ pins the version it was built and tested with:
 
 \
 `# install.packages("pak")`\
-`pak``::`[`pak`](https://pak.r-lib.org/reference/pak.html)`(``"NCC-CNC/constechr@v0.3.0"``)`
+`pak``::`[`pak`](https://pak.r-lib.org/reference/pak.html)`(``"NCC-CNC/constechr@v0.4.0"``)`
 
 In a project that uses renv, run `renv::snapshot()` afterwards to record
 the version in `renv.lock`.
@@ -136,10 +136,13 @@ Read one layer of a vector file as stored.
 
 ## Rasters
 
-Align, polygonize and write rasters.
+Align, polygonize and write rasters, and build the boundary matrix of a
+lat/long raster.
 
 - [`align_raster()`](https://ncc-cnc.github.io/constechr/reference/align_raster.md)
   : Align a raster to a template
+- [`geodesic_boundary_matrix()`](https://ncc-cnc.github.io/constechr/reference/geodesic_boundary_matrix.md)
+  : Boundary matrix of a lat/long raster, in geodesic metres
 - [`polygonize_raster()`](https://ncc-cnc.github.io/constechr/reference/polygonize_raster.md)
   : Polygonize a raster, by cell or by value
 - [`write_raster_file()`](https://ncc-cnc.github.io/constechr/reference/write_raster_file.md)

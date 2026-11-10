@@ -128,6 +128,7 @@ after its source.
 
 Other raster:
 [`align_raster()`](https://ncc-cnc.github.io/constechr/reference/align_raster.md),
+[`geodesic_boundary_matrix()`](https://ncc-cnc.github.io/constechr/reference/geodesic_boundary_matrix.md),
 [`polygonize_raster()`](https://ncc-cnc.github.io/constechr/reference/polygonize_raster.md),
 [`write_rasters()`](https://ncc-cnc.github.io/constechr/reference/write_rasters.md)
 
@@ -141,7 +142,7 @@ aoi <- system.file("extdata", "aoi.gpkg", package = "constechr")
 # 1 and NA, as INT1U, with a message
 pu <- rasterize_aoi(aoi, template, value = 1)
 f <- write_raster_file(pu, file.path(tempdir(), "pu.tif"))
-#> Writing /tmp/Rtmps4c9d1/pu.tif as "INT1U", inferred from its values (whole
+#> Writing /tmp/RtmpysfmAk/pu.tif as "INT1U", inferred from its values (whole
 #> numbers from 1 to 1), because the raster is held in memory, with no stored data
 #> type.
 #> ℹ Give `datatype` to choose another type.
