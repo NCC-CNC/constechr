@@ -184,6 +184,7 @@ named file.
 
 Other raster:
 \code{\link[=align_raster]{align_raster()}},
+\code{\link[=geodesic_boundary_matrix]{geodesic_boundary_matrix()}},
 \code{\link[=polygonize_raster]{polygonize_raster()}},
 \code{\link[=write_raster_file]{write_raster_file()}}
 }

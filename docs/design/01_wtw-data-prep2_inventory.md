@@ -60,6 +60,7 @@ Destination key:
 | `create_wtw_metadata()` | `04_metadata.R` | Builds `wtw-metadata.csv`: per GeoTIFF, looks up national prep and species metadata, derives legend type, values, colours, labels, units, goal. | prep2 |
 | `init_metadata()` | `fct_init_metadata.R` | Empty data frame with the `wtw-metadata.csv` columns. | prep2 |
 | `build_wtw_project()` | `05_wtw.R` | Validates metadata against the GeoTIFFs, re-projects mismatched rasters to the planning units, drops all-zero layers, builds theme, weight, include and exclude parameters, writes the WTW project with `write_project()`. | prep2 |
+| `geodesic_boundary_matrix()` | `fct_geodesic_boundary_matrix.R` | Boundary matrix of a lat/long raster in geodesic metres, for WTW boundary data in `new_dataset_from_auto()` (added on wtw-data-prep2 `dev` at df3a50c). | **constechr**, as `geodesic_boundary_matrix()` (issue #149, ADR 0030) |
 | `validate_manual_legend()` | `fct_validate_manual_legend.R` | Checks a manual legend's values, colours and labels against a raster's unique values. | prep2 (WTW metadata specific) |
 | `Dataset`, `new_dataset()`, `new_dataset_from_auto()` | `wtw_class_Dataset.R` | WTW dataset R6 class. | wheretowork |
 | `write_project()` | `wtw_fct_write_project.R` | Writes WTW configuration, spatial, attribute and boundary files. | wheretowork |
@@ -383,6 +384,17 @@ datatype = NULL, overwrite = TRUE)`
   template is an error. On the fixtures and the real mb_prairie AOI it gives
   the same cells and values as `align_pu()` (an equivalence test records
   the fixture outputs).
+
+### Boundary matrices
+
+`geodesic_boundary_matrix(x)`
+
+- From wtw-data-prep2's `geodesic_boundary_matrix()`, added after the first
+  pass (issue #149, ADR 0030). A building block, with no use-case
+  conventions.
+- `x`: a lat/long raster (`SpatRaster` or path), any number of layers.
+  A projected raster is an error naming `prioritizr::boundary_matrix()`,
+  which is right for it.
 
 ### Extracting layers on a national template (rij matrices)
 
