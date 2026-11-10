@@ -1,6 +1,10 @@
 <!-- markdownlint-disable-file MD025 -->
 
-# constechr (development version)
+# constechr 0.3.1
+
+Adds `geodesic_boundary_matrix()` (#149). Tools install it with
+`pak::pak("NCC-CNC/constechr@v0.3.1")`. Released as a patch at the
+owner's request; it changes no existing function's results or arguments.
 
 ## New functions
 
