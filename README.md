@@ -12,8 +12,9 @@ answers hold that method in place.
 
 ## Status
 
-The current release is v0.3.0: reading vector layers, reading,
-rasterizing and aligning AOIs, polygonizing rasters, rij matrix helpers,
+The current release is v0.3.1: reading vector layers, reading,
+rasterizing and aligning AOIs, polygonizing rasters, geodesic boundary
+matrices of lat/long rasters, rij matrix helpers,
 extracting and writing layers, and the NAT_DATA and Where To Work (WTW)
 functions for wtw-data-prep2's steps. The function reference
 for the latest release is at <https://ncc-cnc.github.io/constechr/>. See
@@ -30,7 +31,7 @@ version it was built and tested with:
 
 ```r
 # install.packages("pak")
-pak::pak("NCC-CNC/constechr@v0.3.0")
+pak::pak("NCC-CNC/constechr@v0.3.1")
 ```
 
 In a project that uses renv, run `renv::snapshot()` afterwards to record the
