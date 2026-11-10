@@ -129,6 +129,7 @@ align_raster(utm, template)
 template's full grid directly.
 
 Other raster:
+\code{\link[=geodesic_boundary_matrix]{geodesic_boundary_matrix()}},
 \code{\link[=polygonize_raster]{polygonize_raster()}},
 \code{\link[=write_raster_file]{write_raster_file()}},
 \code{\link[=write_rasters]{write_rasters()}}

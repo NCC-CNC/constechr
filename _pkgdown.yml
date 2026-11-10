@@ -30,7 +30,9 @@ reference:
     contents:
       - has_concept("vector")
   - title: Rasters
-    desc: Align, polygonize and write rasters.
+    desc: >
+      Align, polygonize and write rasters, and build the boundary matrix of
+      a lat/long raster.
     contents:
       - has_concept("raster")
   - title: rij matrices and extraction

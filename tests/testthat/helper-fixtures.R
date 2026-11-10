@@ -243,6 +243,30 @@ fixture_template_utm <- function() {
   terra::project(fixture_template(), "EPSG:32616", method = "near", res = 1000)
 }
 
+# A lat/long raster for boundary matrices: 6 rows x 5 columns of 0.25 degree
+# cells, x -100 to -98.75 and y 49 to 50.5 (WGS84), holding their cell
+# numbers, with cells 1, 8 and 30 NA. Cell c is in row (c - 1) %/% 5 + 1 and
+# column (c - 1) %% 5 + 1. 0.25 degrees is exact in binary, so cell corners
+# are exact. The raster wtw-data-prep2's geodesic_boundary_matrix() tests
+# use. Needs terra.
+#
+#            col 1   2   3   4   5
+#   row  1     NA   2   3   4   5
+#   row  2      6   7  NA   9  10
+#   row  3     11  12  13  14  15
+#   row  4     16  17  18  19  20
+#   row  5     21  22  23  24  25
+#   row  6     26  27  28  29  NA
+fixture_lonlat <- function() {
+  x <- terra::rast(
+    nrows = 6, ncols = 5, xmin = -100, xmax = -98.75, ymin = 49, ymax = 50.5,
+    crs = "EPSG:4326"
+  )
+  terra::values(x) <- seq_len(terra::ncell(x))
+  x[c(1, 8, 30)] <- NA
+  x
+}
+
 # Writes a fixture raster to `<name>.tif` in a new temporary folder and
 # returns the path, for functions that read or write files beside their
 # input. `...` goes to `terra::writeRaster()` (for example `NAflag = NA` for
